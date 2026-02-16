@@ -90,6 +90,7 @@ TASK_COUNT=0
 while IFS= read -r line; do
   # Skip empty lines and comments
   [[ -z "$line" ]] && continue
+  [[ "$line" =~ ^#$ ]] && continue
   [[ "$line" =~ ^#[^#] ]] && continue
 
   # Section headers
@@ -105,7 +106,7 @@ while IFS= read -r line; do
   TASK_DESCS+=("$(echo "$desc" | xargs)")
   TASK_PROMPTS+=("$(echo "$prompt" | xargs)")
   TASK_VERIFY+=("$(echo "$verify" | xargs)")
-  ((TASK_COUNT++))
+  TASK_COUNT=$((TASK_COUNT + 1))
 done < "$MANIFEST"
 
 echo -e "${BLUE}Loaded ${TASK_COUNT} tasks from ${MANIFEST}${NC}"
@@ -140,7 +141,7 @@ for i in $(seq 0 $((TASK_COUNT - 1))); do
       SKIP_MODE=false
     fi
     echo -e "${YELLOW}  SKIP ${TASK_ID}: ${TASK_DESC}${NC}"
-    ((SKIPPED++))
+    SKIPPED=$((SKIPPED + 1))
     continue
   fi
 
@@ -160,7 +161,7 @@ for i in $(seq 0 $((TASK_COUNT - 1))); do
   if [[ ! -f "$PROMPT_FILE" ]]; then
     echo -e "${RED}  MISSING PROMPT: ${PROMPT_FILE}${NC}"
     echo "MISSING ${TASK_ID} ${TASK_DESC} — prompt file not found: ${PROMPT_FILE}" >> "$SUMMARY_FILE"
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
     continue
   fi
 
@@ -234,7 +235,7 @@ ${PROMPT}"
       BLOCK_REASON=$(grep '\[TASK_BLOCKED\]' "$ATTEMPT_LOG" | head -1 | sed 's/.*\[TASK_BLOCKED\] reason: //')
       echo -e "${RED}  BLOCKED: ${BLOCK_REASON}${NC}"
       echo "BLOCKED ${TASK_ID} ${TASK_DESC} — ${BLOCK_REASON}" >> "$SUMMARY_FILE"
-      ((BLOCKED++))
+      BLOCKED=$((BLOCKED + 1))
       TASK_PASSED=false
       break
     fi
@@ -262,11 +263,11 @@ ${PROMPT}"
   if [[ "$TASK_PASSED" == true ]]; then
     echo "PASSED ${TASK_ID} ${TASK_DESC}" >> "$SUMMARY_FILE"
     echo "${TASK_ID} PASSED" >> "$PROGRESS_FILE"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
   elif [[ $BLOCKED -eq 0 || $(tail -1 "$SUMMARY_FILE" | grep -c "BLOCKED ${TASK_ID}") -eq 0 ]]; then
     echo "FAILED ${TASK_ID} ${TASK_DESC} — failed after $((MAX_RETRIES+1)) attempts" >> "$SUMMARY_FILE"
     echo "${TASK_ID} FAILED" >> "$PROGRESS_FILE"
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 
     # Ask whether to continue or abort
     echo ""
