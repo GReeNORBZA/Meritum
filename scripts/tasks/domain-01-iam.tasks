@@ -1,0 +1,53 @@
+# ============================================================================
+# Domain 01: Identity & Access Management — Build Tasks
+# Run: ./scripts/task-runner.sh tasks/domain-01-iam.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-16
+# ============================================================================
+
+## Domain 1: Identity & Access — Shared Types & Constants
+
+D01-001 | Permission constants, role enums, audit action identifiers, subscription statuses | tasks/prompts/d01/D01-001.md | pnpm --filter shared build
+D01-002 | Drizzle schema for users table | tasks/prompts/d01/D01-002.md | pnpm --filter shared build
+D01-003 | Drizzle schema for recovery_codes, sessions, invitation_tokens tables | tasks/prompts/d01/D01-003.md | pnpm --filter shared build
+D01-004 | Drizzle schema for delegate_linkages and audit_log tables | tasks/prompts/d01/D01-004.md | pnpm --filter shared build
+D01-005 | Zod validation schemas for auth and session endpoints | tasks/prompts/d01/D01-005.md | pnpm --filter shared build
+D01-006 | Zod validation schemas for delegate and account endpoints | tasks/prompts/d01/D01-006.md | pnpm --filter shared build
+D01-007 | Generate and apply database migration | tasks/prompts/d01/D01-007.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 1: Identity & Access — Repository Layer
+
+D01-010 | Repository: user CRUD operations | tasks/prompts/d01/D01-010.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-011 | Repository: session management | tasks/prompts/d01/D01-011.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-012 | Repository: recovery codes and invitation tokens | tasks/prompts/d01/D01-012.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-013 | Repository: delegate linkages | tasks/prompts/d01/D01-013.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-014 | Repository: audit log (append-only) | tasks/prompts/d01/D01-014.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+
+## Domain 1: Identity & Access — Service Layer
+
+D01-020 | Service: registration and email verification | tasks/prompts/d01/D01-020.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-021 | Service: MFA setup and recovery codes | tasks/prompts/d01/D01-021.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-022 | Service: login flow (password + MFA + session creation) | tasks/prompts/d01/D01-022.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-023 | Service: session management and password reset | tasks/prompts/d01/D01-023.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-024 | Service: delegate management | tasks/prompts/d01/D01-024.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-025 | Service: account management and deletion | tasks/prompts/d01/D01-025.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+
+## Domain 1: Identity & Access — Middleware & Routes
+
+D01-030 | Auth middleware: authenticate, authorize, checkSubscription, auditLog plugins | tasks/prompts/d01/D01-030.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+D01-031 | Routes: authentication endpoints (register, login, MFA, password reset) | tasks/prompts/d01/D01-031.md | pnpm --filter api vitest run test/integration/iam/
+D01-032 | Routes: session, delegate, and account endpoints | tasks/prompts/d01/D01-032.md | pnpm --filter api vitest run test/integration/iam/
+
+## Domain 1: Identity & Access — Security Tests
+
+D01-040 | Security: authentication enforcement on every route | tasks/prompts/d01/D01-040.md | pnpm --filter api vitest run test/security/iam/iam.authn.security.ts
+D01-041 | Security: authorization and role enforcement | tasks/prompts/d01/D01-041.md | pnpm --filter api vitest run test/security/iam/iam.authz.security.ts
+D01-042 | Security: cross-user isolation (tenant scoping) | tasks/prompts/d01/D01-042.md | pnpm --filter api vitest run test/security/iam/iam.scoping.security.ts
+D01-043 | Security: input validation and injection prevention | tasks/prompts/d01/D01-043.md | pnpm --filter api vitest run test/security/iam/iam.input.security.ts
+D01-044 | Security: data leakage prevention and anti-enumeration | tasks/prompts/d01/D01-044.md | pnpm --filter api vitest run test/security/iam/iam.leakage.security.ts
+D01-045 | Security: audit trail completeness | tasks/prompts/d01/D01-045.md | pnpm --filter api vitest run test/security/iam/iam.audit.security.ts
+
+## Domain 1: Identity & Access — Final Validation
+
+D01-099 | Full domain test suite: all unit + integration + security tests | tasks/prompts/d01/D01-099.md | pnpm --filter api vitest run src/domains/iam/ test/integration/iam/ test/security/iam/
