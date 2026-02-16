@@ -1,0 +1,919 @@
+{
+  "domainNumber": "10",
+  "domainName": "Mobile Companion",
+  "manifestFile": "domain-10-mobile.tasks",
+  "promptPrefix": "d10",
+  "modulePath": "apps/api/src/domains/mobile",
+  "sections": [
+    {
+      "title": "Domain 10: Mobile Companion — Shared Types, Schemas & Migration",
+      "tasks": [
+        {
+          "id": "D10-001",
+          "description": "Mobile companion constants, enums, and shared types",
+          "verify": "pnpm --filter shared build",
+          "build": [
+            "Create `packages/shared/src/constants/mobile.constants.ts` with all Domain 10 constants:",
+            "",
+            "**Shift statuses:**",
+            "- ACTIVE, ENDED, REVIEWED",
+            "",
+            "**After-hours time brackets (Alberta):**",
+            "- AFHR (weekday evening): 17:00–23:00",
+            "- NGHR (weekday night): 23:00–08:00",
+            "- WKND (weekend/statutory holiday): all day Saturday and Sunday, plus statutory holidays",
+            "- null (standard hours): weekday 08:00–17:00",
+            "",
+            "**Mobile viewport breakpoints:**",
+            "- MOBILE: 360px – 428px",
+            "- TABLET: 429px – 1024px",
+            "- DESKTOP: 1025px+",
+            "",
+            "**Bottom navigation tabs:**",
+            "- HOME, SHIFT, NEW_CLAIM, NOTIFICATIONS",
+            "",
+            "**Favourites constraints:**",
+            "- MAX_FAVOURITES: 30",
+            "- AUTO_SEED_COUNT: 10 (top 10 most frequently billed codes for initial seeding)",
+            "",
+            "**Quick entry constraints:**",
+            "- CLAIM_TYPE: AHCIP only (WCB desktop-only)",
+            "- INITIAL_STATE: draft (no validation on mobile)",
+            "- RECENT_PATIENTS_COUNT: 20",
+            "",
+            "**Common quick-toggle modifiers:**",
+            "- CMGP, AFHR, NGHR, TM, WKND",
+            "",
+            "**Performance targets:**",
+            "- TTI_TARGET_MS: 3000",
+            "- CODE_AUTOCOMPLETE_MS: 200",
+            "- PATIENT_SEARCH_MS: 500",
+            "- CLAIM_SAVE_MS: 1000",
+            "- MAX_TAPS_SHIFT_LOG: 5",
+            "",
+            "**Audit action identifiers:**",
+            "- mobile.shift_started, mobile.shift_ended, mobile.patient_logged",
+            "- mobile.quick_claim_created, mobile.favourite_added, mobile.favourite_removed",
+            "- mobile.favourite_reordered, mobile.summary_viewed",
+            "",
+            "**Sync endpoint (Phase 2 placeholder):**",
+            "- SYNC_ENDPOINT: '/api/v1/sync/claims' (returns 501 at MVP)",
+            "",
+            "Export all as frozen objects / TypeScript enums."
+          ],
+          "frd": [
+            "Domain 10 Section 2.3: After-hours auto-detection — AFHR 17:00–23:00, NGHR 23:00–08:00, WKND weekends/holidays.",
+            "Domain 10 Section 5.1: Viewport breakpoints — mobile 360–428px, tablet 429–1024px, desktop 1025px+ (Table 3).",
+            "Domain 10 Section 5.2: Bottom navigation — Home, Shift, New Claim, Notifications (Table 4).",
+            "Domain 10 Section 4.2: Max 30 favourites, auto-seed from top 10 billed codes.",
+            "Domain 10 Section 5.3: Performance targets — TTI <3s, autocomplete <200ms, patient search <500ms, claim save <1s, shift log <5 taps.",
+            "Domain 10 Section 6: Offline queue Phase 2 — sync endpoint returns 501 at MVP."
+          ]
+        },
+        {
+          "id": "D10-002",
+          "description": "Drizzle schema for ed_shifts table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D10-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/db/mobile.schema.ts` starting with ed_shifts table.",
+            "",
+            "**ed_shifts table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| shift_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL | FK to providers. Indexed. |",
+            "| location_id | UUID FK | NOT NULL | FK to practice_locations. The ED facility. |",
+            "| shift_start | TIMESTAMPTZ | NOT NULL | When the shift started |",
+            "| shift_end | TIMESTAMPTZ | NULLABLE | When the shift ended. Null while active. |",
+            "| patient_count | INTEGER | NOT NULL, DEFAULT 0 | Running count of patients logged |",
+            "| estimated_value | DECIMAL(10,2) | NOT NULL, DEFAULT 0 | Running sum of expected fees |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'ACTIVE' | ACTIVE, ENDED, REVIEWED |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "**Indexes:**",
+            "- UNIQUE partial index on (provider_id) WHERE status = 'ACTIVE' — enforces max one active shift per physician",
+            "- Index on (provider_id, status) for active shift lookups",
+            "- Index on (provider_id, created_at DESC) for shift history listing",
+            "",
+            "**Note:** The FRD states ed_shifts is part of Domain 4.0 data model. If the table already exists from Domain 4.0 build, import it here and extend if needed. If it doesn't exist yet, create it in this domain. The important thing is that claims reference shift_id via FK.",
+            "",
+            "Export table and inferred types (InsertEdShift, SelectEdShift)."
+          ],
+          "frd": [
+            "Domain 10 Section 2.2: Shift session data — ed_shifts table schema (Table 1).",
+            "Domain 10 Section 2.1: Only one active shift per physician at a time."
+          ],
+          "security": [
+            "Unique partial index on (provider_id) WHERE status = 'ACTIVE' enforces the one-active-shift constraint at DB level.",
+            "provider_id scoping on all queries — physician can only see their own shifts.",
+            "location_id FK validates the ED facility exists and belongs to the physician's practice locations."
+          ]
+        },
+        {
+          "id": "D10-003",
+          "description": "Drizzle schema for favourite_codes table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D10-001"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/mobile.schema.ts` the favourite_codes table.",
+            "",
+            "**favourite_codes table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| favourite_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL | FK to providers. Indexed. |",
+            "| health_service_code | VARCHAR(10) | NOT NULL | HSC code reference |",
+            "| display_name | VARCHAR(100) | NULLABLE | Custom label. Null = use official description from Reference Data. |",
+            "| sort_order | INTEGER | NOT NULL | Display order in favourites list. Physician can reorder. |",
+            "| default_modifiers | JSONB | NULLABLE | Array of modifiers to auto-select. E.g. ['CMGP']. |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "**Indexes:**",
+            "- UNIQUE on (provider_id, health_service_code) — no duplicate favourites per physician",
+            "- Index on (provider_id, sort_order) for ordered retrieval",
+            "",
+            "Export table and inferred types (InsertFavouriteCode, SelectFavouriteCode)."
+          ],
+          "frd": [
+            "Domain 10 Section 4.1: Favourites data model (Table 2).",
+            "Domain 10 Section 4.2: Max 30 favourites, unique per HSC code per physician."
+          ],
+          "security": [
+            "provider_id scoping — favourites are per-physician. No cross-physician access.",
+            "health_service_code validated against Reference Data (Domain 2) to prevent invalid codes.",
+            "default_modifiers JSONB validated to contain only known modifier codes."
+          ]
+        },
+        {
+          "id": "D10-004",
+          "description": "Zod validation schemas for all mobile API inputs",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D10-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/validation/mobile.validation.ts` with Zod schemas:",
+            "",
+            "**Shift management:**",
+            "- StartShiftSchema: { location_id: UUID }",
+            "- ShiftIdParamSchema: { id: UUID }",
+            "- ListShiftsQuerySchema: { limit?: number(1-50, default 10), status?: enum(ACTIVE, ENDED, REVIEWED) }",
+            "",
+            "**Shift patient logging (creates a claim linked to shift):**",
+            "- LogPatientSchema: { patient_id: UUID, health_service_code: string(max 10), modifiers?: string[], date_of_service?: ISO date (default today), quick_note?: string(max 500) }. Note: quick_note stored on claim but not transmitted in AHCIP submission.",
+            "",
+            "**Favourite codes:**",
+            "- CreateFavouriteSchema: { health_service_code: string(max 10), display_name?: string(max 100), default_modifiers?: string[], sort_order: integer }",
+            "- UpdateFavouriteSchema: { display_name?: string(max 100), default_modifiers?: string[], sort_order?: integer }. At least one field required.",
+            "- FavouriteIdParamSchema: { id: UUID }",
+            "- ReorderFavouritesSchema: { items: array of { favourite_id: UUID, sort_order: integer }, min 1, max 30 items }",
+            "",
+            "**Quick claim entry:**",
+            "- QuickClaimSchema: { patient_id: UUID, health_service_code: string(max 10), modifiers?: string[], date_of_service?: ISO date (default today) }. Always creates AHCIP draft claim.",
+            "",
+            "**Patient minimal create (from mobile):**",
+            "- MobilePatientSchema: { first_name: string(max 100), last_name: string(max 100), phn: string(exactly 9 digits), date_of_birth: ISO date, gender: enum(M, F, X) }. Minimal fields for mobile — full patient edit on desktop.",
+            "",
+            "All UUIDs validated as v4 format. All dates validated as ISO 8601.",
+            "",
+            "Export all schemas."
+          ],
+          "frd": [
+            "Domain 10 Section 8.1: Shift management endpoints (Table 6).",
+            "Domain 10 Section 8.2: Favourite codes endpoints (Table 7).",
+            "Domain 10 Section 3.1: Quick entry flow — patient, code, modifiers, date of service.",
+            "Domain 10 Section 3.2: Quick entry creates AHCIP draft only. No validation on mobile."
+          ],
+          "security": [
+            "quick_note max 500 chars — prevent unbounded text storage.",
+            "PHN validated as exactly 9 digits — Alberta PHN format.",
+            "Modifiers validated against known modifier codes from Reference Data.",
+            "date_of_service cannot be in the future."
+          ]
+        },
+        {
+          "id": "D10-005",
+          "description": "Database migration for Domain 10 tables",
+          "verify": "pnpm --filter api drizzle-kit generate && pnpm --filter api drizzle-kit migrate",
+          "depends": ["D10-002", "D10-003"],
+          "build": [
+            "Generate and run Drizzle migration for Domain 10 tables.",
+            "",
+            "The migration should create:",
+            "1. ed_shifts table with all columns, indexes (including unique partial index for active shift constraint), FK to providers and practice_locations",
+            "2. favourite_codes table with all columns, indexes, FK to providers",
+            "",
+            "**Important:** Check if ed_shifts already exists from Domain 4.0 build. If so, skip creation or add any missing columns via ALTER TABLE. The shift_id FK on the claims table should also be added if not already present.",
+            "",
+            "Run `pnpm --filter api drizzle-kit generate` to create migration file.",
+            "Run `pnpm --filter api drizzle-kit migrate` to apply.",
+            "Verify both tables exist with correct schema."
+          ],
+          "frd": [
+            "Domain 10 Section 2.2: ed_shifts table — may already exist in Domain 4.0.",
+            "Domain 10 Section 4.1: favourite_codes table."
+          ],
+          "security": [
+            "Unique partial index on ed_shifts (provider_id) WHERE status = 'ACTIVE' is the DB-level enforcement of one active shift.",
+            "FK constraints ensure referential integrity."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 10: Mobile Companion — Repository Layer",
+      "tasks": [
+        {
+          "id": "D10-010",
+          "description": "ED shifts repository — start, end, active lookup, history",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/repos/ed-shifts.repo.test.ts",
+          "depends": ["D10-005"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/repos/ed-shifts.repo.ts` and test file.",
+            "",
+            "**Methods (all require providerId):**",
+            "",
+            "- `create(data: InsertEdShift)` — create new shift with status ACTIVE. Will throw on unique constraint violation if physician already has an active shift.",
+            "- `getActive(providerId)` — get the active shift (status = 'ACTIVE') for this provider. Returns null if none. Uses the partial unique index.",
+            "- `getById(shiftId, providerId)` — fetch shift by ID scoped to provider. Return null for wrong provider (404 pattern).",
+            "- `endShift(shiftId, providerId)` — set shift_end = now(), status = 'ENDED'. Recalculate patient_count and estimated_value from linked claims. Return updated shift.",
+            "- `markReviewed(shiftId, providerId)` — set status = 'REVIEWED'. Called when physician reviews all shift claims on desktop.",
+            "- `list(providerId, filters?)` — list shifts with optional status filter. Paginated by limit. Ordered by created_at DESC.",
+            "- `incrementPatientCount(shiftId, providerId, feeAmount)` — atomically increment patient_count by 1 and add feeAmount to estimated_value. Called after logging a patient encounter.",
+            "- `getSummary(shiftId, providerId)` — return shift details plus list of claim IDs and basic claim data (patient name, HSC code, fee) linked to this shift.",
+            "",
+            "Unit tests: create with active shift throws, getActive returns correct shift, endShift sets timestamp and recalculates, incrementPatientCount is atomic, provider scoping returns null for wrong provider."
+          ],
+          "frd": [
+            "Domain 10 Section 2.1: Shift lifecycle — start, log patients, end, review (Table 0).",
+            "Domain 10 Section 2.2: ed_shifts table fields and shift session management.",
+            "Domain 10 Section 8.1: Shift API endpoints (Table 6)."
+          ],
+          "security": [
+            "One active shift per physician enforced at DB level (unique partial index) and repo level.",
+            "All methods require providerId — no cross-physician shift access.",
+            "getById returns null for wrong provider — 404 pattern.",
+            "incrementPatientCount uses atomic SQL (SET patient_count = patient_count + 1) to prevent race conditions."
+          ]
+        },
+        {
+          "id": "D10-011",
+          "description": "Favourite codes repository — CRUD, reorder, seeding",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/repos/favourite-codes.repo.test.ts",
+          "depends": ["D10-005"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/repos/favourite-codes.repo.ts` and test file.",
+            "",
+            "**Methods (all require providerId):**",
+            "",
+            "- `create(data: InsertFavouriteCode)` — create new favourite. Throws on unique constraint violation (duplicate HSC code for this provider). Validates count < 30 before insert.",
+            "- `getById(favouriteId, providerId)` — fetch by ID scoped to provider. Null for wrong provider (404 pattern).",
+            "- `update(favouriteId, providerId, data: Partial)` — update display_name, default_modifiers, sort_order.",
+            "- `delete(favouriteId, providerId)` — hard delete. Return boolean success.",
+            "- `listByProvider(providerId)` — list all favourites ordered by sort_order ASC.",
+            "- `reorder(providerId, items: {favourite_id, sort_order}[])` — bulk update sort_order for multiple favourites in a single transaction. Validates all favourite_ids belong to this provider.",
+            "- `countByProvider(providerId)` — return count of favourites. Used for max-30 enforcement.",
+            "- `bulkCreate(providerId, items: InsertFavouriteCode[])` — batch insert for initial seeding. Used when auto-seeding from claim history or specialty defaults.",
+            "",
+            "Unit tests: create enforces unique constraint, max 30 enforcement, CRUD operations, reorder updates all sort_orders, bulkCreate seeds correctly, provider scoping."
+          ],
+          "frd": [
+            "Domain 10 Section 4.1: Favourites data model (Table 2).",
+            "Domain 10 Section 4.2: Add/remove, reorder via drag-and-drop, max 30, default modifiers per favourite.",
+            "Domain 10 Section 8.2: Favourite codes API endpoints (Table 7)."
+          ],
+          "security": [
+            "Max 30 favourites enforced at repo level (count check before insert) and application level.",
+            "reorder validates all favourite_ids belong to the calling provider — prevents reordering other physicians' favourites.",
+            "hard delete is acceptable — favourites are not PHI."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 10: Mobile Companion — Service Layer",
+      "tasks": [
+        {
+          "id": "D10-020",
+          "description": "ED shift service — shift lifecycle, patient logging, after-hours detection",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/services/ed-shift.service.test.ts",
+          "depends": ["D10-010"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/services/ed-shift.service.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `startShift(providerId, locationId)` — validate location belongs to physician (via Domain 5 provider-locations). Check no active shift exists. Create shift. Audit log: mobile.shift_started. Return shift.",
+            "- `getActiveShift(providerId)` — return active shift or null.",
+            "- `logPatient(providerId, shiftId, logData)` — validate shift is active and belongs to provider. Create a draft AHCIP claim (via Domain 4 claim service) with shift_id populated. Set claim.date_of_service to today. Set encounter_start to now(). Detect after-hours eligibility based on current time. Increment shift patient_count and estimated_value. Audit log: mobile.patient_logged. Return created claim with after_hours_eligible flag.",
+            "- `endShift(providerId, shiftId)` — validate shift is active and belongs to provider. End shift. Return summary: patient_count, estimated_value, claim list with after-hours flags. Audit log: mobile.shift_ended.",
+            "- `getShiftSummary(providerId, shiftId)` — return shift details + linked claims summary.",
+            "- `listShifts(providerId, filters)` — list physician's shifts.",
+            "",
+            "**After-hours auto-detection logic:**",
+            "Given an encounter timestamp and the physician's location timezone:",
+            "1. Convert encounter time to local time.",
+            "2. Check if day is a weekend (Sat/Sun) → WKND modifier eligible.",
+            "3. Check if day is an Alberta statutory holiday → WKND modifier eligible.",
+            "4. If weekday, check time bracket: 17:00–23:00 → AFHR, 23:00–08:00 → NGHR.",
+            "5. Check if the HSC code is eligible for the detected modifier (some codes exclude after-hours).",
+            "6. Return { modifier: 'AFHR'|'NGHR'|'WKND'|null, eligible: boolean }.",
+            "7. This is a suggestion only — not auto-applied. Shown as indicator on mobile, confirmed on desktop.",
+            "",
+            "**Alberta statutory holidays (for auto-detection):**",
+            "New Year's Day, Family Day (3rd Monday Feb), Good Friday, Victoria Day, Canada Day, Heritage Day (1st Monday Aug), Labour Day, Truth and Reconciliation Day (Sept 30), Thanksgiving, Remembrance Day, Christmas Day.",
+            "Note: Some are fixed dates, some are relative. Use a holiday calculation library or compute programmatically.",
+            "",
+            "Unit tests: start shift succeeds, start shift with active shift fails, log patient creates draft claim with shift_id, after-hours detection for each time bracket, end shift returns summary, location validation."
+          ],
+          "frd": [
+            "Domain 10 Section 2.1: Shift lifecycle — 7 steps from start to desktop review (Table 0).",
+            "Domain 10 Section 2.2: Each claim created during shift has shift_id populated.",
+            "Domain 10 Section 2.3: After-hours auto-detection — AFHR, NGHR, WKND modifiers as suggestions.",
+            "Domain 10 Section 2.1 Step 6: End shift shows patient count, estimated total value, flagged items."
+          ],
+          "security": [
+            "Location validated against physician's practice locations — cannot start shift at another physician's location.",
+            "Shift ownership validated before logging patient or ending shift.",
+            "Claims created via logPatient inherit provider_id scoping from the shift — no cross-physician claim creation.",
+            "After-hours detection is suggestion-only — never auto-applied. Physician confirms on desktop."
+          ]
+        },
+        {
+          "id": "D10-021",
+          "description": "Favourite codes service — management, seeding, sync with desktop",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/services/favourite-codes.service.test.ts",
+          "depends": ["D10-011"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/services/favourite-codes.service.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `addFavourite(providerId, data)` — validate HSC code exists in Reference Data (Domain 2). Validate count < 30. Validate modifiers are known codes. Create favourite. Audit log: mobile.favourite_added. Return created favourite with resolved HSC description.",
+            "- `updateFavourite(providerId, favouriteId, data)` — validate ownership. Update fields. Return updated favourite.",
+            "- `removeFavourite(providerId, favouriteId)` — validate ownership. Delete. Audit log: mobile.favourite_removed.",
+            "- `reorderFavourites(providerId, items)` — validate all IDs belong to provider. Bulk update sort_order. Audit log: mobile.favourite_reordered.",
+            "- `listFavourites(providerId)` — list favourites in sort order. Join with Reference Data to include HSC code description, fee schedule amount. Return enriched list.",
+            "- `seedFavourites(providerId)` — called on first mobile use or when favourites list is empty. If physician has claim history: query top 10 most frequently billed HSC codes and bulk-create as favourites. If no claim history: query specialty-typical codes from Reference Data (Domain 2) and seed from those. Return seeded count.",
+            "",
+            "**Seeding logic detail:**",
+            "1. Check if physician has any favourites → if yes, skip seeding (already initialised).",
+            "2. Query claims table for this provider, GROUP BY health_service_code, ORDER BY COUNT DESC, LIMIT 10.",
+            "3. If results found → bulk-create favourites with sort_order 1–N and no custom display_name or default_modifiers.",
+            "4. If no claim history → query reference_data for specialty-typical codes based on physician's specialty (from Domain 5 provider profile).",
+            "5. Bulk-create from specialty defaults.",
+            "",
+            "Unit tests: add validates HSC code, max 30 enforcement, reorder validates ownership, seeding from claim history, seeding from specialty defaults, seeding skip when favourites exist."
+          ],
+          "frd": [
+            "Domain 10 Section 4.1: Seeding — auto-seed from top 10 billed codes or specialty-typical codes.",
+            "Domain 10 Section 4.2: Add/remove, reorder, max 30, default modifiers, sync across mobile and desktop."
+          ],
+          "security": [
+            "HSC code validated against Reference Data — prevent injection of invalid codes.",
+            "Modifiers validated against known modifier list.",
+            "Seeding queries claim history scoped to provider_id — no cross-physician claim data access."
+          ]
+        },
+        {
+          "id": "D10-022",
+          "description": "Quick claim service — mobile claim entry, minimal validation",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/services/quick-claim.service.test.ts",
+          "depends": ["D10-010"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/services/quick-claim.service.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `createQuickClaim(providerId, data: QuickClaimInput)` — create a draft AHCIP claim with minimal fields. No full validation run on mobile (desktop handles validation). Claim created via Domain 4 claim service with: patient_id, health_service_code, modifiers, date_of_service, claim_type='AHCIP', state='draft', source='mobile_quick_entry'. Return created claim. Audit log: mobile.quick_claim_created.",
+            "- `createMinimalPatient(providerId, data: MobilePatientInput)` — create patient with minimal fields (first_name, last_name, PHN, DOB, gender) via Domain 3 patient service. For mobile quick-add when patient not yet in registry. Full patient profile editing happens on desktop. Return created patient.",
+            "- `getRecentPatients(providerId, limit?)` — query last 20 patients this physician has billed (by most recent claim date_of_service). Return patient_id, first_name, last_name, PHN. For the 'recent patients' list in quick entry.",
+            "",
+            "**Quick claim data flow:**",
+            "1. Mobile creates draft claim with source='mobile_quick_entry'.",
+            "2. Claim appears in physician's desktop claim list.",
+            "3. On desktop, physician reviews: adds diagnostic codes, runs validation, queues for submission.",
+            "4. Mobile never modifies a claim beyond initial creation.",
+            "",
+            "Unit tests: quick claim creates draft AHCIP claim, WCB claim type rejected, minimal patient creation, recent patients ordered by recency, claim has source='mobile_quick_entry'."
+          ],
+          "frd": [
+            "Domain 10 Section 3.1: Quick entry flow — select patient, select code, modifiers, date, save as draft.",
+            "Domain 10 Section 3.2: Quick entry constraints — AHCIP only, draft state, no validation on mobile, diagnostic codes optional."
+          ],
+          "security": [
+            "Claims created as AHCIP draft only — WCB via mobile is explicitly out of scope.",
+            "Patient created with PHN — PHI protection applies. PHN must be unique per physician's registry.",
+            "source='mobile_quick_entry' tag allows audit trail to distinguish mobile-created claims.",
+            "No full validation on mobile prevents mobile from bypassing desktop validation rules."
+          ]
+        },
+        {
+          "id": "D10-023",
+          "description": "Mobile summary service — lightweight KPI aggregation for home screen",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/services/mobile-summary.service.test.ts",
+          "depends": ["D10-010"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/services/mobile-summary.service.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `getSummary(providerId)` — single lightweight query returning:",
+            "  - today_claims_count: count of claims created today by this physician",
+            "  - pending_queue_count: count of claims in 'queued' state awaiting submission",
+            "  - unread_notifications_count: count from Domain 6 notification service",
+            "  - active_shift: { shift_id, shift_start, patient_count, estimated_value } or null",
+            "",
+            "**Performance requirement:** Response < 100ms. This endpoint is called on every mobile home screen load.",
+            "",
+            "**Optimisation strategy:**",
+            "- Use COUNT queries with indexed columns — no full table scans.",
+            "- today_claims_count: WHERE provider_id = $1 AND created_at >= today_start",
+            "- pending_queue_count: WHERE provider_id = $1 AND state = 'queued'",
+            "- unread_notifications_count: call Domain 6 unread count method",
+            "- active_shift: use the ed_shifts active shift lookup (already indexed)",
+            "- Consider caching this response for 30 seconds per provider if DB latency is a concern.",
+            "",
+            "Audit log: mobile.summary_viewed (rate-limited, max 1 per 10 minutes per physician).",
+            "",
+            "Unit tests: summary returns correct counts with seeded data, no active shift returns null, performance under 100ms with indexed queries."
+          ],
+          "frd": [
+            "Domain 10 Section 8.3: GET /api/v1/mobile/summary — today_claims_count, pending_queue_count, unread_notifications_count, active_shift_id (Table 8).",
+            "Domain 10 Section 5.2: Home tab shows today's claims logged, pending queue count, unread notifications count.",
+            "Domain 10 Section 9.4: Mobile summary endpoint < 100ms response time."
+          ],
+          "security": [
+            "providerId scoped — summary only includes this physician's data.",
+            "unread_notifications_count comes from Domain 6 scoped to physician.",
+            "Lightweight response — no PHI in summary (counts only, no patient data)."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 10: Mobile Companion — Routes, Handlers & Integration Tests",
+      "tasks": [
+        {
+          "id": "D10-030",
+          "description": "Shift management routes — start, end, active, summary, list",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/routes/shift.routes.test.ts",
+          "depends": ["D10-020", "D10-004"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/routes/shift.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication. Physician role only (delegates cannot manage shifts).",
+            "",
+            "**Routes:**",
+            "",
+            "1. `POST /api/v1/shifts` — body validated by StartShiftSchema. Start new shift. Returns shift. 409 if active shift already exists. Permission: CLAIM_CREATE.",
+            "2. `GET /api/v1/shifts/active` — no params. Returns active shift or 204 No Content if none. Permission: CLAIM_VIEW.",
+            "3. `POST /api/v1/shifts/:id/end` — param validated by ShiftIdParamSchema. End active shift. Returns shift summary. 404 if shift not found or wrong provider. 400 if shift not active. Permission: CLAIM_CREATE.",
+            "4. `GET /api/v1/shifts/:id/summary` — param validated by ShiftIdParamSchema. Returns shift summary with linked claims. Permission: CLAIM_VIEW.",
+            "5. `GET /api/v1/shifts` — query validated by ListShiftsQuerySchema. List recent shifts. Permission: CLAIM_VIEW.",
+            "",
+            "**Patient logging within shift (uses existing claim creation with shift context):**",
+            "6. `POST /api/v1/shifts/:id/patients` — body validated by LogPatientSchema. Log patient encounter in active shift. Creates draft claim linked to shift. Returns claim with after_hours_eligible flag. Permission: CLAIM_CREATE.",
+            "",
+            "Route-level unit tests: param validation, 409 on duplicate active shift, 404 for wrong provider, 400 for ending non-active shift."
+          ],
+          "frd": [
+            "Domain 10 Section 8.1: Shift management endpoints (Table 6).",
+            "Domain 10 Section 2.1: Shift lifecycle steps.",
+            "Domain 10 Section 7: User stories MOB-001, MOB-002, MOB-003."
+          ],
+          "security": [
+            "Physician role only — delegates cannot start or manage ED shifts.",
+            "Provider scoping from session — shift operations only on own shifts.",
+            "409 on duplicate active shift reveals existence — acceptable since it's the same physician.",
+            "Wrong provider on shift access returns 404 not 403."
+          ]
+        },
+        {
+          "id": "D10-031",
+          "description": "Favourite codes routes — CRUD and reorder",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/routes/favourite.routes.test.ts",
+          "depends": ["D10-021", "D10-004"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/routes/favourite.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication.",
+            "",
+            "**Routes:**",
+            "",
+            "1. `GET /api/v1/favourites` — list physician's favourites in sort order. Enriched with HSC descriptions. Triggers seeding on first call if empty. Permission: CLAIM_VIEW.",
+            "2. `POST /api/v1/favourites` — body validated by CreateFavouriteSchema. Add favourite. 409 if HSC code already in favourites. 400 if max 30 reached. Permission: CLAIM_CREATE.",
+            "3. `PUT /api/v1/favourites/:id` — body validated by UpdateFavouriteSchema. Update favourite. 404 if not found or wrong provider. Permission: CLAIM_CREATE.",
+            "4. `DELETE /api/v1/favourites/:id` — param validated by FavouriteIdParamSchema. Remove favourite. 404 if not found or wrong provider. Permission: CLAIM_CREATE.",
+            "5. `PUT /api/v1/favourites/reorder` — body validated by ReorderFavouritesSchema. Bulk reorder. Permission: CLAIM_CREATE.",
+            "",
+            "Route-level unit tests: CRUD operations, 409 on duplicate, 400 on max 30, auto-seed on first GET, reorder bulk update."
+          ],
+          "frd": [
+            "Domain 10 Section 8.2: Favourite codes endpoints (Table 7).",
+            "Domain 10 Section 4.2: Favourites management — add, remove, reorder, max 30."
+          ],
+          "security": [
+            "Provider scoping — favourites only accessible by owning physician.",
+            "Wrong provider returns 404 not 403.",
+            "Auto-seed on first GET is provider-scoped — seeds from own claim history only."
+          ]
+        },
+        {
+          "id": "D10-032",
+          "description": "Quick claim and mobile summary routes, sync placeholder",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/routes/mobile.routes.test.ts",
+          "depends": ["D10-022", "D10-023", "D10-004"],
+          "build": [
+            "Create `apps/api/src/domains/mobile/routes/mobile.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication.",
+            "",
+            "**Routes:**",
+            "",
+            "1. `POST /api/v1/mobile/quick-claim` — body validated by QuickClaimSchema. Create draft AHCIP claim. Returns created claim. Permission: CLAIM_CREATE.",
+            "2. `POST /api/v1/mobile/patients` — body validated by MobilePatientSchema. Create minimal patient record. Returns created patient. Permission: PATIENT_CREATE.",
+            "3. `GET /api/v1/mobile/recent-patients` — query: { limit?: number(1-20, default 20) }. Returns recent patients for quick entry. Permission: PATIENT_VIEW.",
+            "4. `GET /api/v1/mobile/summary` — no params. Returns lightweight KPI summary for home screen. Permission: CLAIM_VIEW.",
+            "5. `POST /api/v1/sync/claims` — Phase 2 placeholder. Returns 501 Not Implemented with body { message: 'Offline sync is not available in this version', phase: 2 }. No authentication required for 501 response (client may call without valid session when reconnecting).",
+            "",
+            "Route-level unit tests: quick claim creates draft, mobile patient creation, recent patients, summary response shape, sync returns 501."
+          ],
+          "frd": [
+            "Domain 10 Section 3: Quick claim entry flow and constraints.",
+            "Domain 10 Section 8.3: GET /api/v1/mobile/summary endpoint (Table 8).",
+            "Domain 10 Section 6: Offline queue Phase 2 — sync endpoint returns 501 at MVP."
+          ],
+          "security": [
+            "Quick claim creates AHCIP draft only — reject if claim_type != AHCIP.",
+            "Sync endpoint returns 501 — no data processed. Safe to leave unauthenticated for reconnection scenario.",
+            "Mobile patient creation still validates PHN format and enforces provider_id scoping."
+          ]
+        },
+        {
+          "id": "D10-033",
+          "description": "Integration tests — end-to-end mobile workflows",
+          "verify": "pnpm --filter api vitest run test/integration/mobile/",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create integration test files in `apps/api/test/integration/mobile/`:",
+            "",
+            "**File: mobile.shift.integration.ts**",
+            "- Start shift at location → verify shift active → log 3 patients with favourite codes → verify patient_count = 3 → end shift → verify summary matches 3 patients.",
+            "- After-hours: start shift, log patient at 19:00 → verify AFHR eligible flag. Log patient at 23:30 → verify NGHR eligible flag.",
+            "- Active shift persistence: start shift → reload (new request with same session) → GET /shifts/active returns the shift.",
+            "- One active shift: start shift → attempt second start → 409.",
+            "- Shift claims appear in desktop claim list (GET /api/v1/claims with shift_id filter).",
+            "",
+            "**File: mobile.quick-entry.integration.ts**",
+            "- Quick entry flow: create minimal patient → quick claim with patient → verify draft claim in desktop list.",
+            "- Recent patients: create 3 claims for different patients → GET /recent-patients returns them ordered by recency.",
+            "- Quick entry creates AHCIP only: attempt WCB → rejected.",
+            "- Quick entry claim has source='mobile_quick_entry'.",
+            "",
+            "**File: mobile.favourites.integration.ts**",
+            "- First GET triggers seeding (seed physician with known claim history first) → favourites list populated from top billed codes.",
+            "- Add favourite → appears in list → update display_name → verify → delete → removed.",
+            "- Max 30: add 30 favourites → attempt 31st → 400.",
+            "- Reorder: create 5 favourites → reorder → verify new sort_order.",
+            "- Duplicate HSC code → 409.",
+            "",
+            "**File: mobile.summary.integration.ts**",
+            "- Seed claims and active shift → GET /mobile/summary → verify all counts correct.",
+            "- No active shift → summary.active_shift is null.",
+            "- GET /sync/claims → 501.",
+            "",
+            "**File: mobile.delegate.integration.ts**",
+            "- Delegate with CLAIM_VIEW can view shifts, favourites, summary.",
+            "- Delegate cannot start/end shifts (physician-only operation).",
+            "- Delegate with CLAIM_CREATE can create quick claims on behalf of physician."
+          ],
+          "frd": [
+            "Domain 10 Section 9: All testing requirements — responsive design, ED shift, quick entry, performance.",
+            "Domain 10 Section 7: User stories and acceptance criteria (Table 5).",
+            "MOB-002: < 5 taps for repeat patient + favourite code.",
+            "MOB-004: Quick entry under 30 seconds.",
+            "MOB-008: TTI < 3s, code search < 200ms, claim save < 1s."
+          ],
+          "tests": [
+            "Start shift → log patients → end shift → summary shows correct count and estimated value.",
+            "After-hours detection: 18:00 weekday → AFHR, 23:30 weekday → NGHR, Saturday → WKND.",
+            "One active shift constraint: second start attempt → 409.",
+            "Quick claim creates AHCIP draft with source='mobile_quick_entry'.",
+            "Favourites auto-seed from top 10 billed codes on first access.",
+            "Max 30 favourites enforced. Duplicate HSC code → 409.",
+            "Mobile summary returns correct counts under 100ms.",
+            "Sync endpoint returns 501 Not Implemented."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 10: Mobile Companion — Security Tests",
+      "tasks": [
+        {
+          "id": "D10-040",
+          "description": "Security: authentication enforcement on every route",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.authn.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.authn.security.ts`.",
+            "",
+            "Test every authenticated route in Domain 10 returns 401 without a valid session cookie:",
+            "",
+            "**Shift routes:**",
+            "- POST /api/v1/shifts",
+            "- GET /api/v1/shifts/active",
+            "- POST /api/v1/shifts/:id/end",
+            "- GET /api/v1/shifts/:id/summary",
+            "- GET /api/v1/shifts",
+            "- POST /api/v1/shifts/:id/patients",
+            "",
+            "**Favourite routes:**",
+            "- GET /api/v1/favourites",
+            "- POST /api/v1/favourites",
+            "- PUT /api/v1/favourites/:id",
+            "- DELETE /api/v1/favourites/:id",
+            "- PUT /api/v1/favourites/reorder",
+            "",
+            "**Mobile routes:**",
+            "- POST /api/v1/mobile/quick-claim",
+            "- POST /api/v1/mobile/patients",
+            "- GET /api/v1/mobile/recent-patients",
+            "- GET /api/v1/mobile/summary",
+            "",
+            "**Excluded from auth test:**",
+            "- POST /api/v1/sync/claims → returns 501 regardless (unauthenticated OK for Phase 2 reconnection)",
+            "",
+            "For each route (16 total): send request with no cookie, with expired cookie, and with tampered cookie. All must return 401 with no data leakage.",
+            "",
+            "Total assertions: 16 routes × 3 failure modes = 48 test cases."
+          ],
+          "security": [
+            "401 responses must not contain any data beyond the error object.",
+            "Tampered cookies rejected — invalid signature.",
+            "Expired sessions return 401, not stale data.",
+            "Sync endpoint excluded — 501 is acceptable without auth."
+          ]
+        },
+        {
+          "id": "D10-041",
+          "description": "Security: authorization and role enforcement",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.authz.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.authz.security.ts`.",
+            "",
+            "Test role and permission-based access control:",
+            "",
+            "**Delegate cannot manage shifts (physician-only):**",
+            "- POST /shifts as delegate → 403",
+            "- POST /shifts/:id/end as delegate → 403",
+            "- POST /shifts/:id/patients as delegate → 403 (or allowed if delegate has CLAIM_CREATE — clarify per business rule)",
+            "",
+            "**Delegate without CLAIM_VIEW:**",
+            "- GET /shifts/active → 403",
+            "- GET /shifts → 403",
+            "- GET /favourites → 403",
+            "- GET /mobile/summary → 403",
+            "- GET /mobile/recent-patients → 403",
+            "",
+            "**Delegate with CLAIM_VIEW but without CLAIM_CREATE:**",
+            "- GET /shifts/active → 200 (allowed)",
+            "- POST /mobile/quick-claim → 403 (cannot create claims)",
+            "- POST /favourites → 403 (cannot modify favourites)",
+            "",
+            "**Delegate without PATIENT_CREATE:**",
+            "- POST /mobile/patients → 403",
+            "",
+            "**Permission escalation prevention:**",
+            "- Delegate cannot use shift management to create claims under the physician's identity without CLAIM_CREATE."
+          ],
+          "security": [
+            "Shift start/end is physician-only — delegates observe shifts but don't manage them.",
+            "CLAIM_CREATE required for quick claims, patient logging, and favourite modifications.",
+            "PATIENT_CREATE required for mobile patient creation."
+          ]
+        },
+        {
+          "id": "D10-042",
+          "description": "Security: cross-physician tenant isolation (MOST CRITICAL)",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.scoping.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.scoping.security.ts`.",
+            "",
+            "**MOST CRITICAL security test for Domain 10.** Shifts and claims contain PHI.",
+            "",
+            "Setup: Create two physicians (Physician A and Physician B) each with shifts, favourites, and claims.",
+            "",
+            "**Shift isolation:**",
+            "- Physician A starts shift. Physician B calls GET /shifts/active → null (not Physician A's shift).",
+            "- Physician A ends shift. Physician B calls GET /shifts/:id/summary with Physician A's shift_id → 404 (not 403).",
+            "- Physician B calls POST /shifts/:id/patients with Physician A's shift_id → 404 (not 403).",
+            "- Physician B calls POST /shifts/:id/end with Physician A's shift_id → 404 (not 403).",
+            "- Physician A lists shifts → sees only their shifts. Physician B lists shifts → sees only their shifts.",
+            "",
+            "**Favourite isolation:**",
+            "- Physician A's favourites list contains only their codes.",
+            "- Physician B calls PUT /favourites/:id with Physician A's favourite_id → 404.",
+            "- Physician B calls DELETE /favourites/:id with Physician A's favourite_id → 404.",
+            "- Physician B calls PUT /favourites/reorder with Physician A's favourite_ids → validation failure (IDs don't belong to Physician B).",
+            "",
+            "**Quick claim isolation:**",
+            "- Physician A creates quick claim → appears in Physician A's claim list only.",
+            "- Physician A's recent patients list contains only patients they've billed.",
+            "",
+            "**Mobile summary isolation:**",
+            "- Physician A's summary shows only their counts. Physician B's summary shows only their counts.",
+            "",
+            "**Delegate cross-physician:**",
+            "- Delegate of Physician A in Physician A's context → sees Physician A's shifts, favourites, summary.",
+            "- Delegate cannot access Physician B's data if not linked to Physician B.",
+            "",
+            "All cross-physician access attempts MUST return 404, NEVER 403."
+          ],
+          "security": [
+            "MOST CRITICAL: All cross-physician access returns 404 not 403.",
+            "Shift data is PHI-adjacent — shift contains patient encounters.",
+            "Favourite codes are non-PHI but still physician-specific.",
+            "reorder endpoint must validate ALL IDs in the batch belong to the calling physician."
+          ]
+        },
+        {
+          "id": "D10-043",
+          "description": "Security: input validation — injection, type coercion, boundary values",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.input.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.input.security.ts`.",
+            "",
+            "**SQL injection attempts:**",
+            "- location_id: `'; DROP TABLE ed_shifts; --` → 400",
+            "- health_service_code: `03.04A'; DELETE FROM favourite_codes; --` → 400",
+            "- patient_id: injection payload → 400",
+            "- shift_id param: injection payload → 400",
+            "",
+            "**XSS attempts:**",
+            "- display_name: `<script>alert('xss')</script>` → 400 or sanitised",
+            "- quick_note: `<img onerror=alert(1)>` → 400 or sanitised",
+            "- first_name / last_name: HTML injection → 400 or sanitised",
+            "",
+            "**Type coercion attacks:**",
+            "- location_id: integer instead of UUID → 400",
+            "- sort_order: string instead of integer → 400",
+            "- default_modifiers: string instead of array → 400",
+            "- limit: negative number → 400",
+            "",
+            "**UUID validation:**",
+            "- All ID params: 'not-a-uuid' → 400",
+            "- Malformed UUID → 400",
+            "",
+            "**Boundary values:**",
+            "- display_name: 101 chars → 400 (max 100)",
+            "- quick_note: 501 chars → 400 (max 500)",
+            "- PHN: 8 digits → 400 (must be exactly 9)",
+            "- PHN: 10 digits → 400",
+            "- PHN: letters → 400",
+            "- date_of_service: future date → 400",
+            "- date_of_birth: future date → 400",
+            "- sort_order in reorder: negative → 400",
+            "- reorder items: 31 items → 400 (max 30)",
+            "- gender: invalid value → 400 (must be M, F, or X)",
+            "",
+            "All invalid inputs return 400 with generic error messages."
+          ],
+          "security": [
+            "All queries parameterised via Drizzle — no string concatenation.",
+            "Validation at route level before any DB access.",
+            "PHN is 9 digits — strict format prevents injection."
+          ]
+        },
+        {
+          "id": "D10-044",
+          "description": "Security: PHI leakage prevention in errors, headers, and logs",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.leakage.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.leakage.security.ts`.",
+            "",
+            "**Error responses must not contain PHI:**",
+            "- 404 on shift access → no shift data, no patient data in response.",
+            "- 400 on invalid input → validation error only, no claim/patient data.",
+            "- 500 (simulated) → generic error, no stack trace, no PHI.",
+            "- 409 on duplicate active shift → error message, no shift details of existing shift.",
+            "- 409 on duplicate favourite → error message, no details of existing favourite.",
+            "",
+            "**Response headers:**",
+            "- No X-Powered-By header.",
+            "- No server version info.",
+            "",
+            "**Logs must not contain PHI:**",
+            "- Shift logging captures shift_id and provider_id but NOT patient names or PHN.",
+            "- Quick claim logging captures claim_id but NOT patient data.",
+            "- Error logs contain generic error type but NOT PHI.",
+            "",
+            "**Mobile-specific leakage vectors:**",
+            "- GET /mobile/summary → counts only, no patient names, no claim details.",
+            "- GET /mobile/recent-patients → returns patient first_name, last_name, PHN (intentional PHI in response — but only for the authenticated physician's patients).",
+            "- Shift summary → includes patient names and HSC codes (intentional PHI — but only for the authenticated physician's shift).",
+            "- After-hours detection flag → boolean only, no patient data.",
+            "",
+            "**Quick note handling:**",
+            "- quick_note stored on claim for physician reference. Not included in AHCIP submission data. Verify it does not appear in batch submission payloads."
+          ],
+          "security": [
+            "Mobile summary is PHI-free (counts only).",
+            "Recent patients response intentionally contains PHI (names, PHN) — scoped to authenticated physician.",
+            "quick_note is physician-private — never transmitted in AHCIP batch data."
+          ]
+        },
+        {
+          "id": "D10-045",
+          "description": "Security: audit trail completeness — all events logged, append-only",
+          "verify": "pnpm --filter api vitest run test/security/mobile/mobile.audit.security.ts",
+          "depends": ["D10-030", "D10-031", "D10-032"],
+          "build": [
+            "Create `apps/api/test/security/mobile/mobile.audit.security.ts`.",
+            "",
+            "**Verify all audit events are logged:**",
+            "",
+            "1. mobile.shift_started: Start shift → audit entry with shift_id, location_id, provider_id, timestamp.",
+            "2. mobile.shift_ended: End shift → audit entry with shift_id, patient_count, estimated_value, provider_id.",
+            "3. mobile.patient_logged: Log patient in shift → audit entry with shift_id, claim_id, provider_id. NO patient name or PHN in audit entry.",
+            "4. mobile.quick_claim_created: Quick claim → audit entry with claim_id, health_service_code, provider_id. NO patient data.",
+            "5. mobile.favourite_added: Add favourite → audit entry with favourite_id, health_service_code, provider_id.",
+            "6. mobile.favourite_removed: Remove favourite → audit entry with favourite_id, provider_id.",
+            "7. mobile.favourite_reordered: Reorder → audit entry with provider_id, count of items reordered.",
+            "8. mobile.summary_viewed: View summary → audit entry rate-limited (max 1 per 10 minutes per physician).",
+            "",
+            "**Audit integrity:**",
+            "- Audit entries are append-only. No UPDATE or DELETE on audit log table.",
+            "- Each audit entry includes actor_id, actor_role, action, resource_id, timestamp, and details JSONB.",
+            "",
+            "**Delegate audit:**",
+            "- Delegate viewing summary → audit shows delegate as actor, physician as context.",
+            "- Delegate creating quick claim → audit shows delegate identity.",
+            "",
+            "**Rate-limited audit (mobile.summary_viewed):**",
+            "- View summary 5 times in 1 minute → only 1 audit entry.",
+            "- Wait 11 minutes, view again → new audit entry."
+          ],
+          "security": [
+            "Append-only audit log — no UPDATE or DELETE.",
+            "Patient logging audit MUST NOT contain patient name or PHN — only claim_id reference.",
+            "Rate-limited summary audit prevents noise from frequent mobile home screen loads."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 10: Mobile Companion — Final Validation",
+      "tasks": [
+        {
+          "id": "D10-099",
+          "description": "Full domain test suite: all unit + integration + security tests",
+          "verify": "pnpm --filter api vitest run src/domains/mobile/ test/integration/mobile/ test/security/mobile/",
+          "depends": [
+            "D10-040",
+            "D10-041",
+            "D10-042",
+            "D10-043",
+            "D10-044",
+            "D10-045"
+          ],
+          "build": [
+            "Run the complete test suite for Domain 10 Mobile Companion. Do NOT write new code unless tests fail.",
+            "",
+            "1. Run all unit tests: `pnpm --filter api vitest run src/domains/mobile/`",
+            "2. Run all integration tests: `pnpm --filter api vitest run test/integration/mobile/`",
+            "3. Run all security tests: `pnpm --filter api vitest run test/security/mobile/`",
+            "",
+            "If any tests fail: read the failure, fix the source code (not the tests unless the test is wrong), re-run.",
+            "",
+            "After all pass, run the full suite one final time:",
+            "```bash",
+            "pnpm --filter api vitest run src/domains/mobile/ test/integration/mobile/ test/security/mobile/",
+            "```",
+            "",
+            "Verify these security test files exist and are non-empty:",
+            "- test/security/mobile/mobile.authn.security.ts",
+            "- test/security/mobile/mobile.authz.security.ts",
+            "- test/security/mobile/mobile.scoping.security.ts",
+            "- test/security/mobile/mobile.input.security.ts",
+            "- test/security/mobile/mobile.leakage.security.ts",
+            "- test/security/mobile/mobile.audit.security.ts",
+            "",
+            "Verify all Domain 10 API endpoints are registered and reachable:",
+            "- 6 shift management endpoints (2 POST, 4 GET including patient log POST)",
+            "- 5 favourite codes endpoints (1 GET, 1 POST, 2 PUT, 1 DELETE)",
+            "- 5 mobile endpoints (2 POST, 2 GET, 1 sync placeholder)",
+            "",
+            "Total: 16 authenticated routes + 1 unauthenticated (sync 501), 2 DB tables, 6 security test suites."
+          ]
+        }
+      ]
+    }
+  ]
+}

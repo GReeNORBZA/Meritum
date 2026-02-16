@@ -1,0 +1,40 @@
+{
+  "name": "@meritum/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "test": "vitest run",
+    "test:integration": "vitest run test/integration/",
+    "test:security": "vitest run test/security/",
+    "vitest": "vitest",
+    "drizzle-kit": "drizzle-kit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@meritum/shared": "workspace:*",
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^10.2.0",
+    "@fastify/websocket": "^11.0.0",
+    "fastify-type-provider-zod": "^4.0.0",
+    "drizzle-orm": "^0.38.0",
+    "pg": "^8.13.0",
+    "@node-rs/argon2": "^2.0.0",
+    "lucia": "^3.2.0",
+    "zod": "^3.24.0",
+    "pino": "^9.6.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.0",
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.30.0",
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.0"
+  }
+}

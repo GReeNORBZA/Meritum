@@ -1,0 +1,1100 @@
+{
+  "domainNumber": "08",
+  "domainName": "Analytics & Reporting",
+  "manifestFile": "domain-08-analytics.tasks",
+  "promptPrefix": "d08",
+  "modulePath": "apps/api/src/domains/analytics",
+  "sections": [
+    {
+      "title": "Domain 8: Analytics & Reporting — Shared Types, Schemas & Migration",
+      "tasks": [
+        {
+          "id": "D08-001",
+          "description": "Analytics constants, enums, and shared types",
+          "verify": "pnpm --filter shared build",
+          "build": [
+            "Create `packages/shared/src/constants/analytics.constants.ts` with all Domain 8 constants:",
+            "",
+            "**Metric keys (VARCHAR(50) identifiers for analytics_cache.metric_key):**",
+            "- revenue_monthly, revenue_by_ba, revenue_by_location, revenue_by_hsc",
+            "- claims_submitted, claims_assessed, claims_paid, claims_rejected, claims_adjusted",
+            "- rejection_rate_monthly, rejection_by_code, rejection_by_hsc, rejection_resolution_funnel",
+            "- aging_brackets, approaching_deadline, expired_claims, avg_resolution_time, stale_claims",
+            "- wcb_by_form_type, wcb_timing_tier_dist, wcb_fee_tier_analysis, wcb_revenue_trend, wcb_rejection_rate",
+            "- ai_coach_acceptance_rate, ai_coach_revenue_recovered, ai_coach_by_category, ai_coach_top_accepted, ai_coach_suppressed",
+            "- multisite_revenue, multisite_claims, multisite_rrnp",
+            "- pending_pipeline, avg_fee_per_claim, top_hsc_codes",
+            "",
+            "**Report types (VARCHAR(50)):**",
+            "- ACCOUNTANT_SUMMARY, ACCOUNTANT_DETAIL, WEEKLY_SUMMARY, MONTHLY_PERFORMANCE",
+            "- RRNP_QUARTERLY, WCB_TIMING, REJECTION_DIGEST, DATA_PORTABILITY",
+            "",
+            "**Report formats:**",
+            "- PDF, CSV, ZIP",
+            "",
+            "**Subscription frequencies:**",
+            "- DAILY, WEEKLY, MONTHLY, QUARTERLY",
+            "",
+            "**Delivery methods:**",
+            "- IN_APP, EMAIL, BOTH",
+            "",
+            "**Time periods (for dashboard period selector):**",
+            "- THIS_WEEK, THIS_MONTH, LAST_MONTH, THIS_QUARTER, THIS_YEAR, CUSTOM_RANGE, TRAILING_12_MONTHS",
+            "",
+            "**Period comparison mapping:**",
+            "- THIS_WEEK → same days last week",
+            "- THIS_MONTH → same days prior month",
+            "- LAST_MONTH → month before that",
+            "- THIS_QUARTER → same quarter prior year",
+            "- THIS_YEAR → same period prior year",
+            "- CUSTOM_RANGE → same-length period immediately prior",
+            "- TRAILING_12_MONTHS → 12 months before that",
+            "",
+            "**Claim type filter values:**",
+            "- AHCIP, WCB, BOTH",
+            "",
+            "**Aging bracket boundaries:**",
+            "- 0–30 days, 31–60 days, 61–90 days, 90+ days (from date of service)",
+            "",
+            "**Audit action identifiers:**",
+            "- analytics.dashboard_viewed, analytics.report_generated, analytics.report_downloaded",
+            "- analytics.data_portability_requested, analytics.data_portability_downloaded",
+            "- analytics.subscription_created, analytics.subscription_updated, analytics.subscription_cancelled",
+            "",
+            "**Report retention defaults (days):**",
+            "- SCHEDULED: 90, ON_DEMAND: 30, DATA_PORTABILITY: 3 (72 hours)",
+            "",
+            "**Report download link expiry (days):**",
+            "- SCHEDULED: 90, ON_DEMAND: 30, DATA_PORTABILITY: 3",
+            "",
+            "Export all as frozen objects / TypeScript enums."
+          ],
+          "frd": [
+            "Domain 8 Section 7.1: metric_key VARCHAR(50) identifiers for analytics_cache table.",
+            "Domain 8 Section 7.2: report_type enum — ACCOUNTANT_SUMMARY, ACCOUNTANT_DETAIL, WEEKLY_SUMMARY, MONTHLY_PERFORMANCE, RRNP_QUARTERLY, WCB_TIMING, REJECTION_DIGEST, DATA_PORTABILITY.",
+            "Domain 8 Section 7.3: frequency — DAILY, WEEKLY, MONTHLY, QUARTERLY. delivery_method — IN_APP, EMAIL, BOTH.",
+            "Domain 8 Section 3.1: Time periods with comparison mappings (Table 7).",
+            "Domain 8 Section 11.2: Audit trail actions (Table 20).",
+            "Domain 8 Section 7.2: Retention — 90 days scheduled, 30 days on-demand, 72 hours data portability."
+          ]
+        },
+        {
+          "id": "D08-002",
+          "description": "Drizzle schema for analytics_cache table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D08-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/db/analytics.schema.ts` starting with analytics_cache table.",
+            "",
+            "**analytics_cache table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| cache_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL | FK to providers. Indexed. |",
+            "| metric_key | VARCHAR(50) | NOT NULL | One of the METRIC_KEYS constants |",
+            "| period_start | DATE | NOT NULL | Start of period this metric covers |",
+            "| period_end | DATE | NOT NULL | End of period |",
+            "| dimensions | JSONB | NULLABLE | Breakdown dims: {ba_number, location_id, claim_type, hsc_code}. Null for top-level aggregates. |",
+            "| value | JSONB | NOT NULL | Metric value(s). Structure varies by metric_key. |",
+            "| computed_at | TIMESTAMPTZ | NOT NULL | When this cache entry was last computed |",
+            "",
+            "**Indexes:**",
+            "- UNIQUE on (provider_id, metric_key, period_start, period_end, dimensions) — upsert target",
+            "- Index on (provider_id, metric_key) for dashboard queries",
+            "- Index on computed_at for stale cache detection",
+            "",
+            "Export table and inferred types (InsertAnalyticsCache, SelectAnalyticsCache)."
+          ],
+          "frd": [
+            "Domain 8 Section 7.1: analytics_cache table schema (Table 11). Pre-computed aggregates refreshed periodically.",
+            "Domain 8 Section 10.1: Cache refresh — nightly batch + event-driven incremental + stale-cache detection on dashboard open."
+          ],
+          "security": [
+            "provider_id scoping is critical. All cache queries MUST filter by provider_id from the authenticated session.",
+            "JSONB value field may contain PHI-derived aggregates. Encrypted at rest via PostgreSQL TDE."
+          ]
+        },
+        {
+          "id": "D08-003",
+          "description": "Drizzle schema for generated_reports table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D08-001"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/analytics.schema.ts` the generated_reports table.",
+            "",
+            "**generated_reports table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| report_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL | FK to providers. Indexed. |",
+            "| report_type | VARCHAR(50) | NOT NULL | One of REPORT_TYPES constants |",
+            "| format | VARCHAR(10) | NOT NULL | PDF, CSV, or ZIP |",
+            "| period_start | DATE | NULLABLE | Period covered. Null for data portability. |",
+            "| period_end | DATE | NULLABLE | |",
+            "| file_path | VARCHAR(255) | NOT NULL | Path to generated file (encrypted at rest) |",
+            "| file_size_bytes | BIGINT | NOT NULL | For download progress indication |",
+            "| download_link_expires_at | TIMESTAMPTZ | NOT NULL | When the download link expires |",
+            "| downloaded | BOOLEAN | NOT NULL, DEFAULT false | Whether physician has downloaded |",
+            "| scheduled | BOOLEAN | NOT NULL, DEFAULT false | True if from scheduled report |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | pending, generating, ready, failed, expired |",
+            "| error_message | TEXT | NULLABLE | Error details if generation failed |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "**Indexes:**",
+            "- Index on (provider_id, report_type) for listing reports",
+            "- Index on (provider_id, created_at DESC) for recent reports",
+            "- Index on download_link_expires_at for cleanup job",
+            "- Index on (status) for processing queue",
+            "",
+            "Note: Added 'status' and 'error_message' columns beyond FRD spec to support async generation workflow. Status tracks: pending → generating → ready | failed. Expired set by cleanup.",
+            "",
+            "Export table and inferred types (InsertGeneratedReport, SelectGeneratedReport)."
+          ],
+          "frd": [
+            "Domain 8 Section 7.2: generated_reports table schema (Table 12).",
+            "Domain 8 Section 7.2: Retention — 90 days scheduled, 30 days on-demand, 72 hours data portability.",
+            "Domain 8 Section 10.2: Report generation is asynchronous. Physician receives notification when ready."
+          ],
+          "security": [
+            "file_path points to encrypted-at-rest storage. Never expose file_path in API responses.",
+            "download_link_expires_at enforced server-side. Expired links return 410 Gone.",
+            "Generated reports contain PHI (patient PHN in CSV exports). Treat as sensitive."
+          ]
+        },
+        {
+          "id": "D08-004",
+          "description": "Drizzle schema for report_subscriptions table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D08-001"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/analytics.schema.ts` the report_subscriptions table.",
+            "",
+            "**report_subscriptions table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| subscription_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL | FK to providers. Indexed. |",
+            "| report_type | VARCHAR(50) | NOT NULL | Which report to generate |",
+            "| frequency | VARCHAR(20) | NOT NULL | DAILY, WEEKLY, MONTHLY, QUARTERLY |",
+            "| delivery_method | VARCHAR(20) | NOT NULL, DEFAULT 'IN_APP' | IN_APP, EMAIL, BOTH |",
+            "| is_active | BOOLEAN | NOT NULL, DEFAULT true | Active subscriptions generate reports on schedule |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "**Indexes:**",
+            "- UNIQUE on (provider_id, report_type) — one subscription per report type per physician",
+            "- Index on (is_active, frequency) for scheduled job queries",
+            "",
+            "Export table and inferred types (InsertReportSubscription, SelectReportSubscription)."
+          ],
+          "frd": [
+            "Domain 8 Section 7.3: report_subscriptions table schema (Table 13).",
+            "Domain 8 Section 6.1: Available scheduled reports — Weekly Billing Summary, Monthly Performance, RRNP Quarterly, WCB Timing, Rejection Alert Digest (Table 10)."
+          ]
+        },
+        {
+          "id": "D08-005",
+          "description": "Zod validation schemas for all API inputs",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D08-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/validation/analytics.validation.ts` with Zod schemas for all API inputs:",
+            "",
+            "**Dashboard query params:**",
+            "- PeriodParamsSchema: { period: enum(TIME_PERIODS), start_date?: ISO date, end_date?: ISO date }. start_date/end_date required when period is CUSTOM_RANGE.",
+            "- DashboardFilterSchema: { claim_type?: enum(AHCIP, WCB, BOTH), ba_number?: string, location_id?: UUID, claim_state?: string[], hsc_code?: string }",
+            "- RevenueQuerySchema: PeriodParamsSchema.merge(DashboardFilterSchema)",
+            "- RejectionQuerySchema: PeriodParamsSchema.merge({ claim_type?: enum, hsc_code?: string })",
+            "- AgingQuerySchema: { claim_type?: enum(AHCIP, WCB, BOTH) }",
+            "- WcbQuerySchema: PeriodParamsSchema.merge({ form_type?: string })",
+            "- AiCoachQuerySchema: PeriodParamsSchema",
+            "- MultiSiteQuerySchema: PeriodParamsSchema.merge({ compare_locations?: UUID[] }). compare_locations max 2 items for side-by-side.",
+            "- KpiQuerySchema: PeriodParamsSchema.merge(DashboardFilterSchema)",
+            "",
+            "**Report generation:**",
+            "- AccountantReportSchema: { period_start: ISO date, period_end: ISO date, format: enum('csv', 'pdf_summary', 'pdf_detail') }",
+            "- DataPortabilitySchema: { password?: string (optional encryption password, min 12 chars if provided) }",
+            "- ReportIdParamSchema: { id: UUID }",
+            "- ReportListQuerySchema: { report_type?: enum(REPORT_TYPES), start_date?: ISO date, end_date?: ISO date, limit?: number(1-100, default 20), offset?: number }",
+            "",
+            "**Subscriptions:**",
+            "- CreateSubscriptionSchema: { report_type: enum(subscribable report types), frequency: enum(FREQUENCIES), delivery_method: enum(DELIVERY_METHODS, default IN_APP) }",
+            "- UpdateSubscriptionSchema: { frequency?: enum, delivery_method?: enum, is_active?: boolean }. At least one field required.",
+            "- SubscriptionIdParamSchema: { id: UUID }",
+            "",
+            "All date inputs validated as ISO 8601 date strings. All UUIDs validated as v4 format. Custom range validated: end_date >= start_date, max range 2 years.",
+            "",
+            "Export all schemas."
+          ],
+          "frd": [
+            "Domain 8 Section 9.1: Dashboard endpoints with query params (Table 15).",
+            "Domain 8 Section 9.2: Report endpoints with body schemas (Table 16).",
+            "Domain 8 Section 9.3: Subscription endpoints with body schemas (Table 17).",
+            "Domain 8 Section 3.1–3.2: Period selection and filter specifications."
+          ],
+          "security": [
+            "All UUID inputs validated as v4 format to prevent injection.",
+            "Date range max 2 years to prevent excessive query load.",
+            "DataPortabilitySchema password min 12 chars if provided — encourage strong encryption."
+          ]
+        },
+        {
+          "id": "D08-006",
+          "description": "Database migration for all Domain 8 tables",
+          "verify": "pnpm --filter api drizzle-kit generate && pnpm --filter api drizzle-kit migrate",
+          "depends": ["D08-002", "D08-003", "D08-004"],
+          "build": [
+            "Generate and run Drizzle migration for Domain 8 tables.",
+            "",
+            "The migration should create:",
+            "1. analytics_cache table with all columns, indexes, and FK to providers",
+            "2. generated_reports table with all columns, indexes, and FK to providers",
+            "3. report_subscriptions table with all columns, indexes, and FK to providers",
+            "",
+            "Verify FK references to providers table (Domain 5) resolve correctly.",
+            "",
+            "Run `pnpm --filter api drizzle-kit generate` to create migration file.",
+            "Run `pnpm --filter api drizzle-kit migrate` to apply.",
+            "Verify all three tables exist with correct schema."
+          ],
+          "frd": [
+            "Domain 8 Section 7: All three data model tables."
+          ],
+          "security": [
+            "provider_id FK ensures referential integrity — no orphan analytics data.",
+            "Unique constraints prevent duplicate cache entries and subscriptions."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 8: Analytics & Reporting — Repository Layer",
+      "tasks": [
+        {
+          "id": "D08-010",
+          "description": "Analytics cache repository — read, upsert, stale detection",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/repos/analytics-cache.repo.test.ts",
+          "depends": ["D08-006"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/repos/analytics-cache.repo.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `getMetrics(providerId, metricKeys[], periodStart, periodEnd, dimensions?)` — fetch cached metrics for a provider. Filter by metric_key IN metricKeys. Optionally filter by dimensions JSONB containment (@>).",
+            "- `upsertMetric(providerId, metricKey, periodStart, periodEnd, dimensions, value)` — insert or update on (provider_id, metric_key, period_start, period_end, dimensions). Update computed_at on upsert.",
+            "- `bulkUpsert(entries[])` — batch upsert for nightly refresh. Use Drizzle's onConflictDoUpdate.",
+            "- `getStaleEntries(providerId, maxAgeMinutes)` — return metrics where computed_at < now() - maxAgeMinutes. Used to detect when cache needs refresh on dashboard open.",
+            "- `deleteExpiredEntries(olderThan: Date)` — cleanup entries for periods no longer relevant (>24 months old).",
+            "",
+            "**All queries MUST include provider_id in WHERE clause.** No method accepts queries without provider_id.",
+            "",
+            "Unit tests: upsert creates new entry, upsert updates existing entry and sets computed_at, getMetrics filters correctly, stale detection works, bulk upsert handles conflicts."
+          ],
+          "frd": [
+            "Domain 8 Section 7.1: Cache refresh strategy — nightly for all metrics, on-demand on claim state change, stale detection when cache >1 hour old on dashboard open.",
+            "Domain 8 Section 10.1: Dashboard load < 2 seconds — cache enables this."
+          ],
+          "security": [
+            "Every method requires provider_id parameter. No cross-provider cache access.",
+            "bulkUpsert validates all entries belong to the same provider_id."
+          ]
+        },
+        {
+          "id": "D08-011",
+          "description": "Generated reports repository — CRUD, status tracking, expiry",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/repos/generated-reports.repo.test.ts",
+          "depends": ["D08-006"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/repos/generated-reports.repo.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `create(data: InsertGeneratedReport)` — create a new report record with status 'pending'.",
+            "- `getById(reportId, providerId)` — fetch report by ID scoped to provider. Return null if not found or wrong provider (404 pattern, not 403).",
+            "- `updateStatus(reportId, providerId, status, filePath?, fileSizeBytes?, errorMessage?)` — update report status. Used by generation worker.",
+            "- `markDownloaded(reportId, providerId)` — set downloaded = true.",
+            "- `listByProvider(providerId, filters?)` — list reports with optional type/date filters. Paginated (limit, offset). Ordered by created_at DESC.",
+            "- `deleteExpired()` — delete reports where download_link_expires_at < now(). Returns count of deleted.",
+            "- `getReadyForDownload(reportId, providerId)` — fetch report only if status = 'ready' and download_link_expires_at > now(). Null otherwise.",
+            "",
+            "**All read/write methods require providerId.** getById and getReadyForDownload return null (not error) for wrong provider — 404 pattern.",
+            "",
+            "Unit tests: create sets pending, status transitions work, expired reports excluded from downloads, list pagination, provider scoping returns null for wrong provider."
+          ],
+          "frd": [
+            "Domain 8 Section 7.2: generated_reports table and retention rules.",
+            "Domain 8 Section 9.2: GET /reports/{id} — check status and download link. GET /reports/{id}/download — authenticated, time-limited.",
+            "Domain 8 Section 5.2: Download via authenticated, time-limited link (72-hour expiry for data portability)."
+          ],
+          "security": [
+            "getById returns null for wrong providerId — never confirm resource existence to wrong provider (404 not 403).",
+            "file_path is never returned in API responses. Only used server-side for download streaming.",
+            "deleteExpired cleans up PHI-containing files — must also delete the physical file, not just the DB record."
+          ]
+        },
+        {
+          "id": "D08-012",
+          "description": "Report subscriptions repository — CRUD, schedule queries",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/repos/report-subscriptions.repo.test.ts",
+          "depends": ["D08-006"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/repos/report-subscriptions.repo.ts` and test file.",
+            "",
+            "**Methods:**",
+            "",
+            "- `create(data: InsertReportSubscription)` — create subscription. Enforce unique (provider_id, report_type) at repo level too.",
+            "- `getById(subscriptionId, providerId)` — fetch by ID scoped to provider. Null for wrong provider (404 pattern).",
+            "- `update(subscriptionId, providerId, data: Partial)` — update frequency, delivery_method, is_active. Set updated_at.",
+            "- `delete(subscriptionId, providerId)` — hard delete. Return boolean success.",
+            "- `listByProvider(providerId)` — list all subscriptions (active + inactive) for a provider.",
+            "- `getDueSubscriptions(frequency, dayOfWeek?, dayOfMonth?, quarter?)` — used by scheduler. Returns all active subscriptions matching the given frequency and schedule criteria. Joins provider data for report generation context.",
+            "",
+            "Unit tests: create enforces unique constraint, CRUD operations work, getDueSubscriptions filters correctly, provider scoping."
+          ],
+          "frd": [
+            "Domain 8 Section 7.3: report_subscriptions table schema.",
+            "Domain 8 Section 6.1: Scheduled report types and frequencies (Table 10).",
+            "Domain 8 Section 9.3: CRUD API for subscriptions."
+          ],
+          "security": [
+            "delete is a hard delete (subscriptions are not PHI). Audit logged.",
+            "getDueSubscriptions used by system scheduler — returns minimal data needed for generation."
+          ]
+        },
+        {
+          "id": "D08-013",
+          "description": "Dashboard query repository — complex read queries against claim and provider tables",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/repos/dashboard-query.repo.test.ts",
+          "depends": ["D08-006"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/repos/dashboard-query.repo.ts` and test file.",
+            "",
+            "This repository performs read-only queries against Domain 4 (claims), Domain 5 (providers), and Domain 7 (intelligence_engine) tables to compute real-time metrics for the current day and to refresh the cache. It does NOT write to those tables.",
+            "",
+            "**Methods (all require providerId):**",
+            "",
+            "- `computeRevenueMetrics(providerId, periodStart, periodEnd, filters?)` — sum assessed_fee for paid claims. Group by month for trend. Group by BA for dual-BA breakdown. Group by HSC code for top-10. Compute pending pipeline (queued + submitted value).",
+            "- `computeRejectionMetrics(providerId, periodStart, periodEnd, filters?)` — rejection rate: rejected / (assessed + rejected + adjusted). Group by explanatory code. Group by HSC code. Compute resolution funnel: rejected → resubmitted → paid_on_resubmission → written_off. Corrective action effectiveness by rejection code.",
+            "- `computeAgingMetrics(providerId, filters?)` — unresolved claims by age bracket from DOS. Approaching deadline (within 7 days). Expired claims in period. Average resolution time. Stale claims (draft/validated >14 days).",
+            "- `computeWcbMetrics(providerId, periodStart, periodEnd, filters?)` — claims by form type. Timing tier distribution. Fee per timing tier. WCB revenue trend. WCB rejection rate.",
+            "- `computeAiCoachMetrics(providerId, periodStart, periodEnd)` — acceptance rate from suggestion events. Revenue recovered from accepted suggestions. By category. Top accepted rules. Suppressed rules.",
+            "- `computeMultiSiteMetrics(providerId, periodStart, periodEnd, locationIds?)` — revenue, claims, rejection rate per location. RRNP premium per location.",
+            "- `computeKpis(providerId, periodStart, periodEnd, filters?)` — all KPI card values in a single query set: total revenue, claims submitted, rejection rate, avg fee per claim, pending pipeline. Plus prior-period values for delta calculation.",
+            "",
+            "Each method returns typed result objects. All queries are parameterised — no string concatenation.",
+            "",
+            "Unit tests with seeded claim data: revenue calculation correctness, rejection rate formula, aging bracket assignment, period comparison deltas."
+          ],
+          "frd": [
+            "Domain 8 Section 2.1–2.6: All dashboard widget specifications (Tables 1–6).",
+            "Domain 8 Section 3: Period selection and filter application.",
+            "Domain 8 Section 10.1: Dashboard load < 2 seconds — queries optimised for cache population."
+          ],
+          "security": [
+            "All queries MUST include provider_id in WHERE clause. This is the primary tenant isolation mechanism for analytics.",
+            "Read-only access to Domain 4/5/7 tables. Never INSERT/UPDATE/DELETE claim or provider records.",
+            "All queries parameterised via Drizzle — no raw SQL string concatenation."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 8: Analytics & Reporting — Service Layer",
+      "tasks": [
+        {
+          "id": "D08-020",
+          "description": "Dashboard service — aggregation, caching, and period comparison logic",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/services/dashboard.service.test.ts",
+          "depends": ["D08-010", "D08-013"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/services/dashboard.service.ts` and test file.",
+            "",
+            "**Responsibilities:**",
+            "1. Resolve period params (THIS_WEEK, THIS_MONTH, etc.) into concrete date ranges + comparison date ranges per Table 7 mapping.",
+            "2. Check analytics_cache for completed-period data. If cache hit and fresh (<1 hour), return cached. If stale, trigger background refresh and return stale data with `cache_stale: true` flag.",
+            "3. For current-day data, always compute in real-time via dashboard-query.repo.",
+            "4. Merge cached completed-period data with real-time current-day data.",
+            "5. Compute period-over-period deltas (absolute and percentage).",
+            "",
+            "**Methods:**",
+            "- `getRevenueDashboard(providerId, params)` → RevenueOverviewResponse",
+            "- `getRejectionDashboard(providerId, params)` → RejectionAnalysisResponse",
+            "- `getAgingDashboard(providerId, params)` → ClaimAgingResponse",
+            "- `getWcbDashboard(providerId, params)` → WcbAnalyticsResponse (only if physician has WCB config)",
+            "- `getAiCoachDashboard(providerId, params)` → AiCoachPerformanceResponse",
+            "- `getMultiSiteDashboard(providerId, params)` → MultiSiteResponse (only if physician has multiple locations)",
+            "- `getKpis(providerId, params)` → KpiCardsResponse (all KPI card values in single call)",
+            "",
+            "**Period resolution logic:**",
+            "- THIS_WEEK: Monday of current week to today. Comparison: same days (Mon to same weekday) of prior week.",
+            "- THIS_MONTH: 1st of month to today. Comparison: 1st to same day of prior month.",
+            "- LAST_MONTH: full prior calendar month. Comparison: month before that.",
+            "- THIS_QUARTER: quarter start to today. Comparison: same quarter prior year.",
+            "- THIS_YEAR: Jan 1 to today. Comparison: Jan 1 to same day prior year.",
+            "- CUSTOM_RANGE: user dates. Comparison: same-length period immediately prior.",
+            "- TRAILING_12_MONTHS: today - 12 months. Comparison: 12 months before that.",
+            "",
+            "Unit tests: period resolution for each period type, cache hit vs real-time fallback, delta calculation (positive/negative/zero), WCB dashboard hidden for non-WCB physicians."
+          ],
+          "frd": [
+            "Domain 8 Section 2: All dashboard specifications with widget details.",
+            "Domain 8 Section 3.1: Time periods and comparison mapping (Table 7).",
+            "Domain 8 Section 3.2: Filter specification — combinable, applied globally.",
+            "Domain 8 Section 7.1: Cache refresh strategy — nightly, event-driven, stale detection >1 hour.",
+            "Domain 8 Section 10.1: Dashboard load < 2 seconds target."
+          ],
+          "security": [
+            "providerId passed through to all repo calls — never omitted.",
+            "WCB dashboard gated on physician WCB configuration from Domain 5.",
+            "Stale data returned with flag — never silently serve outdated data without indication."
+          ]
+        },
+        {
+          "id": "D08-021",
+          "description": "Cache refresh service — nightly batch, event-driven incremental, stale detection",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/services/cache-refresh.service.test.ts",
+          "depends": ["D08-010", "D08-013"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/services/cache-refresh.service.ts` and test file.",
+            "",
+            "**Responsibilities:**",
+            "",
+            "1. **Nightly batch refresh:** Compute all metrics for all active providers for all completed periods (trailing 12 months). Called by cron job. Process providers in batches to limit DB load.",
+            "2. **Event-driven incremental:** When a claim state changes (paid, rejected, adjusted, etc.), refresh affected metrics for that provider. Called via event handler. Only refresh metrics affected by the state change (e.g., claim paid → refresh revenue, claims_paid, avg_fee_per_claim).",
+            "3. **Stale cache detection:** Check if provider's cache entries are older than threshold (default 60 minutes). Called on dashboard open.",
+            "4. **Cleanup:** Delete cache entries for periods >24 months old.",
+            "",
+            "**Methods:**",
+            "- `refreshAllProviders()` — nightly batch. Iterate active providers, compute all metric_keys, bulkUpsert.",
+            "- `refreshProviderMetrics(providerId, metricKeys?)` — refresh specific metrics for one provider. If metricKeys omitted, refresh all.",
+            "- `handleClaimStateChange(providerId, claimType, newState)` — map state change to affected metric_keys and trigger incremental refresh.",
+            "- `isStale(providerId, maxAgeMinutes?)` — check if any cached metric is older than threshold.",
+            "- `cleanupOldEntries()` — delete entries with period_end >24 months ago.",
+            "",
+            "**Claim state → metric mapping:**",
+            "- paid → revenue_monthly, claims_paid, avg_fee_per_claim, revenue_by_ba, revenue_by_location, top_hsc_codes, pending_pipeline",
+            "- rejected → rejection_rate_monthly, rejection_by_code, rejection_by_hsc, claims_rejected",
+            "- submitted → claims_submitted, pending_pipeline",
+            "- adjusted → claims_adjusted, rejection_resolution_funnel",
+            "",
+            "Unit tests: nightly refresh populates cache, incremental refresh updates only affected metrics, stale detection threshold, cleanup removes old entries."
+          ],
+          "frd": [
+            "Domain 8 Section 7.1: Cache refresh strategy — (1) nightly for all metrics, (2) on-demand when claim state changes, (3) when physician opens dashboard and cache >1 hour old.",
+            "Domain 8 Section 10.3: ~500 cache entries per physician (12 months × ~40 metric_keys)."
+          ],
+          "security": [
+            "Nightly batch iterates providers one at a time — never cross-contaminate cache entries.",
+            "Event-driven refresh validates providerId matches the claim's provider before refreshing."
+          ]
+        },
+        {
+          "id": "D08-022",
+          "description": "Report generation service — accountant exports, data portability, PDF/CSV generation",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/services/report-generation.service.test.ts",
+          "depends": ["D08-011", "D08-013"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/services/report-generation.service.ts` and test file.",
+            "",
+            "**Responsibilities:**",
+            "Generate report files asynchronously. Caller creates a generated_reports record with status 'pending', then this service processes it.",
+            "",
+            "**Methods:**",
+            "",
+            "- `generateAccountantCsv(reportId, providerId, periodStart, periodEnd)` — query all paid claims in period. Write CSV with columns: date_of_service, hsc_code, modifiers, submitted_fee, assessed_fee, payment_date, ba_number, location, claim_type. One row per paid claim. Set report status to 'ready'.",
+            "- `generateAccountantPdfSummary(reportId, providerId, periodStart, periodEnd)` — generate PDF with: physician name, BA numbers, period, total revenue, revenue by BA, revenue by location, AHCIP vs WCB revenue, claim count, RRNP premium, adjustments, written-off total, GST-exempt note. Use pdf-lib or similar. Set status 'ready'.",
+            "- `generateAccountantPdfDetail(reportId, providerId, periodStart, periodEnd)` — PDF with per-claim detail rows. Suitable for audit.",
+            "- `generateDataPortabilityExport(reportId, providerId, password?)` — ZIP containing CSV files: claims.csv (all claims, all states, full fields), patients.csv (complete registry), audit_history.csv (all state changes), ai_suggestions.csv (all suggestions with status), batches.csv (AHCIP + WCB batches), provider_profile.csv (BA numbers, locations, WCB config). Include README.txt explaining schema. Optionally encrypt ZIP with password. Set status 'ready'.",
+            "- `processReport(reportId, providerId)` — dispatcher. Read report record, determine type, call appropriate generator. Update status to 'generating' at start, 'ready' on success, 'failed' on error with error_message.",
+            "",
+            "**File storage:** Write to configured storage path (local filesystem or object storage). File path stored in generated_reports.file_path. All files encrypted at rest.",
+            "",
+            "**Accountant CSV fields (Table 9):**",
+            "date_of_service, hsc_code, modifier(s), submitted_fee, assessed_fee, payment_date, ba_number, location, claim_type",
+            "",
+            "**PDF Summary fields (Table 9):**",
+            "Period, Physician Name, BA Number(s), Total Revenue, Revenue by BA, Revenue by Location, AHCIP Revenue, WCB Revenue, Claim Count, RRNP Premium Total, Adjustments, Written Off, GST Note",
+            "",
+            "**Performance targets (Table 18):**",
+            "- Accountant CSV (monthly ~500 rows): < 5 seconds",
+            "- Accountant PDF summary (2–4 pages): < 10 seconds",
+            "- Accountant PDF detailed (annual ~6,000 rows): < 60 seconds",
+            "- Data portability (all data): < 5 minutes",
+            "",
+            "Unit tests: CSV output format validation, PDF generation produces valid file, data portability includes all expected CSVs and README, password encryption works, status transitions on success/failure."
+          ],
+          "frd": [
+            "Domain 8 Section 4.1: Export formats — CSV, PDF Summary, PDF Detailed (Table 8).",
+            "Domain 8 Section 4.2: Accountant export fields (Table 9).",
+            "Domain 8 Section 5.1: Data portability export contents — all claims, patients, audit history, AI suggestions, batches, provider profile.",
+            "Domain 8 Section 5.2: Export process — async, notification when ready, authenticated time-limited link, optional password encryption.",
+            "Domain 8 Section 10.2: Report generation time targets (Table 18)."
+          ],
+          "security": [
+            "All queries scoped to providerId — data portability export must not leak other physicians' data.",
+            "Data portability is the most sensitive output. Optional password encryption with minimum 12 chars.",
+            "Generated files encrypted at rest. File paths never exposed in API responses.",
+            "CSV exports contain PHN — treat as PHI. PDF exports contain patient data.",
+            "On failure, error_message must not contain PHI or query details — generic error only."
+          ]
+        },
+        {
+          "id": "D08-023",
+          "description": "Scheduled reports service — subscription processing and scheduling logic",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/services/scheduled-reports.service.test.ts",
+          "depends": ["D08-012", "D08-022"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/services/scheduled-reports.service.ts` and test file.",
+            "",
+            "**Responsibilities:**",
+            "Process report subscriptions on schedule. Called by cron jobs at appropriate intervals.",
+            "",
+            "**Methods:**",
+            "",
+            "- `processDailySubscriptions()` — find active DAILY subscriptions, generate reports. Currently only REJECTION_DIGEST is daily. Skip if no rejections in past 24 hours (FRD: 'Daily (if any)').",
+            "- `processWeeklySubscriptions(dayOfWeek)` — find active WEEKLY subscriptions. WEEKLY_SUMMARY runs on Monday, WCB_TIMING runs on Wednesday.",
+            "- `processMonthlySubscriptions()` — find active MONTHLY subscriptions. MONTHLY_PERFORMANCE generated on 3rd business day of month. ACCOUNTANT reports on same schedule.",
+            "- `processQuarterlySubscriptions()` — find active QUARTERLY subscriptions. RRNP_QUARTERLY after each quarter end.",
+            "",
+            "**For each due subscription:**",
+            "1. Determine period covered (prior week/month/quarter).",
+            "2. Create generated_reports record with scheduled=true.",
+            "3. Call report-generation.service.processReport().",
+            "4. On success, send notification via Domain 6 (Notification Service) with download link.",
+            "5. If delivery_method is EMAIL or BOTH, also send email notification with authenticated download link (no report content in email body).",
+            "",
+            "**Schedule details (Table 10):**",
+            "- Weekly Billing Summary: every Monday, covers prior week",
+            "- Monthly Performance: 1st week of month (3rd business day), covers prior month",
+            "- RRNP Quarterly: after each quarter end",
+            "- WCB Timing: weekly Wednesday, covers upcoming 7-day tier downgrades",
+            "- Rejection Alert Digest: daily if any rejections in past 24 hours",
+            "",
+            "Unit tests: subscription filtering by frequency, daily skip logic (no rejections), business day calculation for monthly, notification dispatch on completion."
+          ],
+          "frd": [
+            "Domain 8 Section 6.1: Available scheduled reports and frequencies (Table 10).",
+            "Domain 8 Section 6.2: Report delivery — in-app notification with link, optional email with authenticated download link (no content in email body).",
+            "Domain 8 Section 4.3: Monthly accountant report — 3rd business day, PDF + CSV, notification with download link expiring 30 days."
+          ],
+          "security": [
+            "Email notifications contain download link only — never attach report or include PHI in email body.",
+            "Download links are authenticated and time-limited per report type retention.",
+            "Scheduled generation runs as system process — still scoped to individual provider_id per subscription."
+          ]
+        },
+        {
+          "id": "D08-024",
+          "description": "Download service — authenticated download links, streaming, expiry enforcement",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/services/download.service.test.ts",
+          "depends": ["D08-011"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/services/download.service.ts` and test file.",
+            "",
+            "**Responsibilities:**",
+            "Manage secure file downloads for generated reports.",
+            "",
+            "**Methods:**",
+            "",
+            "- `getDownloadStream(reportId, providerId)` — verify report exists, belongs to provider, status is 'ready', download link not expired. Return file read stream with correct Content-Type and Content-Disposition headers. Mark report as downloaded. Audit log the download event.",
+            "- `isDownloadAvailable(reportId, providerId)` — check availability without initiating download. Returns { available: boolean, expires_at?, file_size_bytes? }.",
+            "- `cleanupExpiredFiles()` — delete physical files for expired reports. Called by cleanup cron. Delete both the file on disk and update DB record status to 'expired'.",
+            "",
+            "**Content-Type mapping:**",
+            "- CSV → text/csv",
+            "- PDF → application/pdf",
+            "- ZIP → application/zip",
+            "",
+            "**Expiry enforcement:**",
+            "- If download_link_expires_at < now(), return 410 Gone.",
+            "- If report belongs to different provider, return 404 (not 403).",
+            "- If report not in 'ready' status, return 404.",
+            "",
+            "Unit tests: successful download streams file, expired link returns 410, wrong provider returns 404, download marks report as downloaded, cleanup deletes files."
+          ],
+          "frd": [
+            "Domain 8 Section 5.2: Download via authenticated, time-limited link.",
+            "Domain 8 Section 4.3: Download link expires in 30 days (accountant reports).",
+            "Domain 8 Section 7.2: Retention — 90 days scheduled, 30 days on-demand, 72 hours data portability."
+          ],
+          "security": [
+            "Provider scoping on every download — wrong provider gets 404 not 403.",
+            "Expired links return 410 Gone — client should not retry.",
+            "File streaming — never load entire file into memory. Stream from disk.",
+            "Audit log every download event including actor identity.",
+            "cleanupExpiredFiles must securely delete physical files — not just DB records."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 8: Analytics & Reporting — Routes, Handlers & Integration Tests",
+      "tasks": [
+        {
+          "id": "D08-030",
+          "description": "Dashboard routes — all 7 GET endpoints for analytics data",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/routes/dashboard.routes.test.ts",
+          "depends": ["D08-020", "D08-005"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/routes/dashboard.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication (Domain 1 middleware). Delegates require ANALYTICS_VIEW or REPORT_VIEW permission.",
+            "",
+            "**Routes:**",
+            "",
+            "1. `GET /api/v1/analytics/revenue` — query params validated by RevenueQuerySchema. Returns RevenueOverviewResponse. Permission: ANALYTICS_VIEW.",
+            "2. `GET /api/v1/analytics/rejections` — query params validated by RejectionQuerySchema. Returns RejectionAnalysisResponse. Permission: ANALYTICS_VIEW.",
+            "3. `GET /api/v1/analytics/aging` — query params validated by AgingQuerySchema. Returns ClaimAgingResponse. Permission: ANALYTICS_VIEW.",
+            "4. `GET /api/v1/analytics/wcb` — query params validated by WcbQuerySchema. Returns WcbAnalyticsResponse. 404 if physician has no WCB config. Permission: ANALYTICS_VIEW.",
+            "5. `GET /api/v1/analytics/ai-coach` — query params validated by AiCoachQuerySchema. Returns AiCoachPerformanceResponse. Permission: ANALYTICS_VIEW.",
+            "6. `GET /api/v1/analytics/multi-site` — query params validated by MultiSiteQuerySchema. Returns MultiSiteResponse. 404 if physician has only one location. Permission: ANALYTICS_VIEW.",
+            "7. `GET /api/v1/analytics/kpis` — query params validated by KpiQuerySchema. Returns KpiCardsResponse. Single call for dashboard init. Permission: ANALYTICS_VIEW.",
+            "",
+            "**All handlers:**",
+            "- Extract providerId from authenticated session (or delegate's active physician context).",
+            "- Pass validated params to dashboard.service.",
+            "- Return JSON response. Include `cache_stale` flag if applicable.",
+            "- Audit log DASHBOARD_VIEWED with rate limiting (max 1 log per dashboard type per 5 minutes per physician to avoid audit noise).",
+            "",
+            "Route-level unit tests: param validation rejects invalid input, correct service methods called, provider scoping from session."
+          ],
+          "frd": [
+            "Domain 8 Section 9.1: Dashboard data endpoints (Table 15).",
+            "Domain 8 Section 9: All endpoints require authentication, scoped to physician or delegate's active physician context.",
+            "Domain 8 Section 11.2: DASHBOARD_VIEWED audit action — rate-limited to avoid audit noise."
+          ],
+          "security": [
+            "ProviderId extracted from session — never from request params.",
+            "ANALYTICS_VIEW permission enforced for delegates.",
+            "Audit logging rate-limited to avoid noise but still captures access patterns."
+          ]
+        },
+        {
+          "id": "D08-031",
+          "description": "Report routes — generation, status, download, listing",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/routes/report.routes.test.ts",
+          "depends": ["D08-022", "D08-024", "D08-005"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/routes/report.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication.",
+            "",
+            "**Routes:**",
+            "",
+            "1. `POST /api/v1/reports/accountant` — body validated by AccountantReportSchema. Creates generated_reports record, queues async generation. Returns { report_id, status: 'pending' }. Permission: REPORT_EXPORT. Audit log: REPORT_GENERATED.",
+            "2. `POST /api/v1/reports/data-portability` — body validated by DataPortabilitySchema. Creates record, queues async generation. Returns { report_id, status: 'pending' }. Permission: DATA_EXPORT. Audit log: DATA_PORTABILITY_REQUESTED (flagged as sensitive action).",
+            "3. `GET /api/v1/reports/:id` — param validated by ReportIdParamSchema. Returns report status, file_size_bytes (if ready), download_link_expires_at. Does NOT return file_path. Permission: REPORT_VIEW.",
+            "4. `GET /api/v1/reports/:id/download` — stream file download. Permission: REPORT_EXPORT. Audit log: REPORT_DOWNLOADED or DATA_PORTABILITY_DOWNLOADED.",
+            "5. `GET /api/v1/reports` — query validated by ReportListQuerySchema. List physician's reports. Paginated. Permission: REPORT_VIEW.",
+            "",
+            "**Async generation:**",
+            "Report generation runs asynchronously. POST endpoints return immediately with report_id. Client polls GET /reports/:id for status. Consider using Fastify's task queue or a simple setImmediate-based worker for MVP.",
+            "",
+            "Route-level unit tests: validation, permission enforcement, 404 for wrong provider, download streaming."
+          ],
+          "frd": [
+            "Domain 8 Section 9.2: Report endpoints (Table 16).",
+            "Domain 8 Section 4: Accountant export flow.",
+            "Domain 8 Section 5: Data portability export flow.",
+            "Domain 8 Section 11.2: Audit trail — REPORT_GENERATED, REPORT_DOWNLOADED, DATA_PORTABILITY_REQUESTED/DOWNLOADED."
+          ],
+          "security": [
+            "REPORT_EXPORT required for generation and download. REPORT_VIEW sufficient for status check and listing.",
+            "DATA_EXPORT permission required for data portability (separate from REPORT_EXPORT).",
+            "file_path NEVER returned in GET /reports/:id response.",
+            "Download endpoint streams file — never loads into memory.",
+            "Data portability download flagged as sensitive action in audit.",
+            "Expired download links return 410 Gone."
+          ]
+        },
+        {
+          "id": "D08-032",
+          "description": "Subscription routes — CRUD for report subscriptions",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/routes/subscription.routes.test.ts",
+          "depends": ["D08-012", "D08-005"],
+          "build": [
+            "Create `apps/api/src/domains/analytics/routes/subscription.routes.ts` and test file.",
+            "",
+            "Register Fastify routes. All require authentication.",
+            "",
+            "**Routes:**",
+            "",
+            "1. `GET /api/v1/report-subscriptions` — list all subscriptions for physician. Permission: REPORT_VIEW.",
+            "2. `POST /api/v1/report-subscriptions` — body validated by CreateSubscriptionSchema. Create new subscription. 409 if subscription for that report_type already exists. Permission: REPORT_EXPORT. Audit log: REPORT_SUBSCRIPTION_CREATED.",
+            "3. `PUT /api/v1/report-subscriptions/:id` — body validated by UpdateSubscriptionSchema. Update subscription. 404 if not found or wrong provider. Permission: REPORT_EXPORT. Audit log: REPORT_SUBSCRIPTION_UPDATED.",
+            "4. `DELETE /api/v1/report-subscriptions/:id` — cancel subscription. 404 if not found or wrong provider. Permission: REPORT_EXPORT. Audit log: REPORT_SUBSCRIPTION_CANCELLED.",
+            "",
+            "Route-level unit tests: CRUD operations, 409 on duplicate, 404 for wrong provider, permission enforcement."
+          ],
+          "frd": [
+            "Domain 8 Section 9.3: Subscription endpoints (Table 17).",
+            "Domain 8 Section 6.2: Physician configures which reports and delivery preferences in settings.",
+            "Domain 8 Section 11.2: REPORT_SUBSCRIPTION_CREATED/UPDATED/CANCELLED audit actions."
+          ],
+          "security": [
+            "Provider scoping — subscriptions only accessible by owning physician.",
+            "Wrong provider returns 404 not 403.",
+            "Audit log all subscription changes."
+          ]
+        },
+        {
+          "id": "D08-033",
+          "description": "Integration tests — end-to-end analytics workflows",
+          "verify": "pnpm --filter api vitest run test/integration/analytics/",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create integration test files in `apps/api/test/integration/analytics/`:",
+            "",
+            "**File: analytics.dashboard.integration.ts**",
+            "- Seed physician with known claim data (mix of paid, rejected, adjusted, submitted AHCIP + WCB claims across multiple months).",
+            "- GET /analytics/revenue → verify KPI values match expected calculations.",
+            "- GET /analytics/rejections → verify rejection rate formula: rejected / (assessed + rejected + adjusted).",
+            "- GET /analytics/aging → verify bracket assignment by days since DOS.",
+            "- GET /analytics/kpis → verify all KPI card values in single response.",
+            "- Period comparison: THIS_MONTH → verify delta values against known prior month data.",
+            "- Filter: claim_type=AHCIP → verify only AHCIP claims in results.",
+            "- PCPCM dual-BA physician: revenue by BA correctly splits.",
+            "",
+            "**File: analytics.reports.integration.ts**",
+            "- POST /reports/accountant with format=csv → poll status → download → verify CSV format and row count.",
+            "- POST /reports/accountant with format=pdf_summary → poll → download → verify PDF is valid.",
+            "- POST /reports/data-portability → poll → download → verify ZIP contains expected CSVs and README.",
+            "- GET /reports → list shows generated reports.",
+            "- Download expired report → 410 Gone.",
+            "",
+            "**File: analytics.subscriptions.integration.ts**",
+            "- Create subscription → list shows it → update frequency → verify update → delete → list empty.",
+            "- Duplicate subscription for same report_type → 409.",
+            "",
+            "**File: analytics.delegate.integration.ts**",
+            "- Delegate with REPORT_VIEW: can view dashboards and list reports. Cannot generate/download.",
+            "- Delegate with REPORT_EXPORT: can generate and download reports.",
+            "- Delegate without REPORT_VIEW: denied on all analytics endpoints.",
+            "- Delegate cannot access DATA_EXPORT (data portability) without explicit DATA_EXPORT permission."
+          ],
+          "frd": [
+            "Domain 8 Section 12: All testing requirements.",
+            "Domain 8 Section 8: User stories and acceptance criteria (Table 14).",
+            "ANL-010: Delegate with REPORT_VIEW can view. REPORT_EXPORT required for downloads."
+          ],
+          "tests": [
+            "Revenue KPI matches sum of assessed_fee for paid claims in period.",
+            "Rejection rate = rejected / (assessed + rejected + adjusted) — not rejected / total.",
+            "Aging brackets: 0–30, 31–60, 61–90, 90+ days from DOS.",
+            "Accountant CSV: one row per paid claim, correct columns.",
+            "Data portability: ZIP contains claims.csv, patients.csv, audit_history.csv, ai_suggestions.csv, batches.csv, provider_profile.csv, README.txt.",
+            "Delegate permissions enforce view vs export distinction."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 8: Analytics & Reporting — Security Tests",
+      "tasks": [
+        {
+          "id": "D08-040",
+          "description": "Security: authentication enforcement on every route",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.authn.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.authn.security.ts`.",
+            "",
+            "Test every authenticated route in Domain 8 returns 401 without a valid session cookie:",
+            "",
+            "**Dashboard routes:**",
+            "- GET /api/v1/analytics/revenue",
+            "- GET /api/v1/analytics/rejections",
+            "- GET /api/v1/analytics/aging",
+            "- GET /api/v1/analytics/wcb",
+            "- GET /api/v1/analytics/ai-coach",
+            "- GET /api/v1/analytics/multi-site",
+            "- GET /api/v1/analytics/kpis",
+            "",
+            "**Report routes:**",
+            "- POST /api/v1/reports/accountant",
+            "- POST /api/v1/reports/data-portability",
+            "- GET /api/v1/reports/:id",
+            "- GET /api/v1/reports/:id/download",
+            "- GET /api/v1/reports",
+            "",
+            "**Subscription routes:**",
+            "- GET /api/v1/report-subscriptions",
+            "- POST /api/v1/report-subscriptions",
+            "- PUT /api/v1/report-subscriptions/:id",
+            "- DELETE /api/v1/report-subscriptions/:id",
+            "",
+            "For each route (17 total): send request with no cookie, with expired cookie, and with tampered cookie. All must return 401 with no data leakage in the response body.",
+            "",
+            "Total assertions: 17 routes × 3 failure modes = 51 test cases."
+          ],
+          "security": [
+            "401 responses must not contain any data in the response body beyond the error object.",
+            "Tampered cookies must be rejected (invalid signature / hash mismatch).",
+            "Expired sessions must return 401 (not 200 with stale data)."
+          ]
+        },
+        {
+          "id": "D08-041",
+          "description": "Security: authorization and permission enforcement",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.authz.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.authz.security.ts`.",
+            "",
+            "Test permission-based access control:",
+            "",
+            "**Delegate without ANALYTICS_VIEW / REPORT_VIEW:**",
+            "- GET /analytics/* → 403 for all 7 dashboard endpoints",
+            "- GET /reports → 403",
+            "- GET /report-subscriptions → 403",
+            "",
+            "**Delegate with REPORT_VIEW but without REPORT_EXPORT:**",
+            "- GET /analytics/* → 200 (allowed)",
+            "- GET /reports → 200 (allowed, can list)",
+            "- GET /reports/:id → 200 (allowed, can check status)",
+            "- POST /reports/accountant → 403 (cannot generate)",
+            "- GET /reports/:id/download → 403 (cannot download)",
+            "- POST /report-subscriptions → 403 (cannot create)",
+            "- PUT /report-subscriptions/:id → 403 (cannot update)",
+            "- DELETE /report-subscriptions/:id → 403 (cannot delete)",
+            "",
+            "**Delegate with REPORT_EXPORT but without DATA_EXPORT:**",
+            "- POST /reports/accountant → 200 (allowed)",
+            "- POST /reports/data-portability → 403 (DATA_EXPORT required)",
+            "",
+            "**Permission escalation prevention:**",
+            "- Delegate cannot modify their own permissions to gain REPORT_EXPORT or DATA_EXPORT."
+          ],
+          "security": [
+            "REPORT_VIEW vs REPORT_EXPORT distinction is critical — view allows dashboards and report listing but not generation or download.",
+            "DATA_EXPORT is a separate, higher-privilege permission for data portability.",
+            "Permission enforcement at route level via Domain 1 middleware."
+          ]
+        },
+        {
+          "id": "D08-042",
+          "description": "Security: cross-physician tenant isolation (MOST CRITICAL)",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.scoping.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.scoping.security.ts`.",
+            "",
+            "**This is the MOST CRITICAL security test for Domain 8.** Analytics data is derived from PHI. Cross-physician leakage would expose patient data.",
+            "",
+            "Setup: Create two physicians (Physician A and Physician B) each with distinct claim data, reports, and subscriptions.",
+            "",
+            "**Dashboard isolation:**",
+            "- Physician A views revenue dashboard → sees ONLY their claims' revenue, not Physician B's.",
+            "- Physician A views rejection dashboard → sees ONLY their rejection data.",
+            "- Physician A views aging dashboard → sees ONLY their unresolved claims.",
+            "- Verify KPI values for Physician A match Physician A's data exclusively.",
+            "- Repeat all for Physician B to confirm bidirectional isolation.",
+            "",
+            "**Report isolation:**",
+            "- Physician A generates accountant report → CSV contains ONLY Physician A's claims.",
+            "- Physician A attempts GET /reports/:id with Physician B's report_id → 404 (not 403).",
+            "- Physician A attempts GET /reports/:id/download with Physician B's report_id → 404 (not 403).",
+            "- Physician A's data portability export contains ONLY Physician A's data across all tables.",
+            "",
+            "**Subscription isolation:**",
+            "- Physician A lists subscriptions → sees ONLY their own.",
+            "- Physician A attempts PUT /report-subscriptions/:id with Physician B's subscription_id → 404 (not 403).",
+            "- Physician A attempts DELETE /report-subscriptions/:id with Physician B's subscription_id → 404 (not 403).",
+            "",
+            "**Cache isolation:**",
+            "- Verify analytics_cache entries for Physician A are never returned for Physician B's dashboard queries.",
+            "",
+            "**Delegate cross-physician:**",
+            "- Delegate of Physician A in Physician A's context → sees Physician A's data.",
+            "- Delegate switches to Physician B's context (if linked) → sees Physician B's data, NOT Physician A's.",
+            "- Delegate NOT linked to Physician B → cannot access Physician B's analytics.",
+            "",
+            "All cross-physician access attempts MUST return 404, NEVER 403. Do not confirm resource existence."
+          ],
+          "security": [
+            "MOST CRITICAL: All cross-physician access returns 404 not 403.",
+            "Analytics data is PHI-derived. Cross-physician leakage = patient data breach.",
+            "Verify at every layer: dashboard queries, report access, subscription access, cache entries.",
+            "Data portability export is the highest-risk — must verify complete isolation."
+          ]
+        },
+        {
+          "id": "D08-043",
+          "description": "Security: input validation — injection, type coercion, boundary values",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.input.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.input.security.ts`.",
+            "",
+            "**SQL injection attempts:**",
+            "- period param: `'; DROP TABLE claims; --` → 400 validation error",
+            "- ba_number filter: `1 OR 1=1` → 400",
+            "- hsc_code filter: `03.03A'; DELETE FROM analytics_cache; --` → 400",
+            "- report_id param: `'; DROP TABLE generated_reports; --` → 400",
+            "- subscription_id param: injection payload → 400",
+            "",
+            "**XSS attempts:**",
+            "- period params with `<script>` tags → 400",
+            "- filter values with HTML injection → 400",
+            "- report format with script payload → 400",
+            "",
+            "**Type coercion attacks:**",
+            "- period: integer instead of string → 400",
+            "- claim_type: array instead of string → 400",
+            "- ba_number: object instead of string → 400",
+            "- report format: unsupported value (e.g., 'exe') → 400",
+            "",
+            "**UUID validation:**",
+            "- report_id: 'not-a-uuid' → 400",
+            "- subscription_id: malformed UUID → 400",
+            "- location_id in filter: invalid UUID → 400",
+            "",
+            "**Boundary values:**",
+            "- Custom date range: end_date before start_date → 400",
+            "- Custom date range: span > 2 years → 400",
+            "- Custom date range: future end_date → 400 (can't query future analytics)",
+            "- Report list: limit=0, limit=-1, limit=1000 → 400",
+            "- compare_locations: more than 2 locations → 400",
+            "- Data portability password: less than 12 chars → 400",
+            "",
+            "All invalid inputs return 400 with generic error messages (no internal details)."
+          ],
+          "security": [
+            "All database queries use parameterised queries via Drizzle — no string concatenation.",
+            "Validation at route level before any DB access.",
+            "Error messages must not reveal internal schema or query structure."
+          ]
+        },
+        {
+          "id": "D08-044",
+          "description": "Security: PHI leakage prevention in errors, headers, and logs",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.leakage.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.leakage.security.ts`.",
+            "",
+            "**Error responses must not contain PHI:**",
+            "- Trigger 404 on report access → response body contains only error code and generic message, no claim data, no patient info, no file paths.",
+            "- Trigger 400 on invalid input → response contains validation error, no claim details.",
+            "- Trigger 500 (simulate internal error) → response contains generic 'Internal Server Error', no stack trace, no query details, no PHI.",
+            "",
+            "**Response headers must not leak information:**",
+            "- No X-Powered-By header (Fastify default removal).",
+            "- No server version info in headers.",
+            "- file_path field NEVER appears in any API response body.",
+            "- Content-Disposition on downloads uses generic filename, not internal file_path.",
+            "",
+            "**Logs must not contain PHI:**",
+            "- Dashboard query logs contain provider_id and metric_key but NOT patient data.",
+            "- Report generation logs contain report_id and status but NOT file contents or patient data.",
+            "- Error logs contain error type and report_id but NOT PHI from the report.",
+            "",
+            "**Analytics-specific leakage vectors:**",
+            "- GET /analytics/revenue → response includes aggregate values only, never individual patient claims.",
+            "- GET /reports/:id → response includes status, file_size, expiry — NOT file_path, NOT report content.",
+            "- Accountant CSV download → Content-Type: text/csv, filename: 'accountant-export-{period}.csv' — not internal path.",
+            "- Data portability download → filename: 'meritum-data-export-{date}.zip' — not internal path.",
+            "",
+            "**Generated report error paths:**",
+            "- Failed report generation → error_message in DB is generic (no PHI). API response shows 'Report generation failed' only."
+          ],
+          "security": [
+            "Analytics aggregates may still derive from PHI — ensure aggregates don't identify individual patients (min cohort sizes in future benchmarking).",
+            "file_path is the most critical field to protect — it reveals internal storage structure.",
+            "Download filenames must be user-friendly, not internal paths."
+          ]
+        },
+        {
+          "id": "D08-045",
+          "description": "Security: audit trail completeness — all events logged, append-only",
+          "verify": "pnpm --filter api vitest run test/security/analytics/analytics.audit.security.ts",
+          "depends": ["D08-030", "D08-031", "D08-032"],
+          "build": [
+            "Create `apps/api/test/security/analytics/analytics.audit.security.ts`.",
+            "",
+            "**Verify all audit events are logged (Table 20):**",
+            "",
+            "1. DASHBOARD_VIEWED: View any dashboard → audit entry with dashboard type, period, filters, actor identity. Verify rate-limited logging (max 1 per dashboard type per 5 minutes per physician).",
+            "2. REPORT_GENERATED: Generate accountant report → audit entry with report type, period, format, actor identity.",
+            "3. REPORT_DOWNLOADED: Download a report → audit entry with report_id, actor identity, timestamp.",
+            "4. DATA_PORTABILITY_REQUESTED: Request data export → audit entry with actor identity, timestamp. Verify flagged as sensitive action.",
+            "5. DATA_PORTABILITY_DOWNLOADED: Download data export → audit entry with actor identity, timestamp. Verify flagged as sensitive action.",
+            "6. REPORT_SUBSCRIPTION_CREATED: Create subscription → audit entry with subscription details, actor identity.",
+            "7. REPORT_SUBSCRIPTION_UPDATED: Update subscription → audit entry with old and new values, actor identity.",
+            "8. REPORT_SUBSCRIPTION_CANCELLED: Delete subscription → audit entry with subscription details, actor identity.",
+            "",
+            "**Audit integrity:**",
+            "- Audit entries are append-only. No UPDATE or DELETE on audit log table.",
+            "- Verify no audit API allows modification of existing entries.",
+            "- Each audit entry includes actor_id, actor_role, action, resource_id, timestamp, and details JSONB.",
+            "",
+            "**Delegate audit trail:**",
+            "- When delegate views dashboard → audit shows delegate as actor, physician as context.",
+            "- When delegate downloads report → audit shows delegate identity clearly.",
+            "",
+            "**Rate-limited audit (DASHBOARD_VIEWED):**",
+            "- View revenue dashboard 3 times in 1 minute → only 1 audit entry.",
+            "- View revenue dashboard, then rejection dashboard → 2 audit entries (different dashboard types).",
+            "- Wait 6 minutes, view revenue again → new audit entry."
+          ],
+          "security": [
+            "Append-only audit log — no UPDATE or DELETE operations permitted.",
+            "Data portability events flagged as sensitive — these are the highest-risk actions.",
+            "Delegate actions clearly attributed to delegate actor with physician context.",
+            "Rate-limited DASHBOARD_VIEWED prevents audit noise while maintaining access pattern visibility."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 8: Analytics & Reporting — Final Validation",
+      "tasks": [
+        {
+          "id": "D08-099",
+          "description": "Full domain test suite: all unit + integration + security tests",
+          "verify": "pnpm --filter api vitest run src/domains/analytics/ test/integration/analytics/ test/security/analytics/",
+          "depends": [
+            "D08-040",
+            "D08-041",
+            "D08-042",
+            "D08-043",
+            "D08-044",
+            "D08-045"
+          ],
+          "build": [
+            "Run the complete test suite for Domain 8 Analytics & Reporting. Do NOT write new code unless tests fail.",
+            "",
+            "1. Run all unit tests: `pnpm --filter api vitest run src/domains/analytics/`",
+            "2. Run all integration tests: `pnpm --filter api vitest run test/integration/analytics/`",
+            "3. Run all security tests: `pnpm --filter api vitest run test/security/analytics/`",
+            "",
+            "If any tests fail: read the failure, fix the source code (not the tests unless the test is wrong), re-run.",
+            "",
+            "After all pass, run the full suite one final time:",
+            "```bash",
+            "pnpm --filter api vitest run src/domains/analytics/ test/integration/analytics/ test/security/analytics/",
+            "```",
+            "",
+            "Verify these security test files exist and are non-empty:",
+            "- test/security/analytics/analytics.authn.security.ts",
+            "- test/security/analytics/analytics.authz.security.ts",
+            "- test/security/analytics/analytics.scoping.security.ts",
+            "- test/security/analytics/analytics.input.security.ts",
+            "- test/security/analytics/analytics.leakage.security.ts",
+            "- test/security/analytics/analytics.audit.security.ts",
+            "",
+            "Verify all Domain 8 API endpoints are registered and reachable:",
+            "- 7 dashboard GET endpoints",
+            "- 5 report endpoints (2 POST, 3 GET)",
+            "- 4 subscription endpoints (GET, POST, PUT, DELETE)",
+            "",
+            "Total: 16 routes, 3 DB tables, 6 security test suites."
+          ]
+        }
+      ]
+    }
+  ]
+}
