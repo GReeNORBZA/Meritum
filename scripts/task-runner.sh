@@ -57,13 +57,14 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 # --- Setup Logging ---
+PROJECT_ROOT="$(pwd)"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 MANIFEST_NAME=$(basename "$MANIFEST" .tasks)
-RUN_LOG_DIR="${LOG_DIR}/${MANIFEST_NAME}-${TIMESTAMP}"
+RUN_LOG_DIR="${PROJECT_ROOT}/${LOG_DIR}/${MANIFEST_NAME}-${TIMESTAMP}"
 mkdir -p "$RUN_LOG_DIR"
 
 SUMMARY_FILE="${RUN_LOG_DIR}/summary.log"
-PROGRESS_FILE="${RUN_LOG_DIR}/.progress"
+PROGRESS_FILE="${PROJECT_ROOT}/${LOG_DIR}/${MANIFEST_NAME}.progress"
 
 echo "Build run: ${MANIFEST_NAME}" > "$SUMMARY_FILE"
 echo "Started:   $(date -Iseconds)" >> "$SUMMARY_FILE"
@@ -244,7 +245,7 @@ ${PROMPT}"
     echo -e "  Running verification: ${VERIFY_CMD}"
     VERIFY_LOG="${RUN_LOG_DIR}/${TASK_ID}-verify-attempt${attempt}.log"
     set +e
-    eval "$VERIFY_CMD" > "$VERIFY_LOG" 2>&1
+    ( eval "$VERIFY_CMD" ) > "$VERIFY_LOG" 2>&1
     VERIFY_EXIT=$?
     set -e
 

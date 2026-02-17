@@ -1,2 +1,9 @@
-// Barrel export for constants, enums, status codes, permission keys
-// Domain task files will populate this
+export {
+  Role,
+  Permission,
+  DefaultPermissions,
+  AuditAction,
+  AuditCategory,
+  SubscriptionStatus,
+  SessionRevokeReason,
+} from './iam.constants.js';

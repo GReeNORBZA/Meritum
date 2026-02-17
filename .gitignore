@@ -17,6 +17,9 @@ out/
 # Drizzle
 drizzle/meta/
 
+# FRD source documents (large binaries — keep out of git)
+docs/frd/*.docx
+
 # IDE
 .idea/
 .vscode/
