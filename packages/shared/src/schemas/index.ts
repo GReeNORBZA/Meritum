@@ -37,3 +37,26 @@ export type {
   MfaReconfigure,
   AuditLogQuery,
 } from './iam.schema.js';
+
+export {
+  createCheckoutSessionSchema,
+  createPortalSessionSchema,
+  stripeWebhookHeaderSchema,
+  statusPageQuerySchema,
+  incidentHistoryQuerySchema,
+  createIncidentSchema,
+  updateIncidentSchema,
+  updateComponentStatusSchema,
+  adminSubscriptionQuerySchema,
+} from './platform.schema.js';
+export type {
+  CreateCheckoutSession,
+  CreatePortalSession,
+  StripeWebhookHeader,
+  StatusPageQuery,
+  IncidentHistoryQuery,
+  CreateIncident,
+  UpdateIncident,
+  UpdateComponentStatus,
+  AdminSubscriptionQuery,
+} from './platform.schema.js';

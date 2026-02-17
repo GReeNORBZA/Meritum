@@ -9,7 +9,7 @@
     "test:integration": "vitest run test/integration/",
     "test:security": "vitest run test/security/",
     "vitest": "vitest",
-    "drizzle-kit": "drizzle-kit",
+    "drizzle-kit": "tsx ./node_modules/drizzle-kit/bin.cjs",
     "clean": "rm -rf dist"
   },
   "dependencies": {

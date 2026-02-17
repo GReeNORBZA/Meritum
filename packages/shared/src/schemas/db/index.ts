@@ -21,3 +21,29 @@ export type {
   InsertAuditLog,
   SelectAuditLog,
 } from './iam.schema.js';
+
+export {
+  subscriptions,
+  paymentHistory,
+  statusComponents,
+  statusIncidents,
+  incidentUpdates,
+  referralCodes,
+  referralRedemptions,
+} from './platform.schema.js';
+export type {
+  InsertSubscription,
+  SelectSubscription,
+  InsertPaymentHistory,
+  SelectPaymentHistory,
+  InsertStatusComponent,
+  SelectStatusComponent,
+  InsertStatusIncident,
+  SelectStatusIncident,
+  InsertIncidentUpdate,
+  SelectIncidentUpdate,
+  InsertReferralCode,
+  SelectReferralCode,
+  InsertReferralRedemption,
+  SelectReferralRedemption,
+} from './platform.schema.js';

@@ -8,6 +8,13 @@
       "when": 1771279112772,
       "tag": "0000_nice_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771289352937,
+      "tag": "0001_bent_lorna_dane",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,48 @@
+# ============================================================================
+# Domain 12: Platform Operations — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-12-platform.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-16
+# ============================================================================
+
+## Domain 12: Platform Operations — Shared Types & Constants
+
+D12-001 | Subscription constants, plan enums, dunning step definitions, webhook event types | scripts/tasks/prompts/d12/D12-001.md | pnpm --filter shared build
+D12-002 | Drizzle schema for subscriptions table | scripts/tasks/prompts/d12/D12-002.md | pnpm --filter shared build
+D12-003 | Drizzle schema for payment_history, status_components, status_incidents, incident_updates tables | scripts/tasks/prompts/d12/D12-003.md | pnpm --filter shared build
+D12-004 | Drizzle schema for referral_codes and referral_redemptions tables (MVP accommodation) | scripts/tasks/prompts/d12/D12-004.md | pnpm --filter shared build
+D12-005 | Zod validation schemas for subscription, billing, and status page endpoints | scripts/tasks/prompts/d12/D12-005.md | pnpm --filter shared build
+D12-006 | Generate and apply database migration for Platform Operations tables | scripts/tasks/prompts/d12/D12-006.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 12: Platform Operations — Repository Layer
+
+D12-010 | Repository: subscription CRUD operations | scripts/tasks/prompts/d12/D12-010.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-011 | Repository: payment history | scripts/tasks/prompts/d12/D12-011.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-012 | Repository: status page components and incidents | scripts/tasks/prompts/d12/D12-012.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 12: Platform Operations — Service Layer
+
+D12-020 | Service: Stripe Checkout session creation and subscription provisioning | scripts/tasks/prompts/d12/D12-020.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-021 | Service: Stripe webhook event processing | scripts/tasks/prompts/d12/D12-021.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-022 | Service: dunning sequence and subscription lifecycle jobs | scripts/tasks/prompts/d12/D12-022.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-023 | Service: status page and incident management | scripts/tasks/prompts/d12/D12-023.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 12: Platform Operations — Middleware & Routes
+
+D12-030 | Stripe webhook middleware and signature verification plugin | scripts/tasks/prompts/d12/D12-030.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D12-031 | Routes: subscription and billing endpoints + integration tests | scripts/tasks/prompts/d12/D12-031.md | pnpm --filter api vitest run test/integration/platform/
+D12-032 | Routes: status page (public) and admin incident management + integration tests | scripts/tasks/prompts/d12/D12-032.md | pnpm --filter api vitest run test/integration/platform/
+
+## Domain 12: Platform Operations — Security Tests
+
+D12-040 | Security: authentication enforcement on every protected route | scripts/tasks/prompts/d12/D12-040.md | pnpm --filter api vitest run test/security/platform/platform.authn.security.ts
+D12-041 | Security: authorization and role enforcement | scripts/tasks/prompts/d12/D12-041.md | pnpm --filter api vitest run test/security/platform/platform.authz.security.ts
+D12-042 | Security: cross-user isolation (tenant scoping) | scripts/tasks/prompts/d12/D12-042.md | pnpm --filter api vitest run test/security/platform/platform.scoping.security.ts
+D12-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d12/D12-043.md | pnpm --filter api vitest run test/security/platform/platform.input.security.ts
+D12-044 | Security: data leakage prevention (Stripe secrets, PHI isolation) | scripts/tasks/prompts/d12/D12-044.md | pnpm --filter api vitest run test/security/platform/platform.leakage.security.ts
+D12-045 | Security: audit trail completeness for billing and subscription events | scripts/tasks/prompts/d12/D12-045.md | pnpm --filter api vitest run test/security/platform/platform.audit.security.ts
+
+## Domain 12: Platform Operations — Final Validation
+
+D12-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d12/D12-099.md | pnpm --filter api vitest run src/domains/platform/ test/integration/platform/ test/security/platform/
