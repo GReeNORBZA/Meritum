@@ -1,0 +1,53 @@
+# ============================================================================
+# Domain 02: Reference Data — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-02-reference.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-17
+# ============================================================================
+
+## Domain 2: Reference Data — Shared Types & Constants
+
+D02-001 | Reference data constants: data set enums, fee types, rule categories, modifier types, facility types | scripts/tasks/prompts/d02/D02-001.md | pnpm --filter shared build
+D02-002 | Drizzle schema for reference_data_versions and hsc_codes tables | scripts/tasks/prompts/d02/D02-002.md | pnpm --filter shared build
+D02-003 | Drizzle schema for wcb_codes and modifier_definitions tables | scripts/tasks/prompts/d02/D02-003.md | pnpm --filter shared build
+D02-004 | Drizzle schema for governing_rules and functional_centres tables | scripts/tasks/prompts/d02/D02-004.md | pnpm --filter shared build
+D02-005 | Drizzle schema for di_codes, rrnp_communities, and pcpcm_baskets tables | scripts/tasks/prompts/d02/D02-005.md | pnpm --filter shared build
+D02-006 | Drizzle schema for statutory_holidays, explanatory_codes, and reference_data_staging tables | scripts/tasks/prompts/d02/D02-006.md | pnpm --filter shared build
+D02-007 | Zod validation schemas for search, lookup, and public endpoints | scripts/tasks/prompts/d02/D02-007.md | pnpm --filter shared build
+D02-008 | Zod validation schemas for admin data management and internal validation endpoints | scripts/tasks/prompts/d02/D02-008.md | pnpm --filter shared build
+D02-009 | Generate and apply database migration for all Reference Data tables | scripts/tasks/prompts/d02/D02-009.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 2: Reference Data — Repository Layer
+
+D02-010 | Repository: version management and HSC code queries (version-aware) | scripts/tasks/prompts/d02/D02-010.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-011 | Repository: WCB codes, modifier definitions, and governing rules queries | scripts/tasks/prompts/d02/D02-011.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-012 | Repository: DI codes, RRNP communities, PCPCM baskets, holidays, explanatory codes | scripts/tasks/prompts/d02/D02-012.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-013 | Repository: admin staging operations (upload, diff, publish, rollback) | scripts/tasks/prompts/d02/D02-013.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+
+## Domain 2: Reference Data — Service Layer
+
+D02-020 | Service: HSC code search with version resolution and frequency weighting | scripts/tasks/prompts/d02/D02-020.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-021 | Service: modifier lookup, validation support, and governing rule queries | scripts/tasks/prompts/d02/D02-021.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-022 | Service: admin data ingestion (upload, schema validation, diff generation) | scripts/tasks/prompts/d02/D02-022.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-023 | Service: admin publishing (stage -> publish, rollback, event emission) | scripts/tasks/prompts/d02/D02-023.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+D02-024 | Service: holiday management, change summaries, and contextual help | scripts/tasks/prompts/d02/D02-024.md | pnpm --filter api vitest run src/domains/reference/reference.test.ts
+
+## Domain 2: Reference Data — Middleware & Routes
+
+D02-030 | Routes: search and lookup endpoints (13 public user-facing routes) | scripts/tasks/prompts/d02/D02-030.md | pnpm --filter api vitest run test/integration/reference/
+D02-031 | Routes: admin data management endpoints (upload, diff, publish, holidays) | scripts/tasks/prompts/d02/D02-031.md | pnpm --filter api vitest run test/integration/reference/
+D02-032 | Routes: internal validation endpoints and change summary endpoints | scripts/tasks/prompts/d02/D02-032.md | pnpm --filter api vitest run test/integration/reference/
+
+## Domain 2: Reference Data — Security Tests
+
+D02-040 | Security: authentication enforcement on every route | scripts/tasks/prompts/d02/D02-040.md | pnpm --filter api vitest run test/security/reference/reference.authn.security.ts
+D02-041 | Security: authorization and role enforcement | scripts/tasks/prompts/d02/D02-041.md | pnpm --filter api vitest run test/security/reference/reference.authz.security.ts
+D02-042 | Security: cross-user isolation (tenant scoping) | scripts/tasks/prompts/d02/D02-042.md | pnpm --filter api vitest run test/security/reference/reference.scoping.security.ts
+D02-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d02/D02-043.md | pnpm --filter api vitest run test/security/reference/reference.input.security.ts
+D02-044 | Security: data leakage prevention | scripts/tasks/prompts/d02/D02-044.md | pnpm --filter api vitest run test/security/reference/reference.leakage.security.ts
+D02-045 | Security: audit trail completeness for all reference data operations | scripts/tasks/prompts/d02/D02-045.md | pnpm --filter api vitest run test/security/reference/reference.audit.security.ts
+
+## Domain 2: Reference Data — Final Validation
+
+D02-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d02/D02-099.md | pnpm --filter api vitest run src/domains/reference/ test/integration/reference/ test/security/reference/

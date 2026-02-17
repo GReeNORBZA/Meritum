@@ -22,6 +22,13 @@
       "when": 1771306041654,
       "tag": "0002_watery_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771316585681,
+      "tag": "0003_early_wallow",
+      "breakpoints": true
     }
   ]
 }

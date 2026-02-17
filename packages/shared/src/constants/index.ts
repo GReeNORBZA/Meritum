@@ -41,3 +41,19 @@ export {
   NOTIFICATION_RETENTION_ARCHIVE_DAYS,
   NotificationAuditAction,
 } from './notification.constants.js';
+
+export {
+  ReferenceDataSet,
+  FeeType,
+  ModifierType,
+  ModifierCalculationMethod,
+  RuleCategory,
+  RuleSeverity,
+  FacilityType,
+  PcpcmBasketType,
+  HolidayJurisdiction,
+  ExplanatoryCodeSeverity,
+  StagingStatus,
+  VersionEventType,
+  ReferenceAuditAction,
+} from './reference.constants.js';

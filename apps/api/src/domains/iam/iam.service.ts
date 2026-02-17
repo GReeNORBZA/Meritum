@@ -1047,6 +1047,12 @@ export interface AuthContext {
   role: string;
   subscriptionStatus: string;
   sessionId: string;
+  delegateContext?: {
+    delegateUserId: string;
+    physicianProviderId: string;
+    permissions: string[];
+    linkageId: string;
+  };
 }
 
 /**
@@ -1070,12 +1076,19 @@ export async function validateSession(
   // Refresh idle timer
   await deps.sessionRepo.refreshSession(result.session.sessionId);
 
-  return {
+  const ctx: AuthContext = {
     userId: result.user.userId,
     role: result.user.role,
     subscriptionStatus: result.user.subscriptionStatus,
     sessionId: result.session.sessionId,
   };
+
+  // Include delegate context if present (populated after physician context switch)
+  if ((result.user as any).delegateContext) {
+    ctx.delegateContext = (result.user as any).delegateContext;
+  }
+
+  return ctx;
 }
 
 // ---------------------------------------------------------------------------

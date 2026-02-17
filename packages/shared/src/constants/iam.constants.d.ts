@@ -1,0 +1,96 @@
+export declare const Role: {
+    readonly PHYSICIAN: "PHYSICIAN";
+    readonly DELEGATE: "DELEGATE";
+    readonly ADMIN: "ADMIN";
+};
+export type Role = (typeof Role)[keyof typeof Role];
+export declare const Permission: {
+    readonly CLAIM_CREATE: "CLAIM_CREATE";
+    readonly CLAIM_VIEW: "CLAIM_VIEW";
+    readonly CLAIM_EDIT: "CLAIM_EDIT";
+    readonly CLAIM_DELETE: "CLAIM_DELETE";
+    readonly CLAIM_SUBMIT: "CLAIM_SUBMIT";
+    readonly BATCH_VIEW: "BATCH_VIEW";
+    readonly BATCH_APPROVE: "BATCH_APPROVE";
+    readonly PATIENT_CREATE: "PATIENT_CREATE";
+    readonly PATIENT_VIEW: "PATIENT_VIEW";
+    readonly PATIENT_EDIT: "PATIENT_EDIT";
+    readonly PATIENT_IMPORT: "PATIENT_IMPORT";
+    readonly REPORT_VIEW: "REPORT_VIEW";
+    readonly REPORT_EXPORT: "REPORT_EXPORT";
+    readonly ANALYTICS_VIEW: "ANALYTICS_VIEW";
+    readonly PROVIDER_VIEW: "PROVIDER_VIEW";
+    readonly PROVIDER_EDIT: "PROVIDER_EDIT";
+    readonly DELEGATE_MANAGE: "DELEGATE_MANAGE";
+    readonly SUBSCRIPTION_MANAGE: "SUBSCRIPTION_MANAGE";
+    readonly SETTINGS_VIEW: "SETTINGS_VIEW";
+    readonly SETTINGS_EDIT: "SETTINGS_EDIT";
+    readonly DATA_EXPORT: "DATA_EXPORT";
+    readonly AUDIT_VIEW: "AUDIT_VIEW";
+    readonly AI_COACH_VIEW: "AI_COACH_VIEW";
+    readonly AI_COACH_MANAGE: "AI_COACH_MANAGE";
+    readonly ADMIN_PHI_ACCESS: "ADMIN_PHI_ACCESS";
+};
+export type Permission = (typeof Permission)[keyof typeof Permission];
+export declare const DefaultPermissions: {
+    readonly PHYSICIAN: readonly Permission[];
+    readonly DELEGATE: readonly Permission[];
+    readonly ADMIN: readonly Permission[];
+};
+export declare const AuditAction: {
+    readonly AUTH_REGISTERED: "auth.registered";
+    readonly AUTH_EMAIL_VERIFIED: "auth.email_verified";
+    readonly AUTH_MFA_SETUP: "auth.mfa_setup";
+    readonly AUTH_LOGIN_SUCCESS: "auth.login_success";
+    readonly AUTH_LOGIN_FAILED: "auth.login_failed";
+    readonly AUTH_LOGIN_MFA_SUCCESS: "auth.login_mfa_success";
+    readonly AUTH_LOGIN_MFA_FAILED: "auth.login_mfa_failed";
+    readonly AUTH_LOGIN_RECOVERY_USED: "auth.login_recovery_used";
+    readonly AUTH_LOGOUT: "auth.logout";
+    readonly AUTH_SESSION_REVOKED: "auth.session_revoked";
+    readonly AUTH_SESSION_REVOKED_ALL: "auth.session_revoked_all";
+    readonly AUTH_PASSWORD_RESET_REQUESTED: "auth.password_reset_requested";
+    readonly AUTH_PASSWORD_RESET_COMPLETED: "auth.password_reset_completed";
+    readonly DELEGATE_INVITED: "delegate.invited";
+    readonly DELEGATE_ACCEPTED: "delegate.accepted";
+    readonly DELEGATE_PERMISSIONS_UPDATED: "delegate.permissions_updated";
+    readonly DELEGATE_REVOKED: "delegate.revoked";
+    readonly DELEGATE_CONTEXT_SWITCHED: "delegate.context_switched";
+    readonly ACCOUNT_UPDATED: "account.updated";
+    readonly ACCOUNT_MFA_RECONFIGURED: "account.mfa_reconfigured";
+    readonly ACCOUNT_RECOVERY_CODES_REGENERATED: "account.recovery_codes_regenerated";
+    readonly ACCOUNT_DELETION_REQUESTED: "account.deletion_requested";
+    readonly ACCOUNT_DELETION_EXECUTED: "account.deletion_executed";
+    readonly ACCOUNT_SUSPENDED: "account.suspended";
+    readonly ACCOUNT_REACTIVATED: "account.reactivated";
+    readonly AUDIT_QUERIED: "audit.queried";
+    readonly AUDIT_EXPORTED: "audit.exported";
+    readonly ADMIN_MFA_RESET_ISSUED: "admin.mfa_reset_issued";
+};
+export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+export declare const AuditCategory: {
+    readonly AUTH: "auth";
+    readonly DELEGATE: "delegate";
+    readonly ACCOUNT: "account";
+    readonly AUDIT: "audit";
+    readonly ADMIN: "admin";
+};
+export type AuditCategory = (typeof AuditCategory)[keyof typeof AuditCategory];
+export declare const SubscriptionStatus: {
+    readonly TRIAL: "TRIAL";
+    readonly ACTIVE: "ACTIVE";
+    readonly PAST_DUE: "PAST_DUE";
+    readonly SUSPENDED: "SUSPENDED";
+    readonly CANCELLED: "CANCELLED";
+};
+export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
+export declare const SessionRevokeReason: {
+    readonly LOGOUT: "logout";
+    readonly EXPIRED_IDLE: "expired_idle";
+    readonly EXPIRED_ABSOLUTE: "expired_absolute";
+    readonly REVOKED_REMOTE: "revoked_remote";
+    readonly PASSWORD_RESET: "password_reset";
+    readonly ACCOUNT_DELETED: "account_deleted";
+};
+export type SessionRevokeReason = (typeof SessionRevokeReason)[keyof typeof SessionRevokeReason];
+//# sourceMappingURL=iam.constants.d.ts.map
