@@ -15,6 +15,13 @@
       "when": 1771289352937,
       "tag": "0001_bent_lorna_dane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771306041654,
+      "tag": "0002_watery_magdalene",
+      "breakpoints": true
     }
   ]
 }

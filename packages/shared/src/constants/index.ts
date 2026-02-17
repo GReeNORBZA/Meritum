@@ -26,3 +26,18 @@ export {
   DUNNING_SUSPENSION_DAY,
   DUNNING_CANCELLATION_DAY,
 } from './platform.constants.js';
+
+export {
+  NotificationPriority,
+  NotificationChannel,
+  DigestMode,
+  EmailDeliveryStatus,
+  NotificationEventType,
+  EventCategory,
+  EVENT_CATALOGUE,
+  EMAIL_RETRY_SCHEDULE_MS,
+  EMAIL_MAX_RETRY_ATTEMPTS,
+  NOTIFICATION_RETENTION_PRIMARY_DAYS,
+  NOTIFICATION_RETENTION_ARCHIVE_DAYS,
+  NotificationAuditAction,
+} from './notification.constants.js';

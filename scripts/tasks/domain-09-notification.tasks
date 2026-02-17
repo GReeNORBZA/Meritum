@@ -1,0 +1,48 @@
+# ============================================================================
+# Domain 09: Notification Service — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-09-notification.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-17
+# ============================================================================
+
+## Domain 9: Notification Service — Shared Types & Constants
+
+D09-001 | Notification constants: event types, priorities, channels, digest modes, delivery statuses, retry schedule, audit actions | scripts/tasks/prompts/d09/D09-001.md | pnpm --filter shared build
+D09-002 | Drizzle schema for notifications table | scripts/tasks/prompts/d09/D09-002.md | pnpm --filter shared build
+D09-003 | Drizzle schema for email_delivery_log and notification_templates tables | scripts/tasks/prompts/d09/D09-003.md | pnpm --filter shared build
+D09-004 | Drizzle schema for digest_queue and notification_preferences tables | scripts/tasks/prompts/d09/D09-004.md | pnpm --filter shared build
+D09-005 | Zod validation schemas for notification feed, preferences, and event ingestion endpoints | scripts/tasks/prompts/d09/D09-005.md | pnpm --filter shared build
+D09-006 | Generate and apply database migration for notification tables | scripts/tasks/prompts/d09/D09-006.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 9: Notification Service — Repository Layer
+
+D09-010 | Repository: notifications CRUD (feed, read, dismiss, unread count) | scripts/tasks/prompts/d09/D09-010.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+D09-011 | Repository: email delivery log, notification templates | scripts/tasks/prompts/d09/D09-011.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+D09-012 | Repository: digest queue and notification preferences | scripts/tasks/prompts/d09/D09-012.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+
+## Domain 9: Notification Service — Service Layer
+
+D09-020 | Service: event processing pipeline — receive, resolve recipients, check preferences, render, create | scripts/tasks/prompts/d09/D09-020.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+D09-021 | Service: email delivery, retry logic, quiet hours, bounce handling | scripts/tasks/prompts/d09/D09-021.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+D09-022 | Service: digest assembly and scheduled jobs | scripts/tasks/prompts/d09/D09-022.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+D09-023 | Service: WebSocket real-time notification delivery | scripts/tasks/prompts/d09/D09-023.md | pnpm --filter api vitest run src/domains/notification/notification.test.ts
+
+## Domain 9: Notification Service — Routes & Integration Tests
+
+D09-030 | Routes: notification feed, read, dismiss, unread count | scripts/tasks/prompts/d09/D09-030.md | pnpm --filter api vitest run test/integration/notification/
+D09-031 | Routes: notification preferences and quiet hours | scripts/tasks/prompts/d09/D09-031.md | pnpm --filter api vitest run test/integration/notification/
+D09-032 | Routes: internal event ingestion, WebSocket endpoint, Postmark webhook | scripts/tasks/prompts/d09/D09-032.md | pnpm --filter api vitest run test/integration/notification/
+
+## Domain 9: Notification Service — Security Tests
+
+D09-040 | Security: authentication enforcement on every notification route | scripts/tasks/prompts/d09/D09-040.md | pnpm --filter api vitest run test/security/notification/notification.authn.security.ts
+D09-041 | Security: authorization and role enforcement for notification features | scripts/tasks/prompts/d09/D09-041.md | pnpm --filter api vitest run test/security/notification/notification.authz.security.ts
+D09-042 | Security: cross-user notification isolation (tenant scoping) | scripts/tasks/prompts/d09/D09-042.md | pnpm --filter api vitest run test/security/notification/notification.scoping.security.ts
+D09-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d09/D09-043.md | pnpm --filter api vitest run test/security/notification/notification.input.security.ts
+D09-044 | Security: data leakage prevention — no PHI in email, sanitised errors | scripts/tasks/prompts/d09/D09-044.md | pnpm --filter api vitest run test/security/notification/notification.leakage.security.ts
+D09-045 | Security: audit trail completeness for notification actions | scripts/tasks/prompts/d09/D09-045.md | pnpm --filter api vitest run test/security/notification/notification.audit.security.ts
+
+## Domain 9: Notification Service — Final Validation
+
+D09-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d09/D09-099.md | pnpm --filter api vitest run src/domains/notification/ test/integration/notification/ test/security/notification/

@@ -47,3 +47,23 @@ export type {
   InsertReferralRedemption,
   SelectReferralRedemption,
 } from './platform.schema.js';
+
+export {
+  notifications,
+  emailDeliveryLog,
+  notificationTemplates,
+  digestQueue,
+  notificationPreferences,
+} from './notification.schema.js';
+export type {
+  InsertNotification,
+  SelectNotification,
+  InsertEmailDeliveryLog,
+  SelectEmailDeliveryLog,
+  InsertNotificationTemplate,
+  SelectNotificationTemplate,
+  InsertDigestQueueItem,
+  SelectDigestQueueItem,
+  InsertNotificationPreference,
+  SelectNotificationPreference,
+} from './notification.schema.js';

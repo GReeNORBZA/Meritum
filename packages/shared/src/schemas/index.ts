@@ -60,3 +60,28 @@ export type {
   UpdateComponentStatus,
   AdminSubscriptionQuery,
 } from './platform.schema.js';
+
+export {
+  notificationFeedQuerySchema,
+  notificationIdParamSchema,
+  updatePreferenceSchema,
+  preferenceCategoryParamSchema,
+  quietHoursSchema,
+  emitEventSchema,
+  emitBatchEventSchema,
+  notificationResponseSchema,
+  unreadCountResponseSchema,
+  preferenceResponseSchema,
+} from './notification.schema.js';
+export type {
+  NotificationFeedQuery,
+  NotificationIdParam,
+  UpdatePreference,
+  PreferenceCategoryParam,
+  QuietHours,
+  EmitEvent,
+  EmitBatchEvent,
+  NotificationResponse,
+  UnreadCountResponse,
+  PreferenceResponse,
+} from './notification.schema.js';

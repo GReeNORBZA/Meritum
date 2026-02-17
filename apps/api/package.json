@@ -28,6 +28,7 @@
     "otplib": "^13.3.0",
     "pg": "^8.13.0",
     "pino": "^9.6.0",
+    "postmark": "^4.0.5",
     "zod": "^3.24.0"
   },
   "devDependencies": {
