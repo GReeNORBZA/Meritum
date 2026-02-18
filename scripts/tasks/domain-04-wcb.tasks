@@ -1,0 +1,46 @@
+## Domain 4.2: WCB Claim Pathway — Shared Types & Constants
+D04W-001 | WCB constants: form types, role codes, facility types, timing tiers, validation checks, batch/payment statuses, OIS codes | scripts/tasks/prompts/d04w/D04W-001.md | pnpm --filter shared build
+D04W-002 | Drizzle schema for wcb_claim_details table — general, practitioner, and claimant fields | scripts/tasks/prompts/d04w/D04W-002.md | pnpm --filter shared build
+D04W-003 | Drizzle schema for wcb_claim_details — employer, accident, injury assessment, treatment plan, and opioid fields | scripts/tasks/prompts/d04w/D04W-003.md | pnpm --filter shared build
+D04W-004 | Drizzle schema for wcb_claim_details — RTW, invoice correction, and OIS-specific fields (~56 additional columns) | scripts/tasks/prompts/d04w/D04W-004.md | pnpm --filter shared build
+D04W-005 | Drizzle schema for wcb_injuries, wcb_prescriptions, wcb_consultations, wcb_work_restrictions child tables | scripts/tasks/prompts/d04w/D04W-005.md | pnpm --filter shared build
+D04W-006 | Drizzle schema for wcb_invoice_lines and wcb_attachments child tables | scripts/tasks/prompts/d04w/D04W-006.md | pnpm --filter shared build
+D04W-007 | Drizzle schema for wcb_batches, wcb_return_records, wcb_return_invoice_lines, wcb_remittance_records pipeline tables | scripts/tasks/prompts/d04w/D04W-007.md | pnpm --filter shared build
+D04W-008 | Zod validation schemas for WCB claim CRUD, batch, return, remittance, and MVP endpoints | scripts/tasks/prompts/d04w/D04W-008.md | pnpm --filter shared build
+D04W-009 | Generate and apply database migration for all WCB tables | scripts/tasks/prompts/d04w/D04W-009.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 4.2: WCB Claim Pathway — Repository Layer
+D04W-010 | Repository: WCB claim CRUD operations (create, read, update, soft-delete) | scripts/tasks/prompts/d04w/D04W-010.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-011 | Repository: child table CRUD (injuries, prescriptions, consultations, work restrictions) | scripts/tasks/prompts/d04w/D04W-011.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-012 | Repository: invoice line and attachment operations | scripts/tasks/prompts/d04w/D04W-012.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-013 | Repository: WCB batch operations (create, status transitions, download tracking) | scripts/tasks/prompts/d04w/D04W-013.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-014 | Repository: return file and remittance record operations | scripts/tasks/prompts/d04w/D04W-014.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+
+## Domain 4.2: WCB Claim Pathway — Service Layer
+D04W-020 | Service: WCB claim creation with form-type routing and practitioner snapshot | scripts/tasks/prompts/d04w/D04W-020.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-021 | Service: WCB validation engine — required fields, conditional logic, data type/length checks | scripts/tasks/prompts/d04w/D04W-021.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-022 | Service: POB-NOI validation, Contract/Role/Form enforcement, and timing deadline calculations | scripts/tasks/prompts/d04w/D04W-022.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-023 | Service: WCB fee calculation — timing tiers, 351 premium codes, expedited services, unbundling, RRNP | scripts/tasks/prompts/d04w/D04W-023.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-024 | Service: WCB batch assembly and HL7 v2.3.1 XML generation | scripts/tasks/prompts/d04w/D04W-024.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-025 | Service: XSD validation, batch download with signed URL, and upload confirmation | scripts/tasks/prompts/d04w/D04W-025.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-026 | Service: WCB return file parsing, claim matching, and state transitions | scripts/tasks/prompts/d04w/D04W-026.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-027 | Service: WCB payment remittance XML parsing and reconciliation | scripts/tasks/prompts/d04w/D04W-027.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-028 | Service: MVP export (pre-filled PDF) and manual outcome recording | scripts/tasks/prompts/d04w/D04W-028.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+
+## Domain 4.2: WCB Claim Pathway — Routes & Integration Tests
+D04W-030 | Routes and handlers for WCB claim CRUD + validation + form schema endpoints | scripts/tasks/prompts/d04w/D04W-030.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-031 | Routes and handlers for WCB batch management, return file, remittance, and MVP endpoints | scripts/tasks/prompts/d04w/D04W-031.md | pnpm --filter api vitest run src/domains/wcb/wcb.test.ts
+D04W-032 | Integration tests: WCB claim lifecycle (create, validate, submit, return, reconcile) | scripts/tasks/prompts/d04w/D04W-032.md | pnpm --filter api vitest run test/integration/wcb/
+D04W-033 | Integration tests: WCB validation engine (all 16 checks, conditional cascades, POB-NOI matrix) | scripts/tasks/prompts/d04w/D04W-033.md | pnpm --filter api vitest run test/integration/wcb/
+D04W-034 | Integration tests: batch XML generation, XSD validation, return file and remittance processing | scripts/tasks/prompts/d04w/D04W-034.md | pnpm --filter api vitest run test/integration/wcb/
+
+## Domain 4.2: WCB Claim Pathway — Security Tests
+D04W-040 | Security: authentication enforcement on every WCB route | scripts/tasks/prompts/d04w/D04W-040.md | pnpm --filter api vitest run test/security/wcb/wcb.authn.security.ts
+D04W-041 | Security: authorization and role/permission enforcement for WCB routes | scripts/tasks/prompts/d04w/D04W-041.md | pnpm --filter api vitest run test/security/wcb/wcb.authz.security.ts
+D04W-042 | Security: cross-physician tenant isolation (MOST CRITICAL) | scripts/tasks/prompts/d04w/D04W-042.md | pnpm --filter api vitest run test/security/wcb/wcb.scoping.security.ts
+D04W-043 | Security: input validation and injection prevention for WCB endpoints | scripts/tasks/prompts/d04w/D04W-043.md | pnpm --filter api vitest run test/security/wcb/wcb.input.security.ts
+D04W-044 | Security: PHI leakage prevention for WCB data | scripts/tasks/prompts/d04w/D04W-044.md | pnpm --filter api vitest run test/security/wcb/wcb.leakage.security.ts
+D04W-045 | Security: audit trail completeness for WCB operations | scripts/tasks/prompts/d04w/D04W-045.md | pnpm --filter api vitest run test/security/wcb/wcb.audit.security.ts
+
+## Domain 4.2: WCB Claim Pathway — Final Validation
+D04W-099 | Full domain test suite: all unit + integration + security tests for WCB Pathway | scripts/tasks/prompts/d04w/D04W-099.md | pnpm --filter api vitest run src/domains/wcb/ test/integration/wcb/ test/security/wcb/
