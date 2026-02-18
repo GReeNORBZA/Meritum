@@ -1,0 +1,57 @@
+# ============================================================================
+# Domain 04: Claim Lifecycle Core — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-04-claim-core.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-18
+# ============================================================================
+
+## Domain 4.0: Claim Lifecycle Core — Shared Types & Constants
+
+D04-001 | Claim state machine constants, import sources, auto-submission modes, validation check IDs, audit actions | scripts/tasks/prompts/d04/D04-001.md | pnpm --filter shared build
+D04-002 | Drizzle schema for claims table | scripts/tasks/prompts/d04/D04-002.md | pnpm --filter shared build
+D04-003 | Drizzle schema for import_batches and field_mapping_templates tables | scripts/tasks/prompts/d04/D04-003.md | pnpm --filter shared build
+D04-004 | Drizzle schema for shifts and claim_audit_history tables | scripts/tasks/prompts/d04/D04-004.md | pnpm --filter shared build
+D04-005 | Zod validation schemas for claim CRUD and state transition endpoints | scripts/tasks/prompts/d04/D04-005.md | pnpm --filter shared build
+D04-006 | Zod validation schemas for import, template, shift, export, and preferences endpoints | scripts/tasks/prompts/d04/D04-006.md | pnpm --filter shared build
+D04-007 | Generate and apply database migration for all claim tables | scripts/tasks/prompts/d04/D04-007.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 4.0: Claim Lifecycle Core — Repository Layer
+
+D04-010 | Repository: claims CRUD (create, read, update, soft-delete, list with filters) | scripts/tasks/prompts/d04/D04-010.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-011 | Repository: claim state transitions and clean/flagged classification | scripts/tasks/prompts/d04/D04-011.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-012 | Repository: import batches and duplicate file detection | scripts/tasks/prompts/d04/D04-012.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-013 | Repository: field mapping templates CRUD | scripts/tasks/prompts/d04/D04-013.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-014 | Repository: shifts (ED workflow) | scripts/tasks/prompts/d04/D04-014.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-015 | Repository: claim audit history (append-only) | scripts/tasks/prompts/d04/D04-015.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-016 | Repository: submission preferences and data export records | scripts/tasks/prompts/d04/D04-016.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+
+## Domain 4.0: Claim Lifecycle Core — Service Layer
+
+D04-020 | Service: claim creation (manual entry, from EMR import, from ED shift) | scripts/tasks/prompts/d04/D04-020.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-021 | Service: validation engine (pipeline structure, shared checks S1-S7, result format) | scripts/tasks/prompts/d04/D04-021.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-022 | Service: state machine enforcement, clean/flagged classification, auto-submission logic | scripts/tasks/prompts/d04/D04-022.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-023 | Service: EMR import flow (upload, preview, commit, field mapping) | scripts/tasks/prompts/d04/D04-023.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-024 | Service: ED shift workflow (create shift, add encounters, complete, after-hours calculation) | scripts/tasks/prompts/d04/D04-024.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-025 | Service: rejection management, resubmission, and write-off | scripts/tasks/prompts/d04/D04-025.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+D04-026 | Service: AI Coach interactions, duplicate handling, submission preferences, data export | scripts/tasks/prompts/d04/D04-026.md | pnpm --filter api vitest run src/domains/claim/claim.test.ts
+
+## Domain 4.0: Claim Lifecycle Core — Middleware & Routes
+
+D04-030 | Routes: claim CRUD, state transitions, validation, AI Coach, rejection management | scripts/tasks/prompts/d04/D04-030.md | pnpm --filter api vitest run test/integration/claim/
+D04-031 | Routes: EMR import, field mapping templates, ED shifts, data export, submission preferences | scripts/tasks/prompts/d04/D04-031.md | pnpm --filter api vitest run test/integration/claim/
+D04-032 | Integration tests: full claim lifecycle (create -> validate -> queue -> submit -> assess -> paid) | scripts/tasks/prompts/d04/D04-032.md | pnpm --filter api vitest run test/integration/claim/
+D04-033 | Integration tests: EMR import, ED shift workflow, auto-submission modes, deadline expiry | scripts/tasks/prompts/d04/D04-033.md | pnpm --filter api vitest run test/integration/claim/
+
+## Domain 4.0: Claim Lifecycle Core — Security Tests
+
+D04-040 | Security: authentication enforcement on every route | scripts/tasks/prompts/d04/D04-040.md | pnpm --filter api vitest run test/security/claim/claim.authn.security.ts
+D04-041 | Security: authorization and permission enforcement | scripts/tasks/prompts/d04/D04-041.md | pnpm --filter api vitest run test/security/claim/claim.authz.security.ts
+D04-042 | Security: physician tenant isolation (MOST CRITICAL) | scripts/tasks/prompts/d04/D04-042.md | pnpm --filter api vitest run test/security/claim/claim.scoping.security.ts
+D04-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d04/D04-043.md | pnpm --filter api vitest run test/security/claim/claim.input.security.ts
+D04-044 | Security: data leakage prevention (PHI protection) | scripts/tasks/prompts/d04/D04-044.md | pnpm --filter api vitest run test/security/claim/claim.leakage.security.ts
+D04-045 | Security: audit trail completeness for all claim actions | scripts/tasks/prompts/d04/D04-045.md | pnpm --filter api vitest run test/security/claim/claim.audit.security.ts
+
+## Domain 4.0: Claim Lifecycle Core — Final Validation
+
+D04-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d04/D04-099.md | pnpm --filter api vitest run src/domains/claim/ test/integration/claim/ test/security/claim/

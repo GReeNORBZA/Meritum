@@ -1,0 +1,21 @@
+// Re-exports from @meritum/shared for this domain's Zod schemas
+export {
+  createClaimSchema,
+  updateClaimSchema,
+  claimIdParamSchema,
+  listClaimsSchema,
+  queueClaimSchema,
+  writeOffClaimSchema,
+  resubmitClaimSchema,
+  dismissSuggestionSchema,
+  suggestionIdParamSchema,
+  type CreateClaim,
+  type UpdateClaim,
+  type ClaimIdParam,
+  type ListClaims,
+  type QueueClaim,
+  type WriteOffClaim,
+  type ResubmitClaim,
+  type DismissSuggestion,
+  type SuggestionIdParam,
+} from '@meritum/shared/schemas/claim.schema.js';

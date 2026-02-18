@@ -85,3 +85,21 @@ export {
   CSV_COLUMN_MAPPINGS,
   CSV_GENDER_VALUE_MAPPINGS,
 } from './patient.constants.js';
+
+export {
+  ClaimState,
+  TERMINAL_STATES,
+  STATE_TRANSITIONS,
+  ClaimType,
+  ClaimImportSource,
+  AutoSubmissionMode,
+  ImportBatchStatus,
+  ShiftStatus,
+  ClaimAuditAction,
+  ActorContext,
+  ValidationCheckId,
+  ValidationSeverity,
+  VALIDATION_CHECKS,
+  ExportStatus,
+  ClaimNotificationEvent,
+} from './claim.constants.js';

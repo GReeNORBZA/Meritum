@@ -43,6 +43,13 @@
       "when": 1771375010456,
       "tag": "0005_kind_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771385244982,
+      "tag": "0006_greedy_firelord",
+      "breakpoints": true
     }
   ]
 }

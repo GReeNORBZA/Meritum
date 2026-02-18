@@ -151,3 +151,26 @@ export type {
   InsertPatientMergeHistory,
   SelectPatientMergeHistory,
 } from './patient.schema.js';
+
+export {
+  claims,
+  fieldMappingTemplates,
+  importBatches,
+  shifts,
+  claimExports,
+  claimAuditHistory,
+} from './claim.schema.js';
+export type {
+  InsertClaim,
+  SelectClaim,
+  InsertFieldMappingTemplate,
+  SelectFieldMappingTemplate,
+  InsertImportBatch,
+  SelectImportBatch,
+  InsertShift,
+  SelectShift,
+  InsertClaimExport,
+  SelectClaimExport,
+  InsertClaimAuditHistory,
+  SelectClaimAuditHistory,
+} from './claim.schema.js';
