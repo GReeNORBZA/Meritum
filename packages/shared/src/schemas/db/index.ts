@@ -108,3 +108,32 @@ export type {
   InsertReferenceDataStaging,
   SelectReferenceDataStaging,
 } from './reference.schema.js';
+
+export {
+  providers,
+  businessArrangements,
+  pcpcmEnrolments,
+  practiceLocations,
+  wcbConfigurations,
+  delegateRelationships,
+  submissionPreferences,
+  hlinkConfigurations,
+} from './provider.schema.js';
+export type {
+  InsertProvider,
+  SelectProvider,
+  InsertBa,
+  SelectBa,
+  InsertPcpcmEnrolment,
+  SelectPcpcmEnrolment,
+  InsertLocation,
+  SelectLocation,
+  InsertWcbConfig,
+  SelectWcbConfig,
+  InsertDelegateRelationship,
+  SelectDelegateRelationship,
+  InsertSubmissionPreferences,
+  SelectSubmissionPreferences,
+  InsertHlinkConfig,
+  SelectHlinkConfig,
+} from './provider.schema.js';

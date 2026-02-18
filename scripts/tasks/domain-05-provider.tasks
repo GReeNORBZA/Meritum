@@ -1,0 +1,60 @@
+# ============================================================================
+# Domain 05: Provider Management — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-05-provider.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-17
+# ============================================================================
+
+## Domain 5: Provider Management — Shared Types & Constants
+
+D05-001 | Provider constants, enums, delegate permission catalogue, audit action identifiers | scripts/tasks/prompts/d05/D05-001.md | pnpm --filter shared build
+D05-002 | Drizzle schema for providers table | scripts/tasks/prompts/d05/D05-002.md | pnpm --filter shared build
+D05-003 | Drizzle schema for business_arrangements and pcpcm_enrolments tables | scripts/tasks/prompts/d05/D05-003.md | pnpm --filter shared build
+D05-004 | Drizzle schema for practice_locations table | scripts/tasks/prompts/d05/D05-004.md | pnpm --filter shared build
+D05-005 | Drizzle schema for wcb_configurations and delegate_relationships tables | scripts/tasks/prompts/d05/D05-005.md | pnpm --filter shared build
+D05-006 | Drizzle schema for submission_preferences and hlink_configurations tables | scripts/tasks/prompts/d05/D05-006.md | pnpm --filter shared build
+D05-007 | Zod validation schemas for provider profile, BA, location, WCB endpoints | scripts/tasks/prompts/d05/D05-007.md | pnpm --filter shared build
+D05-008 | Zod validation schemas for delegate, submission preferences, H-Link, internal API | scripts/tasks/prompts/d05/D05-008.md | pnpm --filter shared build
+D05-009 | Generate and apply database migration for all provider tables | scripts/tasks/prompts/d05/D05-009.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 5: Provider Management — Repository Layer
+
+D05-010 | Repository: provider CRUD operations | scripts/tasks/prompts/d05/D05-010.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-011 | Repository: business arrangement management | scripts/tasks/prompts/d05/D05-011.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-012 | Repository: practice location management | scripts/tasks/prompts/d05/D05-012.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-013 | Repository: PCPCM enrolment and WCB configuration | scripts/tasks/prompts/d05/D05-013.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-014 | Repository: delegate relationships | scripts/tasks/prompts/d05/D05-014.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-015 | Repository: submission preferences and H-Link configuration | scripts/tasks/prompts/d05/D05-015.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-016 | Repository: provider context queries (internal API) | scripts/tasks/prompts/d05/D05-016.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+
+## Domain 5: Provider Management — Service Layer
+
+D05-020 | Service: provider profile management and onboarding | scripts/tasks/prompts/d05/D05-020.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-021 | Service: business arrangement management with PCPCM constraints | scripts/tasks/prompts/d05/D05-021.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-022 | Service: practice location management with RRNP eligibility | scripts/tasks/prompts/d05/D05-022.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-023 | Service: PCPCM routing logic | scripts/tasks/prompts/d05/D05-023.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-024 | Service: WCB configuration management | scripts/tasks/prompts/d05/D05-024.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-025 | Service: delegate management (invitation, acceptance, revocation) | scripts/tasks/prompts/d05/D05-025.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-026 | Service: submission preferences and H-Link configuration | scripts/tasks/prompts/d05/D05-026.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D05-027 | Service: provider context (internal API for claim lifecycle) | scripts/tasks/prompts/d05/D05-027.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+
+## Domain 5: Provider Management — Routes & Integration Tests
+
+D05-030 | Routes: provider profile, onboarding, BA, and location endpoints | scripts/tasks/prompts/d05/D05-030.md | pnpm --filter api vitest run test/integration/provider/
+D05-031 | Routes: WCB configuration and submission preferences endpoints | scripts/tasks/prompts/d05/D05-031.md | pnpm --filter api vitest run test/integration/provider/
+D05-032 | Routes: delegate management endpoints | scripts/tasks/prompts/d05/D05-032.md | pnpm --filter api vitest run test/integration/provider/
+D05-033 | Routes: internal provider context API endpoints | scripts/tasks/prompts/d05/D05-033.md | pnpm --filter api vitest run test/integration/provider/
+
+## Domain 5: Provider Management — Security Tests
+
+D05-040 | Security: authentication enforcement on every route | scripts/tasks/prompts/d05/D05-040.md | pnpm --filter api vitest run test/security/provider/provider.authn.security.ts
+D05-041 | Security: authorization and role enforcement | scripts/tasks/prompts/d05/D05-041.md | pnpm --filter api vitest run test/security/provider/provider.authz.security.ts
+D05-042 | Security: cross-user isolation (physician tenant scoping) — MOST CRITICAL | scripts/tasks/prompts/d05/D05-042.md | pnpm --filter api vitest run test/security/provider/provider.scoping.security.ts
+D05-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d05/D05-043.md | pnpm --filter api vitest run test/security/provider/provider.input.security.ts
+D05-044 | Security: data leakage prevention | scripts/tasks/prompts/d05/D05-044.md | pnpm --filter api vitest run test/security/provider/provider.leakage.security.ts
+D05-045 | Security: audit trail completeness | scripts/tasks/prompts/d05/D05-045.md | pnpm --filter api vitest run test/security/provider/provider.audit.security.ts
+
+## Domain 5: Provider Management — Final Validation
+
+D05-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d05/D05-099.md | pnpm --filter api vitest run src/domains/provider/ test/integration/provider/ test/security/provider/

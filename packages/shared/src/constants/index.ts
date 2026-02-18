@@ -57,3 +57,19 @@ export {
   VersionEventType,
   ReferenceAuditAction,
 } from './reference.constants.js';
+
+export {
+  ProviderStatus,
+  PhysicianType,
+  BAType,
+  BAStatus,
+  PcpcmEnrolmentStatus,
+  DelegateRelationshipStatus,
+  SubmissionMode,
+  HLinkAccreditationStatus,
+  DelegatePermission,
+  DelegatePermissionTemplate,
+  DelegatePermissionTemplatePermissions,
+  ProviderAuditAction,
+  DEFAULT_SUBMISSION_PREFERENCES,
+} from './provider.constants.js';
