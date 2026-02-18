@@ -202,3 +202,32 @@ export type {
   RuleDetailQuery,
   VersionQuery,
 } from './reference.schema.js';
+
+export {
+  createPatientSchema,
+  updatePatientSchema,
+  patientIdParamSchema,
+  patientSearchQuerySchema,
+  recentPatientsQuerySchema,
+  importMappingSchema,
+  importIdParamSchema,
+  mergePreviewSchema,
+  mergeExecuteSchema,
+  exportIdParamSchema,
+  internalPatientIdParamSchema,
+  validatePhnParamSchema,
+} from './patient.schema.js';
+export type {
+  CreatePatient,
+  UpdatePatient,
+  PatientIdParam,
+  PatientSearchQuery,
+  RecentPatientsQuery,
+  ImportMapping,
+  ImportIdParam,
+  MergePreview,
+  MergeExecute,
+  ExportIdParam,
+  InternalPatientIdParam,
+  ValidatePhnParam,
+} from './patient.schema.js';

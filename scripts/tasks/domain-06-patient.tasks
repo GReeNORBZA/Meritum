@@ -1,0 +1,50 @@
+# ============================================================================
+# Domain 06: Patient Registry — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-06-patient.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-18
+# ============================================================================
+
+## Domain 6: Patient Registry — Shared Types & Constants
+
+D06-001 | Patient constants, enums, audit action identifiers, PHN validation utility | scripts/tasks/prompts/d06/D06-001.md | pnpm --filter shared build
+D06-002 | Drizzle schema for patients table | scripts/tasks/prompts/d06/D06-002.md | pnpm --filter shared build
+D06-003 | Drizzle schema for patient_import_batches and patient_merge_history tables | scripts/tasks/prompts/d06/D06-003.md | pnpm --filter shared build
+D06-004 | Zod validation schemas for patient CRUD, search, import, merge, and export endpoints | scripts/tasks/prompts/d06/D06-004.md | pnpm --filter shared build
+D06-005 | Generate and apply database migration for all patient tables | scripts/tasks/prompts/d06/D06-005.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 6: Patient Registry — Repository Layer
+
+D06-010 | Repository: patient CRUD operations | scripts/tasks/prompts/d06/D06-010.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-011 | Repository: patient search (PHN, name with pg_trgm, DOB, combined, recent) | scripts/tasks/prompts/d06/D06-011.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-012 | Repository: CSV import batch operations | scripts/tasks/prompts/d06/D06-012.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-013 | Repository: patient merge operations | scripts/tasks/prompts/d06/D06-013.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-014 | Repository: patient export and internal API queries | scripts/tasks/prompts/d06/D06-014.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+
+## Domain 6: Patient Registry — Service Layer
+
+D06-020 | Service: patient CRUD with PHN validation and audit logging | scripts/tasks/prompts/d06/D06-020.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-021 | Service: patient search orchestration | scripts/tasks/prompts/d06/D06-021.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-022 | Service: CSV bulk import workflow | scripts/tasks/prompts/d06/D06-022.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-023 | Service: patient merge workflow | scripts/tasks/prompts/d06/D06-023.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+D06-024 | Service: patient export and internal API | scripts/tasks/prompts/d06/D06-024.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+
+## Domain 6: Patient Registry — Routes & Integration Tests
+
+D06-030 | Routes: patient CRUD and search endpoints | scripts/tasks/prompts/d06/D06-030.md | pnpm --filter api vitest run test/integration/patient/
+D06-031 | Routes: CSV import endpoints | scripts/tasks/prompts/d06/D06-031.md | pnpm --filter api vitest run test/integration/patient/
+D06-032 | Routes: merge, export, and internal API endpoints | scripts/tasks/prompts/d06/D06-032.md | pnpm --filter api vitest run test/integration/patient/
+
+## Domain 6: Patient Registry — Security Tests
+
+D06-040 | Security: authentication enforcement on every route | scripts/tasks/prompts/d06/D06-040.md | pnpm --filter api vitest run test/security/patient/patient.authn.security.ts
+D06-041 | Security: authorization and role enforcement | scripts/tasks/prompts/d06/D06-041.md | pnpm --filter api vitest run test/security/patient/patient.authz.security.ts
+D06-042 | Security: cross-physician patient isolation (HIA custodian scoping) — MOST CRITICAL | scripts/tasks/prompts/d06/D06-042.md | pnpm --filter api vitest run test/security/patient/patient.scoping.security.ts
+D06-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d06/D06-043.md | pnpm --filter api vitest run test/security/patient/patient.input.security.ts
+D06-044 | Security: PHI leakage prevention | scripts/tasks/prompts/d06/D06-044.md | pnpm --filter api vitest run test/security/patient/patient.leakage.security.ts
+D06-045 | Security: audit trail completeness | scripts/tasks/prompts/d06/D06-045.md | pnpm --filter api vitest run test/security/patient/patient.audit.security.ts
+
+## Domain 6: Patient Registry — Final Validation
+
+D06-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d06/D06-099.md | pnpm --filter api vitest run src/domains/patient/ test/integration/patient/ test/security/patient/

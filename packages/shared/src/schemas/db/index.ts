@@ -137,3 +137,17 @@ export type {
   InsertHlinkConfig,
   SelectHlinkConfig,
 } from './provider.schema.js';
+
+export {
+  patients,
+  patientImportBatches,
+  patientMergeHistory,
+} from './patient.schema.js';
+export type {
+  InsertPatient,
+  SelectPatient,
+  InsertPatientImportBatch,
+  SelectPatientImportBatch,
+  InsertPatientMergeHistory,
+  SelectPatientMergeHistory,
+} from './patient.schema.js';

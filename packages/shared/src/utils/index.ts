@@ -1,2 +1,1 @@
-// Barrel export for utility functions
-// Domain task files will populate this
+export { validateAlbertaPhn, maskPhn } from './phn.utils.js';

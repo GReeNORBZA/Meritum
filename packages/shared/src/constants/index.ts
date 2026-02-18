@@ -73,3 +73,15 @@ export {
   ProviderAuditAction,
   DEFAULT_SUBMISSION_PREFERENCES,
 } from './provider.constants.js';
+
+export {
+  Gender,
+  ImportStatus,
+  ImportSource,
+  PatientSearchMode,
+  ProvinceCode,
+  DEFAULT_PHN_PROVINCE,
+  PatientAuditAction,
+  CSV_COLUMN_MAPPINGS,
+  CSV_GENDER_VALUE_MAPPINGS,
+} from './patient.constants.js';
