@@ -50,6 +50,13 @@
       "when": 1771385244982,
       "tag": "0006_greedy_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771396649552,
+      "tag": "0007_melted_demogoblin",
+      "breakpoints": true
     }
   ]
 }

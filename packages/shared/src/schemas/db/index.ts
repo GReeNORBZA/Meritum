@@ -174,3 +174,11 @@ export type {
   InsertClaimAuditHistory,
   SelectClaimAuditHistory,
 } from './claim.schema.js';
+
+export { ahcipClaimDetails, ahcipBatches } from './ahcip.schema.js';
+export type {
+  InsertAhcipClaimDetail,
+  SelectAhcipClaimDetail,
+  InsertAhcipBatch,
+  SelectAhcipBatch,
+} from './ahcip.schema.js';

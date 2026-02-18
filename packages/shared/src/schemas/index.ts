@@ -278,3 +278,20 @@ export type {
   ClaimExportIdParam,
   UpdateSubmissionMode,
 } from './claim.schema.js';
+
+export {
+  createAhcipDetailSchema,
+  updateAhcipDetailSchema,
+  listBatchesSchema,
+  batchIdParamSchema,
+  feeCalculateSchema,
+  batchAssessmentParamSchema,
+} from './ahcip.schema.js';
+export type {
+  CreateAhcipDetail,
+  UpdateAhcipDetail,
+  ListBatches,
+  BatchIdParam,
+  FeeCalculate,
+  BatchAssessmentParam,
+} from './ahcip.schema.js';

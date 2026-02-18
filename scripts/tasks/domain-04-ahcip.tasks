@@ -1,0 +1,47 @@
+# ============================================================================
+# Domain 4.1: AHCIP Claim Pathway — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-04-ahcip.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-18
+# ============================================================================
+
+## Domain 4.1: AHCIP Claim Pathway — Shared Types & Constants
+
+D04A-001 | AHCIP constants: batch statuses, validation check IDs (A1–A19), encounter types, after-hours types, modifier codes, cycle timeline | scripts/tasks/prompts/d04a/D04A-001.md | pnpm --filter shared build
+D04A-002 | Drizzle schema for ahcip_claim_details table | scripts/tasks/prompts/d04a/D04A-002.md | pnpm --filter shared build
+D04A-003 | Drizzle schema for ahcip_batches table | scripts/tasks/prompts/d04a/D04A-003.md | pnpm --filter shared build
+D04A-004 | Zod validation schemas for AHCIP claim details, batch, fee, and assessment endpoints | scripts/tasks/prompts/d04a/D04A-004.md | pnpm --filter shared build
+D04A-005 | Generate and apply database migration for AHCIP tables | scripts/tasks/prompts/d04a/D04A-005.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 4.1: AHCIP Claim Pathway — Repository Layer
+
+D04A-010 | Repository: AHCIP claim details CRUD (create, read, update with base claim join) | scripts/tasks/prompts/d04a/D04A-010.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+D04A-011 | Repository: AHCIP batches (create, status updates, query, claim-batch linking) | scripts/tasks/prompts/d04a/D04A-011.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+
+## Domain 4.1: AHCIP Claim Pathway — Service Layer
+
+D04A-020 | Service: AHCIP claim creation with extension data, BA resolution, and PCPCM routing | scripts/tasks/prompts/d04a/D04A-020.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+D04A-021 | Service: AHCIP validation module (A1–A19 checks, pathway delegation interface) | scripts/tasks/prompts/d04a/D04A-021.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+D04A-022 | Service: AHCIP fee calculation engine (base fee, modifiers, premiums, RRNP, PCPCM, shadow billing) | scripts/tasks/prompts/d04a/D04A-022.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+D04A-023 | Service: Thursday batch cycle (assembly, H-Link file generation, transmission, retry logic) | scripts/tasks/prompts/d04a/D04A-023.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+D04A-024 | Service: assessment response ingestion (file parsing, claim matching, state transitions, payment reconciliation) | scripts/tasks/prompts/d04a/D04A-024.md | pnpm --filter api vitest run src/domains/ahcip/ahcip.test.ts
+
+## Domain 4.1: AHCIP Claim Pathway — Middleware & Routes
+
+D04A-030 | Routes: AHCIP batch management, assessment, fee calculation endpoints | scripts/tasks/prompts/d04a/D04A-030.md | pnpm --filter api vitest run test/integration/ahcip/
+D04A-031 | Integration tests: AHCIP billing scenarios end-to-end | scripts/tasks/prompts/d04a/D04A-031.md | pnpm --filter api vitest run test/integration/ahcip/
+D04A-032 | Integration tests: validation pipeline, fee calculation, and H-Link file generation | scripts/tasks/prompts/d04a/D04A-032.md | pnpm --filter api vitest run test/integration/ahcip/
+
+## Domain 4.1: AHCIP Claim Pathway — Security Tests
+
+D04A-040 | Security: authentication enforcement on every AHCIP route | scripts/tasks/prompts/d04a/D04A-040.md | pnpm --filter api vitest run test/security/ahcip/ahcip.authn.security.ts
+D04A-041 | Security: authorization and permission enforcement for AHCIP routes | scripts/tasks/prompts/d04a/D04A-041.md | pnpm --filter api vitest run test/security/ahcip/ahcip.authz.security.ts
+D04A-042 | Security: physician tenant isolation for AHCIP data (MOST CRITICAL) | scripts/tasks/prompts/d04a/D04A-042.md | pnpm --filter api vitest run test/security/ahcip/ahcip.scoping.security.ts
+D04A-043 | Security: input validation and injection prevention for AHCIP endpoints | scripts/tasks/prompts/d04a/D04A-043.md | pnpm --filter api vitest run test/security/ahcip/ahcip.input.security.ts
+D04A-044 | Security: data leakage prevention for AHCIP (PHI in claims, files, assessments) | scripts/tasks/prompts/d04a/D04A-044.md | pnpm --filter api vitest run test/security/ahcip/ahcip.leakage.security.ts
+D04A-045 | Security: audit trail completeness for AHCIP batch lifecycle | scripts/tasks/prompts/d04a/D04A-045.md | pnpm --filter api vitest run test/security/ahcip/ahcip.audit.security.ts
+
+## Domain 4.1: AHCIP Claim Pathway — Final Validation
+
+D04A-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d04a/D04A-099.md | pnpm --filter api vitest run src/domains/ahcip/ test/integration/ahcip/ test/security/ahcip/
