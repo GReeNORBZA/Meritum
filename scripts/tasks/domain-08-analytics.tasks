@@ -1,0 +1,37 @@
+## Domain 8: Analytics & Reporting — Shared Types, Schemas & Migration
+D08-001 | Analytics constants, enums, and shared types | scripts/tasks/prompts/d08/D08-001.md | pnpm --filter shared build
+D08-002 | Drizzle schema for analytics_cache table | scripts/tasks/prompts/d08/D08-002.md | pnpm --filter shared build
+D08-003 | Drizzle schema for generated_reports table | scripts/tasks/prompts/d08/D08-003.md | pnpm --filter shared build
+D08-004 | Drizzle schema for report_subscriptions table | scripts/tasks/prompts/d08/D08-004.md | pnpm --filter shared build
+D08-005 | Zod validation schemas for all API inputs | scripts/tasks/prompts/d08/D08-005.md | pnpm --filter shared build
+D08-006 | Database migration for all Domain 8 tables | scripts/tasks/prompts/d08/D08-006.md | pnpm --filter api drizzle-kit generate && pnpm --filter api drizzle-kit migrate
+
+## Domain 8: Analytics & Reporting — Repository Layer
+D08-010 | Analytics cache repository — read, upsert, stale detection | scripts/tasks/prompts/d08/D08-010.md | pnpm --filter api vitest run src/domains/analytics/repos/analytics-cache.repo.test.ts
+D08-011 | Generated reports repository — CRUD, status tracking, expiry | scripts/tasks/prompts/d08/D08-011.md | pnpm --filter api vitest run src/domains/analytics/repos/generated-reports.repo.test.ts
+D08-012 | Report subscriptions repository — CRUD, schedule queries | scripts/tasks/prompts/d08/D08-012.md | pnpm --filter api vitest run src/domains/analytics/repos/report-subscriptions.repo.test.ts
+D08-013 | Dashboard query repository — complex read queries against claim and provider tables | scripts/tasks/prompts/d08/D08-013.md | pnpm --filter api vitest run src/domains/analytics/repos/dashboard-query.repo.test.ts
+
+## Domain 8: Analytics & Reporting — Service Layer
+D08-020 | Dashboard service — aggregation, caching, and period comparison logic | scripts/tasks/prompts/d08/D08-020.md | pnpm --filter api vitest run src/domains/analytics/services/dashboard.service.test.ts
+D08-021 | Cache refresh service — nightly batch, event-driven incremental, stale detection | scripts/tasks/prompts/d08/D08-021.md | pnpm --filter api vitest run src/domains/analytics/services/cache-refresh.service.test.ts
+D08-022 | Report generation service — accountant exports, data portability, PDF/CSV generation | scripts/tasks/prompts/d08/D08-022.md | pnpm --filter api vitest run src/domains/analytics/services/report-generation.service.test.ts
+D08-023 | Scheduled reports service — subscription processing and scheduling logic | scripts/tasks/prompts/d08/D08-023.md | pnpm --filter api vitest run src/domains/analytics/services/scheduled-reports.service.test.ts
+D08-024 | Download service — authenticated download links, streaming, expiry enforcement | scripts/tasks/prompts/d08/D08-024.md | pnpm --filter api vitest run src/domains/analytics/services/download.service.test.ts
+
+## Domain 8: Analytics & Reporting — Routes, Handlers & Integration Tests
+D08-030 | Dashboard routes — all 7 GET endpoints for analytics data | scripts/tasks/prompts/d08/D08-030.md | pnpm --filter api vitest run src/domains/analytics/routes/dashboard.routes.test.ts
+D08-031 | Report routes — generation, status, download, listing | scripts/tasks/prompts/d08/D08-031.md | pnpm --filter api vitest run src/domains/analytics/routes/report.routes.test.ts
+D08-032 | Subscription routes — CRUD for report subscriptions | scripts/tasks/prompts/d08/D08-032.md | pnpm --filter api vitest run src/domains/analytics/routes/subscription.routes.test.ts
+D08-033 | Integration tests — end-to-end analytics workflows | scripts/tasks/prompts/d08/D08-033.md | pnpm --filter api vitest run test/integration/analytics/
+
+## Domain 8: Analytics & Reporting — Security Tests
+D08-040 | Security: authentication enforcement on every route | scripts/tasks/prompts/d08/D08-040.md | pnpm --filter api vitest run test/security/analytics/analytics.authn.security.ts
+D08-041 | Security: authorization and permission enforcement | scripts/tasks/prompts/d08/D08-041.md | pnpm --filter api vitest run test/security/analytics/analytics.authz.security.ts
+D08-042 | Security: cross-physician tenant isolation (MOST CRITICAL) | scripts/tasks/prompts/d08/D08-042.md | pnpm --filter api vitest run test/security/analytics/analytics.scoping.security.ts
+D08-043 | Security: input validation — injection, type coercion, boundary values | scripts/tasks/prompts/d08/D08-043.md | pnpm --filter api vitest run test/security/analytics/analytics.input.security.ts
+D08-044 | Security: PHI leakage prevention in errors, headers, and logs | scripts/tasks/prompts/d08/D08-044.md | pnpm --filter api vitest run test/security/analytics/analytics.leakage.security.ts
+D08-045 | Security: audit trail completeness — all events logged, append-only | scripts/tasks/prompts/d08/D08-045.md | pnpm --filter api vitest run test/security/analytics/analytics.audit.security.ts
+
+## Domain 8: Analytics & Reporting — Final Validation
+D08-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d08/D08-099.md | pnpm --filter api vitest run src/domains/analytics/ test/integration/analytics/ test/security/analytics/

@@ -583,7 +583,12 @@ function seedSessions() {
     userId: DELEGATE_USER_ID,
     role: 'DELEGATE',
     subscriptionStatus: 'ACTIVE',
-  });
+    delegateContext: {
+      delegateUserId: DELEGATE_USER_ID,
+      physicianProviderId: DELEGATE_PHYSICIAN_ID,
+      permissions: ['AI_COACH_VIEW', 'AI_COACH_MANAGE'],
+    },
+  } as any);
   sessions.push({
     sessionId: DELEGATE_SESSION_ID,
     userId: DELEGATE_USER_ID,
@@ -1374,7 +1379,7 @@ describe('Intelligence Engine Audit Trail Verification (Security)', () => {
           {
             ruleId: DUMMY_RULE_ID,
             name: 'Missing modifier check',
-            category: SuggestionCategory.MISSING_MODIFIER,
+            category: SuggestionCategory.MODIFIER_ADD,
             claimType: 'AHCIP',
             conditions: { type: 'existence', field: 'ahcip.modifier1', operator: 'IS NULL' },
             suggestionTemplate: {
@@ -1509,7 +1514,7 @@ describe('Intelligence Engine Audit Trail Verification (Security)', () => {
       expect(event.providerId).toBe(PHYSICIAN_USER_ID);
       expect(event.ruleId).toBe(DUMMY_RULE_ID);
       expect(event.tier).toBe(1);
-      expect(event.category).toBe(SuggestionCategory.MISSING_MODIFIER);
+      expect(event.category).toBe(SuggestionCategory.MODIFIER_ADD);
     });
 
     it('reanalyseClaim produces intel.claim_analysed with isReanalysis flag', async () => {
@@ -1598,6 +1603,150 @@ describe('Intelligence Engine Audit Trail Verification (Security)', () => {
 
       // One GENERATED event per Tier 1 suggestion
       expect(generatedEvents.length).toBe(tier1Count);
+    });
+  });
+
+  // =========================================================================
+  // 10. Rule Suppression / Unsuppression Audit Events
+  // =========================================================================
+
+  describe('Rule Suppression and Unsuppression Audit Events', () => {
+    it('unsuppressing a rule via handler produces UNSUPPRESSED audit entry in domain audit log', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/me/rules/${DUMMY_RULE_ID}/unsuppress`,
+        headers: physicianHeaders(),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // Verify the domain audit log contains the unsuppress action
+      const unsuppressAudits = auditLogCalls.filter(
+        (a) => a.action === 'intelligence.rule_unsuppressed',
+      );
+      expect(unsuppressAudits.length).toBe(1);
+      expect(unsuppressAudits[0].providerId).toBe(PHYSICIAN_USER_ID);
+      expect(unsuppressAudits[0].details.ruleId).toBe(DUMMY_RULE_ID);
+    });
+
+    it('auto-suppression via consecutive dismissals updates learning state', async () => {
+      // When recordDismissal is called and consecutiveDismissals >= threshold,
+      // the repository sets isSuppressed = true. This is tested by verifying
+      // that the recordDismissal mock was called during dismiss.
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/suggestions/${DUMMY_SUGGESTION_ID}/dismiss`,
+        headers: physicianHeaders(),
+        payload: { reason: 'not_applicable' },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // Verify recordDismissal was called on the lifecycle deps
+      const lifecycleDeps = handlerDeps.lifecycleDeps;
+      expect(lifecycleDeps.recordDismissal).toHaveBeenCalled();
+    });
+
+    it('dismissing a suggestion records DISMISSED event with all required fields', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/suggestions/${DUMMY_SUGGESTION_ID}/dismiss`,
+        headers: physicianHeaders(),
+        payload: { reason: 'already_billed' },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const dismissedEvents = suggestionEvents.filter(
+        (e) => e.eventType === SuggestionEventType.DISMISSED,
+      );
+      expect(dismissedEvents.length).toBeGreaterThanOrEqual(1);
+
+      const event = dismissedEvents[0];
+      expect(event.claimId).toBe(DUMMY_CLAIM_ID);
+      expect(event.suggestionId).toBe(DUMMY_SUGGESTION_ID);
+      expect(event.providerId).toBe(PHYSICIAN_USER_ID);
+      expect(event.dismissedReason).toBe('already_billed');
+      expect(event.tier).toBeDefined();
+      expect(event.category).toBeDefined();
+    });
+  });
+
+  // =========================================================================
+  // 11. Delegate Context — Provider ID Correctness in Events
+  // =========================================================================
+
+  describe('Delegate Context Provider ID Correctness', () => {
+    it('delegate unsuppress records the physician provider ID, not the delegate user ID', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/me/rules/${DUMMY_RULE_ID}/unsuppress`,
+        headers: delegateHeaders(),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const unsuppressAudits = auditLogCalls.filter(
+        (a) => a.action === 'intelligence.rule_unsuppressed',
+      );
+      expect(unsuppressAudits.length).toBe(1);
+      // The provider ID should be the physician's ID (DELEGATE_PHYSICIAN_ID),
+      // not the delegate's own user ID
+      expect(unsuppressAudits[0].providerId).toBe(DELEGATE_PHYSICIAN_ID);
+      expect(unsuppressAudits[0].providerId).not.toBe(DELEGATE_USER_ID);
+    });
+
+    it('delegate preference update records the physician provider ID', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/intelligence/me/preferences',
+        headers: delegateHeaders(),
+        payload: { enabled_categories: ['MODIFIER_ADD'] },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const prefsAudits = auditLogCalls.filter(
+        (a) => a.action === 'intelligence.preferences_updated',
+      );
+      expect(prefsAudits.length).toBe(1);
+      expect(prefsAudits[0].providerId).toBe(DELEGATE_PHYSICIAN_ID);
+      expect(prefsAudits[0].providerId).not.toBe(DELEGATE_USER_ID);
+    });
+
+    it('delegate accept suggestion records ACCEPTED event with physician provider ID', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/suggestions/${DUMMY_SUGGESTION_ID}/accept`,
+        headers: delegateHeaders(),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const acceptedEvents = suggestionEvents.filter(
+        (e) => e.eventType === SuggestionEventType.ACCEPTED,
+      );
+      expect(acceptedEvents.length).toBeGreaterThanOrEqual(1);
+      expect(acceptedEvents[0].providerId).toBe(DELEGATE_PHYSICIAN_ID);
+      expect(acceptedEvents[0].providerId).not.toBe(DELEGATE_USER_ID);
+    });
+
+    it('delegate dismiss suggestion records DISMISSED event with physician provider ID', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/intelligence/suggestions/${DUMMY_SUGGESTION_ID}/dismiss`,
+        headers: delegateHeaders(),
+        payload: { reason: 'delegate_dismissal' },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const dismissedEvents = suggestionEvents.filter(
+        (e) => e.eventType === SuggestionEventType.DISMISSED,
+      );
+      expect(dismissedEvents.length).toBeGreaterThanOrEqual(1);
+      expect(dismissedEvents[0].providerId).toBe(DELEGATE_PHYSICIAN_ID);
+      expect(dismissedEvents[0].providerId).not.toBe(DELEGATE_USER_ID);
     });
   });
 });

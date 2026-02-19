@@ -243,3 +243,17 @@ export type {
   CrossClaimQuery,
   SuggestionTemplate,
 } from './intelligence.schema.js';
+
+export {
+  analyticsCache,
+  generatedReports,
+  reportSubscriptions,
+} from './analytics.schema.js';
+export type {
+  InsertAnalyticsCache,
+  SelectAnalyticsCache,
+  InsertGeneratedReport,
+  SelectGeneratedReport,
+  InsertReportSubscription,
+  SelectReportSubscription,
+} from './analytics.schema.js';

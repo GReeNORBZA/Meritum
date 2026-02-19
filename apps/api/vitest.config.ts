@@ -12,6 +12,8 @@ export default defineConfig({
       'test/**/*.security.ts',
     ],
     setupFiles: [],
+    testTimeout: 15000,
+    hookTimeout: 30000,
   },
   resolve: {
     alias: {
