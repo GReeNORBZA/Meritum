@@ -273,3 +273,13 @@ export type {
   InsertFavouriteCode,
   SelectFavouriteCode,
 } from './mobile.schema.js';
+
+export { supportTickets, helpArticles, articleFeedback } from './support.schema.js';
+export type {
+  InsertSupportTicket,
+  SelectSupportTicket,
+  InsertHelpArticle,
+  SelectHelpArticle,
+  InsertArticleFeedback,
+  SelectArticleFeedback,
+} from './support.schema.js';

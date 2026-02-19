@@ -468,3 +468,24 @@ export type {
   ImaAcknowledge,
   OnboardingProgressResponse,
 } from './onboarding.schema.js';
+
+export {
+  articleListQuerySchema,
+  articleSlugParamSchema,
+  articleFeedbackSchema,
+  createTicketSchema,
+  ticketListQuerySchema,
+  ticketIdParamSchema,
+  ticketRatingSchema,
+  updateTicketSchema,
+} from './validation/support.validation.js';
+export type {
+  ArticleListQuery,
+  ArticleSlugParam,
+  ArticleFeedbackInput,
+  CreateTicket,
+  TicketListQuery,
+  TicketIdParam,
+  TicketRating,
+  UpdateTicket,
+} from './validation/support.validation.js';

@@ -234,3 +234,21 @@ export {
   MobileAuditAction,
   SYNC_ENDPOINT,
 } from './mobile.constants.js';
+
+export {
+  TicketStatus,
+  TicketPriority,
+  DEFAULT_TICKET_PRIORITY,
+  TicketCategory,
+  SLA_TARGETS,
+  SLA_BUSINESS_HOURS,
+  SLA_BUSINESS_DAYS,
+  HelpCategory,
+  ArticleFeedback,
+  SATISFACTION_RATING_MIN,
+  SATISFACTION_RATING_MAX,
+  CONTEXT_HELP_MAPPINGS,
+  SupportAuditAction,
+  AI_CHAT_CONFIDENCE_THRESHOLD,
+  AI_CHAT_ENABLED,
+} from './support.constants.js';

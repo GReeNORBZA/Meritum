@@ -1,0 +1,31 @@
+## Domain 13: Support System — Shared Types, Schemas & Migration
+D13-001 | Support system constants, enums, and shared types | scripts/tasks/prompts/d13/D13-001.md | pnpm --filter shared build
+D13-002 | Drizzle schema for support_tickets table | scripts/tasks/prompts/d13/D13-002.md | pnpm --filter shared build
+D13-003 | Drizzle schema for help_articles table | scripts/tasks/prompts/d13/D13-003.md | pnpm --filter shared build
+D13-004 | Drizzle schema for article_feedback table | scripts/tasks/prompts/d13/D13-004.md | pnpm --filter shared build
+D13-005 | Zod validation schemas for all support API inputs | scripts/tasks/prompts/d13/D13-005.md | pnpm --filter shared build
+D13-006 | Database migration for all Domain 13 tables | scripts/tasks/prompts/d13/D13-006.md | pnpm --filter api drizzle-kit generate && pnpm --filter api drizzle-kit migrate
+
+## Domain 13: Support System — Repository Layer
+D13-010 | Help articles repository — search, category listing, feedback | scripts/tasks/prompts/d13/D13-010.md | pnpm --filter api vitest run src/domains/support/repos/help-articles.repo.test.ts
+D13-011 | Support tickets repository — CRUD, status tracking, SLA queries | scripts/tasks/prompts/d13/D13-011.md | pnpm --filter api vitest run src/domains/support/repos/support-tickets.repo.test.ts
+
+## Domain 13: Support System — Service Layer
+D13-020 | Help centre service — search, context-aware routing, feedback | scripts/tasks/prompts/d13/D13-020.md | pnpm --filter api vitest run src/domains/support/services/help-centre.service.test.ts
+D13-021 | Support ticket service — creation, lifecycle, notifications, SLA | scripts/tasks/prompts/d13/D13-021.md | pnpm --filter api vitest run src/domains/support/services/support-ticket.service.test.ts
+
+## Domain 13: Support System — Routes, Handlers & Integration Tests
+D13-030 | Help centre routes — article search, category listing, feedback | scripts/tasks/prompts/d13/D13-030.md | pnpm --filter api vitest run src/domains/support/routes/help.routes.test.ts
+D13-031 | Support ticket routes — creation, listing, detail, rating, screenshot upload | scripts/tasks/prompts/d13/D13-031.md | pnpm --filter api vitest run src/domains/support/routes/ticket.routes.test.ts
+D13-032 | Integration tests — end-to-end support workflows | scripts/tasks/prompts/d13/D13-032.md | pnpm --filter api vitest run test/integration/support/
+
+## Domain 13: Support System — Security Tests
+D13-040 | Security: authentication enforcement on every protected route | scripts/tasks/prompts/d13/D13-040.md | pnpm --filter api vitest run test/security/support/support.authn.security.ts
+D13-041 | Security: authorization and permission enforcement | scripts/tasks/prompts/d13/D13-041.md | pnpm --filter api vitest run test/security/support/support.authz.security.ts
+D13-042 | Security: cross-physician tenant isolation (MOST CRITICAL) | scripts/tasks/prompts/d13/D13-042.md | pnpm --filter api vitest run test/security/support/support.scoping.security.ts
+D13-043 | Security: input validation — injection, file upload, boundary values | scripts/tasks/prompts/d13/D13-043.md | pnpm --filter api vitest run test/security/support/support.input.security.ts
+D13-044 | Security: PHI leakage prevention in errors, headers, and logs | scripts/tasks/prompts/d13/D13-044.md | pnpm --filter api vitest run test/security/support/support.leakage.security.ts
+D13-045 | Security: audit trail completeness — all events logged, append-only | scripts/tasks/prompts/d13/D13-045.md | pnpm --filter api vitest run test/security/support/support.audit.security.ts
+
+## Domain 13: Support System — Final Validation
+D13-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d13/D13-099.md | pnpm --filter api vitest run src/domains/support/ test/integration/support/ test/security/support/
