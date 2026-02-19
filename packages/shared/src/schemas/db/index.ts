@@ -265,3 +265,11 @@ export type {
   InsertImaRecord,
   SelectImaRecord,
 } from './onboarding.schema.js';
+
+export { edShifts, favouriteCodes } from './mobile.schema.js';
+export type {
+  InsertEdShift,
+  SelectEdShift,
+  InsertFavouriteCode,
+  SelectFavouriteCode,
+} from './mobile.schema.js';

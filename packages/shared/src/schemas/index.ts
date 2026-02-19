@@ -420,6 +420,31 @@ export type {
 } from './validation/analytics.validation.js';
 
 export {
+  startShiftSchema,
+  mobileShiftIdParamSchema,
+  listShiftsQuerySchema,
+  logPatientSchema,
+  createFavouriteSchema,
+  updateFavouriteSchema,
+  favouriteIdParamSchema,
+  reorderFavouritesSchema,
+  quickClaimSchema,
+  mobilePatientSchema,
+} from './validation/mobile.validation.js';
+export type {
+  StartShift,
+  MobileShiftIdParam,
+  ListShiftsQuery,
+  LogPatient,
+  CreateFavourite,
+  UpdateFavourite,
+  FavouriteIdParam,
+  ReorderFavourites,
+  QuickClaim,
+  MobilePatient,
+} from './validation/mobile.validation.js';
+
+export {
   addressSchema,
   onboardingStep1Schema,
   onboardingStep2Schema,
