@@ -29,7 +29,7 @@ export function buildApp(opts = {}) {
 }
 
 // Start server when run directly
-if (process.argv[1] === import.meta.filename) {
+if (require.main === module) {
   const app = buildApp();
   const port = parseInt(process.env.API_PORT ?? '3001', 10);
   const host = process.env.API_HOST ?? '0.0.0.0';

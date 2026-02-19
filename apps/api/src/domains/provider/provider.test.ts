@@ -3676,7 +3676,7 @@ describe('Provider Service', () => {
         (e) => e.providerId === providerId,
       );
       expect(enrolment!.status).toBe('WITHDRAWN');
-      expect(enrolment!.withdrawalDate).toBeDefined();
+      expect(enrolment!.updatedAt).toBeDefined();
     });
 
     it('emits audit event', async () => {

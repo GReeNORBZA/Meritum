@@ -128,7 +128,7 @@ export async function notificationWebSocketRoutes(
     hashTokenFn: (token: string) => string;
   },
 ) {
-  registerNotificationWebSocket(app, opts.sessionValidator, opts.hashTokenFn);
+  registerNotificationWebSocket(app as any, opts.sessionValidator, opts.hashTokenFn);
 }
 
 // ---------------------------------------------------------------------------

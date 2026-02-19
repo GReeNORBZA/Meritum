@@ -1739,7 +1739,23 @@ export function createWcbRepository(db: NodePgDatabase) {
      */
     async getRemittanceDiscrepancies(
       remittanceImportId: string,
+      physicianId: string,
     ): Promise<RemittanceDiscrepancy[]> {
+      // Verify the remittance import belongs to the physician
+      const importRow = await db
+        .select({ remittanceImportId: wcbRemittanceImports.remittanceImportId })
+        .from(wcbRemittanceImports)
+        .where(
+          and(
+            eq(wcbRemittanceImports.remittanceImportId, remittanceImportId),
+            eq(wcbRemittanceImports.physicianId, physicianId),
+          ),
+        );
+
+      if (importRow.length === 0) {
+        return [];
+      }
+
       const records = await db
         .select()
         .from(wcbRemittanceRecords)

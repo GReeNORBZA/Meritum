@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createSubscriptionRepository,
   createPaymentRepository,
@@ -1902,6 +1902,7 @@ describe('Platform Service — createCheckoutSession', () => {
   it('createCheckoutSession rejects if user not found', async () => {
     const userRepo: UserRepo = {
       findUserById: vi.fn().mockResolvedValue(undefined),
+      updateSubscriptionStatus: vi.fn().mockResolvedValue(undefined),
     };
     const deps = makeServiceDeps({ userRepo });
 

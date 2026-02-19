@@ -1091,7 +1091,7 @@ function evaluateConditionalRequirement(
   // Invoice lines are conditionally required on invoice forms
   if (fieldName === 'invoice_lines' && existingData.form_id) {
     const invoiceForms = [WcbFormType.C568, WcbFormType.C568A, WcbFormType.C569, WcbFormType.C570];
-    if (invoiceForms.includes(existingData.form_id as WcbFormType)) {
+    if ((invoiceForms as string[]).includes(existingData.form_id as string)) {
       return true;
     }
   }
@@ -2220,7 +2220,7 @@ function checkInvoiceLineIntegrity(
   errors: ValidationIssue[],
 ): void {
   const invoiceForms = [WcbFormType.C568, WcbFormType.C568A, WcbFormType.C569, WcbFormType.C570];
-  const isInvoiceForm = invoiceForms.includes(formId as WcbFormType);
+  const isInvoiceForm = (invoiceForms as string[]).includes(formId);
 
   if (isInvoiceForm) {
     if (!invoiceLines || invoiceLines.length === 0) {
@@ -5071,4 +5071,3 @@ export {
   detectDiscrepancyReasons,
   subtractMoney,
 };
-export type { TimingTierResult, ProcessRemittanceFileResult, ParsedRemittanceFile, ParsedRemittanceRecord, MvpExportResult, ManualOutcomeInput, ManualOutcomeResult, TimingDashboardItem, TimingDashboardResult };

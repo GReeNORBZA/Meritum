@@ -173,5 +173,5 @@ export async function intelWebSocketRoutes(
     hashTokenFn: (token: string) => string;
   },
 ) {
-  registerIntelWebSocket(app, opts.sessionValidator, opts.hashTokenFn);
+  registerIntelWebSocket(app as any, opts.sessionValidator, opts.hashTokenFn);
 }

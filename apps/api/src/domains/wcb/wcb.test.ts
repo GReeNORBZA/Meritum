@@ -3533,6 +3533,14 @@ describe('WCB Repository', () => {
 
       const importId = 'ri-test-1111';
 
+      // Seed the remittance import for physician scoping
+      wcbRemittanceImportStore.push({
+        remittanceImportId: importId,
+        physicianId: PHYSICIAN_1,
+        recordCount: 4,
+        createdAt: new Date(),
+      });
+
       // Normal record — no discrepancy
       wcbRemittanceRecordStore.push({
         wcbRemittanceId: 'rem-1',
@@ -3597,7 +3605,7 @@ describe('WCB Repository', () => {
         billedAmount: '50.00',
       });
 
-      const result = await repo.getRemittanceDiscrepancies(importId);
+      const result = await repo.getRemittanceDiscrepancies(importId, PHYSICIAN_1);
 
       expect(result).toHaveLength(2);
 
@@ -3616,6 +3624,13 @@ describe('WCB Repository', () => {
 
       const importId = 'ri-test-2222';
 
+      wcbRemittanceImportStore.push({
+        remittanceImportId: importId,
+        physicianId: PHYSICIAN_1,
+        recordCount: 1,
+        createdAt: new Date(),
+      });
+
       wcbRemittanceRecordStore.push({
         wcbRemittanceId: 'rem-1',
         remittanceImportId: importId,
@@ -3624,7 +3639,7 @@ describe('WCB Repository', () => {
         billedAmount: '94.15',
       });
 
-      const result = await repo.getRemittanceDiscrepancies(importId);
+      const result = await repo.getRemittanceDiscrepancies(importId, PHYSICIAN_1);
 
       expect(result).toHaveLength(0);
     });
@@ -3633,7 +3648,7 @@ describe('WCB Repository', () => {
       const db = makeMockDb();
       const repo = createWcbRepository(db);
 
-      const result = await repo.getRemittanceDiscrepancies('ri-nonexistent');
+      const result = await repo.getRemittanceDiscrepancies('ri-nonexistent', PHYSICIAN_1);
 
       expect(result).toHaveLength(0);
     });
@@ -3644,6 +3659,13 @@ describe('WCB Repository', () => {
 
       const importId = 'ri-test-3333';
 
+      wcbRemittanceImportStore.push({
+        remittanceImportId: importId,
+        physicianId: PHYSICIAN_1,
+        recordCount: 1,
+        createdAt: new Date(),
+      });
+
       wcbRemittanceRecordStore.push({
         wcbRemittanceId: 'rem-1',
         remittanceImportId: importId,
@@ -3652,7 +3674,7 @@ describe('WCB Repository', () => {
         billedAmount: '94.15',
       });
 
-      const result = await repo.getRemittanceDiscrepancies(importId);
+      const result = await repo.getRemittanceDiscrepancies(importId, PHYSICIAN_1);
 
       expect(result).toHaveLength(1);
       expect(result[0].discrepancyType).toBe('STATUS_NOT_ISSUED');
@@ -6121,6 +6143,7 @@ describe('WCB Service', () => {
 
       const fileStorage: FileStorage = {
         storeEncrypted: vi.fn().mockResolvedValue(undefined),
+        readEncrypted: vi.fn().mockResolvedValue(Buffer.from('')),
       };
 
       const secretsProvider: SecretsProvider = {
@@ -9377,9 +9400,7 @@ describe('WCB Handlers', () => {
   describe('GET /wcb/batches — listBatchesHandler', () => {
     it('returns empty list when no batches exist', async () => {
       const h = handlers();
-      const request = makeMockRequest({
-        query: { page: 1, page_size: 20 },
-      }) as any;
+      const request = makeMockRequest({}) as any;
       request.query = { page: 1, page_size: 20 };
       const reply = makeMockReply();
 

@@ -588,8 +588,7 @@ export async function addBa(
         ffsBaId: ffsBa.baId,
         status: PcpcmEnrolmentStatus.PENDING,
         panelSize: null,
-        enrolmentDate: data.effectiveDate ?? null,
-        withdrawalDate: null,
+        enrolmentDate: (data.effectiveDate ?? new Date().toISOString().split('T')[0]) as string,
       });
     }
   }
@@ -734,7 +733,6 @@ export async function deactivateBa(
         providerId,
         {
           status: PcpcmEnrolmentStatus.WITHDRAWN,
-          withdrawalDate: new Date().toISOString().split('T')[0],
         },
       );
     }

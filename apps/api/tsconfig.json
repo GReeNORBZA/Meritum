@@ -4,10 +4,13 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
-      "@meritum/shared": ["../../packages/shared/src"],
-      "@meritum/shared/*": ["../../packages/shared/src/*"]
+      "@meritum/shared": ["../../packages/shared/dist"],
+      "@meritum/shared/*": ["../../packages/shared/dist/*"]
     }
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "test"]
+  "exclude": ["node_modules", "dist", "test"],
+  "references": [
+    { "path": "../../packages/shared" }
+  ]
 }

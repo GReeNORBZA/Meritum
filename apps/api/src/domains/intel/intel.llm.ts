@@ -507,7 +507,7 @@ export async function analyseTier2(
     confidence: parsed.confidence,
     sourceReference: parsed.source_reference,
     sourceUrl: null,
-    suggestedChanges: parsed.suggested_changes ?? null,
+    suggestedChanges: parsed.suggested_changes?.map(c => ({ field: c.field, valueFormula: c.value_formula })) ?? null,
   };
 
   if (deps.appendSuggestionEvent) {

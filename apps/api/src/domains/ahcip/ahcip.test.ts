@@ -3137,7 +3137,7 @@ function makeTestClaim(overrides?: Partial<AhcipClaimForValidation>): AhcipClaim
   };
 }
 
-function findEntry(entries: Array<{ check: string; severity: string }>, check: string, severity?: string) {
+function findEntry(entries: Array<{ check: string; severity: string; message: string }>, check: string, severity?: string) {
   return entries.find(
     (e) => e.check === check && (severity ? e.severity === severity : true),
   );

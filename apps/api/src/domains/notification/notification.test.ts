@@ -2354,7 +2354,7 @@ describe('NotificationService', () => {
       // CLAIM_VALIDATED is LOW priority (not URGENT)
       // In the calling code, this should trigger deferral
       const cataloguePriority = 'LOW'; // CLAIM_VALIDATED priority
-      const isUrgent = cataloguePriority === 'URGENT';
+      const isUrgent = (cataloguePriority as string) === 'URGENT';
       expect(isUrgent).toBe(false);
 
       // Verify that scheduleAfterQuietHours returns a future date
@@ -2528,9 +2528,9 @@ describe('NotificationService', () => {
       const updatedDelivery = deliveryLogStore.find(
         (d: any) => d.deliveryId === delivery.deliveryId,
       );
-      expect(updatedDelivery.status).toBe('BOUNCED');
-      expect(updatedDelivery.bounceReason).toBe('Mailbox does not exist');
-      expect(updatedDelivery.bouncedAt).toBeInstanceOf(Date);
+      expect(updatedDelivery!.status).toBe('BOUNCED');
+      expect(updatedDelivery!.bounceReason).toBe('Mailbox does not exist');
+      expect(updatedDelivery!.bouncedAt).toBeInstanceOf(Date);
 
       // Should have created an in-app notification
       const bounceNotifs = notificationStore.filter(
@@ -2576,11 +2576,11 @@ describe('NotificationService', () => {
       const updatedDelivery = deliveryLogStore.find(
         (d: any) => d.deliveryId === delivery.deliveryId,
       );
-      expect(updatedDelivery.status).not.toBe('BOUNCED');
+      expect(updatedDelivery!.status).not.toBe('BOUNCED');
 
       // Should have incremented retry count
-      expect(updatedDelivery.retryCount).toBe(1);
-      expect(updatedDelivery.nextRetryAt).toBeInstanceOf(Date);
+      expect(updatedDelivery!.retryCount).toBe(1);
+      expect(updatedDelivery!.nextRetryAt).toBeInstanceOf(Date);
 
       // No in-app notification for soft bounce
       const bounceNotifs = notificationStore.filter(
@@ -3585,7 +3585,7 @@ describe('NotificationService', () => {
 
       const defaultHash = (t: string) => `hashed-${t}`;
 
-      registerNotificationWebSocket(mockApp, validator, hashFn ?? defaultHash);
+      registerNotificationWebSocket(mockApp as any, validator, hashFn ?? defaultHash);
 
       if (!capturedHandler) throw new Error('Handler was not registered');
       return capturedHandler;

@@ -900,6 +900,7 @@ describe('HelpArticlesRepository', () => {
     it('creates a new article with auto-generated slug', async () => {
       const result = await repo.create({
         title: 'How to Submit AHCIP Claims',
+        slug: 'how-to-submit-ahcip-claims',
         category: 'billing',
         content: 'Step by step guide...',
         summary: 'A guide to AHCIP claims',

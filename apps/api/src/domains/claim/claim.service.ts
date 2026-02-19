@@ -2393,7 +2393,7 @@ export async function updateSubmissionPreferences(
     AutoSubmissionMode.REQUIRE_APPROVAL,
   ];
 
-  if (!validModes.includes(mode)) {
+  if (!validModes.includes(mode as AutoSubmissionMode)) {
     throw new BusinessRuleError(`Invalid submission mode: ${mode}`);
   }
 

@@ -6331,7 +6331,7 @@ describe('Intel Seed — seedMvpRules', () => {
 
     if (cond.type === 'and' && 'children' in cond) {
       // First child: set_membership for CMGP-eligible codes
-      const setMember = cond.children[0];
+      const setMember = cond.children![0];
       expect(setMember.type).toBe('set_membership');
       expect('field' in setMember && setMember.field).toBe('ahcip.healthServiceCode');
       expect('operator' in setMember && setMember.operator).toBe('IN');
@@ -6339,7 +6339,7 @@ describe('Intel Seed — seedMvpRules', () => {
 
       // Other children: modifier != CMGP checks
       for (let i = 1; i <= 3; i++) {
-        const modCheck = cond.children[i];
+        const modCheck = cond.children![i];
         expect(modCheck.type).toBe('field_compare');
         expect('operator' in modCheck && modCheck.operator).toBe('!=');
         expect('value' in modCheck && modCheck.value).toBe('CMGP');
@@ -6368,8 +6368,8 @@ describe('Intel Seed — seedMvpRules', () => {
     const cond = daily.conditions;
     expect(cond.type).toBe('cross_claim');
     if (cond.type === 'cross_claim' && 'query' in cond) {
-      expect(cond.query.lookbackDays).toBe(1);
-      expect(cond.query.aggregation).toBe('count');
+      expect(cond.query!.lookbackDays).toBe(1);
+      expect(cond.query!.aggregation).toBe('count');
       expect('operator' in cond && cond.operator).toBe('>=');
       expect('value' in cond && cond.value).toBe(2);
     }
@@ -6378,14 +6378,14 @@ describe('Intel Seed — seedMvpRules', () => {
     const weekly = gr3Rules.find(r => r.name.includes('weekly'))!;
     expect(weekly).toBeDefined();
     if (weekly.conditions.type === 'cross_claim' && 'query' in weekly.conditions) {
-      expect(weekly.conditions.query.lookbackDays).toBe(7);
+      expect(weekly.conditions.query!.lookbackDays).toBe(7);
     }
 
     // Monthly limit
     const monthly = gr3Rules.find(r => r.name.includes('monthly'))!;
     expect(monthly).toBeDefined();
     if (monthly.conditions.type === 'cross_claim' && 'query' in monthly.conditions) {
-      expect(monthly.conditions.query.lookbackDays).toBe(30);
+      expect(monthly.conditions.query!.lookbackDays).toBe(30);
     }
   });
 

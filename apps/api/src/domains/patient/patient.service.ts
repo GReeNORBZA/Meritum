@@ -446,8 +446,8 @@ export async function searchPatients(
 ): Promise<PatientSearchResult> {
   const mode = determineSearchMode(query);
 
-  let patients: SelectPatient[];
-  let total: number;
+  let patients: SelectPatient[] = [];
+  let total: number = 0;
 
   switch (mode) {
     case PatientSearchMode.PHN_LOOKUP: {

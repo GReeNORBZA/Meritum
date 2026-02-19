@@ -8,6 +8,7 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { hash as argon2Hash, verify as argon2Verify } from '@node-rs/argon2';
+// @ts-expect-error otplib v13 restructured exports; authenticator exists at runtime via preset-default
 import { authenticator } from 'otplib';
 import { type Register } from '@meritum/shared/schemas/iam.schema.js';
 import {

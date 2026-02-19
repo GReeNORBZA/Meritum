@@ -188,7 +188,7 @@ function authedPost(
       cookie: `session=${token}`,
       'content-type': 'application/json',
     },
-    payload: body,
+    payload: body as string,
   });
 }
 
@@ -197,7 +197,7 @@ function publicPost(app: FastifyInstance, url: string, body: unknown) {
     method: 'POST',
     url,
     headers: { 'content-type': 'application/json' },
-    payload: body,
+    payload: body as string,
   });
 }
 

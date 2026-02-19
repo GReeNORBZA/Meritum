@@ -381,8 +381,8 @@ describe('SupportTicketsRepository', () => {
         subject: 'Batch failed',
         description: 'My batch submission failed',
         contextMetadata: {
-          batch_error: true,
           batch_id: 'batch-123',
+          error_codes: ['BATCH_ERROR'],
         },
       });
 
@@ -410,7 +410,7 @@ describe('SupportTicketsRepository', () => {
         description: 'Error in batch',
         contextMetadata: {
           batch_id: 'batch-789',
-          error: 'Submission timeout',
+          error_codes: ['Submission timeout'],
         },
       });
 
@@ -435,7 +435,8 @@ describe('SupportTicketsRepository', () => {
         description: 'Batch problem',
         priority: TicketPriority.LOW,
         contextMetadata: {
-          batch_error: true,
+          batch_id: 'batch-err',
+          error_codes: ['BATCH_ERROR'],
         },
       });
 

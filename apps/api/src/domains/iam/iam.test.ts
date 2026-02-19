@@ -2383,7 +2383,7 @@ describe('IAM Service — registerUser', () => {
         return user;
       },
       async findUserByEmail(email) {
-        return createdUsers.find((u) => u.email === email.toLowerCase());
+        return createdUsers.find((u) => u.email === email.toLowerCase()) as any;
       },
       async updateUser(userId, data) {
         const user = createdUsers.find((u) => u.userId === userId);
@@ -2391,7 +2391,7 @@ describe('IAM Service — registerUser', () => {
         if (data.emailVerified !== undefined) {
           user.emailVerified = data.emailVerified;
         }
-        return user;
+        return user as any;
       },
     };
 
@@ -2401,7 +2401,7 @@ describe('IAM Service — registerUser', () => {
         return { tokenHash: data.tokenHash };
       },
       async findVerificationTokenByHash(tokenHash) {
-        return verificationTokens.find((t) => t.tokenHash === tokenHash);
+        return verificationTokens.find((t) => t.tokenHash === tokenHash) as any;
       },
       async markVerificationTokenUsed(tokenHash) {
         const token = verificationTokens.find((t) => t.tokenHash === tokenHash);
@@ -2578,7 +2578,7 @@ describe('IAM Service — verifyEmail', () => {
         return user;
       },
       async findUserByEmail(email) {
-        return createdUsers.find((u) => u.email === email.toLowerCase());
+        return createdUsers.find((u) => u.email === email.toLowerCase()) as any;
       },
       async updateUser(userId, data) {
         const user = createdUsers.find((u) => u.userId === userId);
@@ -2586,7 +2586,7 @@ describe('IAM Service — verifyEmail', () => {
         if (data.emailVerified !== undefined) {
           user.emailVerified = data.emailVerified;
         }
-        return user;
+        return user as any;
       },
     };
 
@@ -2596,7 +2596,7 @@ describe('IAM Service — verifyEmail', () => {
         return { tokenHash: data.tokenHash };
       },
       async findVerificationTokenByHash(tokenHash) {
-        return verificationTokens.find((t) => t.tokenHash === tokenHash);
+        return verificationTokens.find((t) => t.tokenHash === tokenHash) as any;
       },
       async markVerificationTokenUsed(tokenHash) {
         const token = verificationTokens.find((t) => t.tokenHash === tokenHash);
@@ -2754,7 +2754,7 @@ describe('IAM Service — initiateMfaSetup', () => {
 
     const userRepo: MfaUserRepo = {
       async findUserById(userId) {
-        return usersDb.find((u) => u.userId === userId);
+        return usersDb.find((u) => u.userId === userId) as any;
       },
       async setMfaSecret(userId, encryptedSecret) {
         const user = usersDb.find((u) => u.userId === userId);
@@ -2864,7 +2864,7 @@ describe('IAM Service — confirmMfaSetup', () => {
 
     const userRepo: MfaUserRepo = {
       async findUserById(userId) {
-        return usersDb.find((u) => u.userId === userId);
+        return usersDb.find((u) => u.userId === userId) as any;
       },
       async setMfaSecret(userId, encryptedSecret) {
         const user = usersDb.find((u) => u.userId === userId);
@@ -3036,7 +3036,7 @@ describe('IAM Service — regenerateRecoveryCodes', () => {
 
     const userRepo: MfaUserRepo = {
       async findUserById(userId) {
-        return usersDb.find((u) => u.userId === userId);
+        return usersDb.find((u) => u.userId === userId) as any;
       },
       async setMfaSecret(userId, encryptedSecret) {
         const user = usersDb.find((u) => u.userId === userId);
@@ -3184,7 +3184,7 @@ describe('IAM Service — reconfigureMfa', () => {
 
     const userRepo: MfaUserRepo = {
       async findUserById(userId) {
-        return usersDb.find((u) => u.userId === userId);
+        return usersDb.find((u) => u.userId === userId) as any;
       },
       async setMfaSecret(userId, encryptedSecret) {
         const user = usersDb.find((u) => u.userId === userId);
@@ -4323,7 +4323,7 @@ describe('IAM Service — revokeAllSessions', () => {
       (e) => e.event === 'auth.session_revoked_all',
     );
     expect(event).toBeDefined();
-    expect(event.payload.currentSessionId).toBe(s1.sessionId);
+    expect(event!.payload.currentSessionId).toBe(s1.sessionId);
   });
 });
 
@@ -4539,9 +4539,9 @@ describe('IAM Service — requestPasswordReset', () => {
       (e) => e.event === 'USER_PASSWORD_RESET_REQUESTED',
     );
     expect(event).toBeDefined();
-    expect(event.payload.userId).toBe('user-1');
-    expect(event.payload.email).toBe('doctor@meritum.ca');
-    expect(event.payload.resetToken).toBeDefined();
+    expect(event!.payload.userId).toBe('user-1');
+    expect(event!.payload.email).toBe('doctor@meritum.ca');
+    expect(event!.payload.resetToken).toBeDefined();
 
     // Audit should be logged
     const auditEntry = auditEntries.find(
@@ -4778,7 +4778,7 @@ describe('IAM Service — resetPassword', () => {
       (e) => e.event === 'auth.password_reset_completed',
     );
     expect(event).toBeDefined();
-    expect(event.payload.userId).toBe('user-1');
+    expect(event!.payload.userId).toBe('user-1');
   });
 });
 
@@ -4916,7 +4916,7 @@ function makeDelegateServiceDeps(): DelegateServiceDeps {
               lastLogin: null,
             };
           });
-      }),
+      }) as any,
       listPhysiciansForDelegate: vi.fn(async (delegateUserId: string) => {
         return delegateLinkageStore
           .filter((l) => l.delegateUserId === delegateUserId && l.isActive === true)
@@ -4927,7 +4927,7 @@ function makeDelegateServiceDeps(): DelegateServiceDeps {
               physician: { userId: physician?.userId, fullName: physician?.fullName, email: physician?.email },
             };
           });
-      }),
+      }) as any,
       updateLinkagePermissions: vi.fn(async (linkageId: string, permissions: string[], canApproveBatches: boolean) => {
         const linkage = delegateLinkageStore.find((l) => l.linkageId === linkageId && l.isActive === true);
         if (!linkage) return undefined;
@@ -5729,14 +5729,14 @@ describe('IAM Service — getAccount', () => {
 
     const userRepo: AccountUserRepo = {
       async findUserById(userId) {
-        return userStore.find((u) => u.userId === userId);
+        return userStore.find((u) => u.userId === userId) as any;
       },
       async updateUser(userId, data) {
         const user = userStore.find((u) => u.userId === userId);
         if (!user) return undefined;
         if (data.fullName !== undefined) user.fullName = data.fullName;
         if (data.phone !== undefined) user.phone = data.phone;
-        return user;
+        return user as any;
       },
       async deactivateUser(userId) {
         const user = userStore.find((u) => u.userId === userId);
@@ -5841,14 +5841,14 @@ describe('IAM Service — updateAccount', () => {
 
     const userRepo: AccountUserRepo = {
       async findUserById(userId) {
-        return userStore.find((u) => u.userId === userId);
+        return userStore.find((u) => u.userId === userId) as any;
       },
       async updateUser(userId, data) {
         const user = userStore.find((u) => u.userId === userId);
         if (!user) return undefined;
         if (data.fullName !== undefined) user.fullName = data.fullName;
         if (data.phone !== undefined) user.phone = data.phone;
-        return user;
+        return user as any;
       },
       async deactivateUser(userId) {
         const user = userStore.find((u) => u.userId === userId);
@@ -5954,14 +5954,14 @@ describe('IAM Service — requestAccountDeletion', () => {
 
     const userRepo: AccountUserRepo = {
       async findUserById(userId) {
-        return userStore.find((u) => u.userId === userId);
+        return userStore.find((u) => u.userId === userId) as any;
       },
       async updateUser(userId, data) {
         const user = userStore.find((u) => u.userId === userId);
         if (!user) return undefined;
         if (data.fullName !== undefined) user.fullName = data.fullName;
         if (data.phone !== undefined) user.phone = data.phone;
-        return user;
+        return user as any;
       },
       async deactivateUser(userId) {
         const user = userStore.find((u) => u.userId === userId);
@@ -6119,7 +6119,7 @@ describe('IAM Service — requestAccountDeletion', () => {
       (e) => e.action === 'account.deletion_requested',
     );
     expect(deletionAudit).toBeDefined();
-    expect(deletionAudit.resourceId).toBe('user-1');
+    expect(deletionAudit!.resourceId).toBe('user-1');
 
     // Deletion event should be emitted
     const deletionEvent = emittedEvents.find(
@@ -6150,7 +6150,7 @@ describe('IAM Service — checkSubscriptionAccess', () => {
 
     const userRepo: AccountUserRepo = {
       async findUserById(userId) {
-        return userStore.find((u) => u.userId === userId);
+        return userStore.find((u) => u.userId === userId) as any;
       },
       async updateUser() { return undefined; },
       async deactivateUser() {},
@@ -6502,7 +6502,7 @@ describe('Auth Plugin — checkSubscription', () => {
     const isAllowed = allowedStatuses.includes(status);
     expect(isAllowed).toBe(false);
 
-    const errorCode = status === 'SUSPENDED' ? 'ACCOUNT_SUSPENDED' : 'SUBSCRIPTION_REQUIRED';
+    const errorCode = (status as string) === 'SUSPENDED' ? 'ACCOUNT_SUSPENDED' : 'SUBSCRIPTION_REQUIRED';
     expect(errorCode).toBe('SUBSCRIPTION_REQUIRED');
   });
 });

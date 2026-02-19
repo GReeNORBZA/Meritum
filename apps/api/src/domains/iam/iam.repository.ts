@@ -49,8 +49,7 @@ export function createUserRepository(db: NodePgDatabase) {
       const rows = await db
         .select()
         .from(users)
-        .where(eq(users.email, email.toLowerCase()))
-        .where(eq(users.isActive, true))
+        .where(and(eq(users.email, email.toLowerCase()), eq(users.isActive, true)))
         .limit(1);
       return rows[0];
     },
