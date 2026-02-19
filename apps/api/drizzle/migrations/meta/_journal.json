@@ -78,6 +78,13 @@
       "when": 1771471463145,
       "tag": "0010_mute_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771482712475,
+      "tag": "0011_careless_madame_masque",
+      "breakpoints": true
     }
   ]
 }

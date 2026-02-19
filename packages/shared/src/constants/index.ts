@@ -201,3 +201,12 @@ export {
   REPORT_RETENTION_DAYS,
   REPORT_DOWNLOAD_EXPIRY_DAYS,
 } from './analytics.constants.js';
+
+export {
+  OnboardingStep,
+  REQUIRED_ONBOARDING_STEPS,
+  BALinkageStatus,
+  IMA_TEMPLATE_VERSION,
+  GuidedTourStop,
+  OnboardingAuditAction,
+} from './onboarding.constants.js';

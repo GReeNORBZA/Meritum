@@ -257,3 +257,11 @@ export type {
   InsertReportSubscription,
   SelectReportSubscription,
 } from './analytics.schema.js';
+
+export { onboardingProgress, imaRecords } from './onboarding.schema.js';
+export type {
+  InsertOnboardingProgress,
+  SelectOnboardingProgress,
+  InsertImaRecord,
+  SelectImaRecord,
+} from './onboarding.schema.js';

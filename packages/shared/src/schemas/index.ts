@@ -418,3 +418,28 @@ export type {
   UpdateSubscription,
   SubscriptionIdParam,
 } from './validation/analytics.validation.js';
+
+export {
+  addressSchema,
+  onboardingStep1Schema,
+  onboardingStep2Schema,
+  onboardingStep3Schema,
+  onboardingStep4Schema,
+  onboardingStep5Schema,
+  onboardingStep6Schema,
+  stepNumberParamSchema,
+  imaAcknowledgeSchema,
+  onboardingProgressResponseSchema,
+} from './onboarding.schema.js';
+export type {
+  Address,
+  OnboardingStep1,
+  OnboardingStep2,
+  OnboardingStep3,
+  OnboardingStep4,
+  OnboardingStep5,
+  OnboardingStep6,
+  StepNumberParam,
+  ImaAcknowledge,
+  OnboardingProgressResponse,
+} from './onboarding.schema.js';

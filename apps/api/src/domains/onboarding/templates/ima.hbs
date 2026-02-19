@@ -1,0 +1,95 @@
+<html>
+<head>
+<style>
+  body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; margin: 40px; color: #000; }
+  h1 { text-align: center; font-size: 16pt; margin-bottom: 4px; }
+  h2 { text-align: center; font-size: 13pt; font-weight: normal; margin-top: 0; margin-bottom: 24px; }
+  .section { margin-bottom: 16px; }
+  .section-title { font-weight: bold; margin-bottom: 8px; text-decoration: underline; }
+  .parties { margin-bottom: 20px; }
+  .signature-block { margin-top: 40px; }
+  .signature-line { border-bottom: 1px solid #000; width: 300px; display: inline-block; margin-top: 30px; }
+  .field-value { font-weight: bold; }
+  ol { padding-left: 20px; }
+  ol li { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h1>INFORMATION MANAGER AGREEMENT</h1>
+<h2>Health Information Act (Alberta)</h2>
+
+<div class="parties">
+<p><strong>Effective Date:</strong> <span class="field-value">{{effective_date}}</span></p>
+<p><strong>Template Version:</strong> <span class="field-value">{{template_version}}</span></p>
+</div>
+
+<div class="section">
+<p class="section-title">BETWEEN:</p>
+<p><strong>Custodian (Physician):</strong></p>
+<p>Dr. <span class="field-value">{{physician_first_name}} {{physician_last_name}}</span></p>
+<p>CPSA Registration Number: <span class="field-value">{{cpsa_number}}</span></p>
+<p>Business Arrangement Number(s): <span class="field-value">{{ba_numbers}}</span></p>
+</div>
+
+<div class="section">
+<p><strong>Information Manager:</strong></p>
+<p><span class="field-value">{{company_name}}</span></p>
+<p>{{company_address}}</p>
+</div>
+
+<div class="section">
+<p class="section-title">RECITALS</p>
+<p>WHEREAS the Custodian is a physician registered with the College of Physicians and Surgeons of Alberta and is a custodian as defined in the Health Information Act, RSA 2000, c. H-5 (the "Act");</p>
+<p>WHEREAS the Information Manager provides electronic medical billing services, including the submission of AHCIP claims via H-Link and WCB Alberta claims via Electronic Injury Reporting;</p>
+<p>WHEREAS the Custodian wishes to engage the Information Manager to perform information management services in accordance with the Act;</p>
+</div>
+
+<div class="section">
+<p class="section-title">AGREEMENT</p>
+<p>NOW THEREFORE, in consideration of the mutual covenants set forth herein, the parties agree as follows:</p>
+
+<ol>
+<li><strong>Definitions.</strong> Terms used in this Agreement that are defined in the Act have the meanings given to them in the Act.</li>
+
+<li><strong>Scope of Services.</strong> The Information Manager shall process, store, and transmit health information solely as directed by the Custodian and solely for the purposes of submitting claims to Alberta Health (AHCIP) and WCB Alberta on behalf of the Custodian.</li>
+
+<li><strong>Compliance with the Act.</strong> The Information Manager shall comply with the Act, including all regulations and orders made under the Act, in performing its duties under this Agreement.</li>
+
+<li><strong>Safeguards.</strong> The Information Manager shall implement and maintain reasonable administrative, technical, and physical safeguards to protect the confidentiality, integrity, and availability of health information, including:
+  <ol type="a">
+    <li>Encryption of health information at rest and in transit;</li>
+    <li>Access controls restricting access to authorized personnel;</li>
+    <li>Audit logging of all access to health information;</li>
+    <li>Storage of all health information within Canada.</li>
+  </ol>
+</li>
+
+<li><strong>Canadian Data Residency.</strong> All health information processed under this Agreement shall be stored exclusively in data centres located within Canada. The Information Manager shall not transfer health information outside of Canada without the prior written consent of the Custodian.</li>
+
+<li><strong>Subcontractors.</strong> The Information Manager shall not engage any subcontractor to process health information without the prior written consent of the Custodian. Any approved subcontractor shall be bound by obligations no less protective than those in this Agreement.</li>
+
+<li><strong>Breach Notification.</strong> The Information Manager shall notify the Custodian of any breach or suspected breach of this Agreement, or any unauthorized access to or disclosure of health information, within 24 hours of becoming aware of the breach.</li>
+
+<li><strong>Return and Destruction.</strong> Upon termination of this Agreement, the Information Manager shall, at the Custodian's direction, return or securely destroy all health information in its possession, and provide written confirmation of such return or destruction.</li>
+
+<li><strong>Audit Rights.</strong> The Custodian and the Office of the Information and Privacy Commissioner of Alberta shall have the right to audit the Information Manager's compliance with this Agreement and the Act.</li>
+
+<li><strong>Term and Termination.</strong> This Agreement shall commence on the Effective Date and shall continue for as long as the Custodian maintains an active subscription with the Information Manager. Either party may terminate this Agreement upon 30 days' written notice.</li>
+
+<li><strong>Limitation of Liability.</strong> The Information Manager shall not be liable for any indirect, incidental, or consequential damages arising out of or related to this Agreement, except to the extent caused by the Information Manager's gross negligence or wilful misconduct.</li>
+
+<li><strong>Governing Law.</strong> This Agreement shall be governed by and construed in accordance with the laws of the Province of Alberta and the federal laws of Canada applicable therein.</li>
+</ol>
+</div>
+
+<div class="signature-block">
+<p><strong>ACKNOWLEDGED AND AGREED:</strong></p>
+<p>By clicking "I Acknowledge" in the Meritum platform, the Custodian confirms that they have read, understood, and agree to the terms of this Information Manager Agreement.</p>
+<p><strong>Custodian:</strong> Dr. {{physician_first_name}} {{physician_last_name}}</p>
+<p><strong>CPSA Number:</strong> {{cpsa_number}}</p>
+<p><strong>Date:</strong> {{effective_date}}</p>
+</div>
+
+</body>
+</html>

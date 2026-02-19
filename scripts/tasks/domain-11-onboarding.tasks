@@ -1,0 +1,31 @@
+## Domain 11: Onboarding — Shared Types & Constants
+D11-001 | Onboarding constants: step enums, BA statuses, IMA template version, tour stops, audit actions | scripts/tasks/prompts/d11/D11-001.md | pnpm --filter shared build
+D11-002 | Drizzle schema for onboarding_progress table | scripts/tasks/prompts/d11/D11-002.md | pnpm --filter shared build
+D11-003 | Drizzle schema for ima_records table | scripts/tasks/prompts/d11/D11-003.md | pnpm --filter shared build
+D11-004 | Zod validation schemas for onboarding step inputs and API responses | scripts/tasks/prompts/d11/D11-004.md | pnpm --filter shared build
+D11-005 | Generate and apply database migration for onboarding tables | scripts/tasks/prompts/d11/D11-005.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 11: Onboarding — Repository Layer
+D11-010 | Repository: onboarding progress CRUD | scripts/tasks/prompts/d11/D11-010.md | pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts
+D11-011 | Repository: IMA records (append-only acknowledgements) | scripts/tasks/prompts/d11/D11-011.md | pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts
+
+## Domain 11: Onboarding — Service Layer
+D11-020 | Service: onboarding progress management and step completion | scripts/tasks/prompts/d11/D11-020.md | pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts
+D11-021 | Service: IMA generation, acknowledgement, and document downloads | scripts/tasks/prompts/d11/D11-021.md | pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts
+D11-022 | Service: guided tour and patient import orchestration | scripts/tasks/prompts/d11/D11-022.md | pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts
+
+## Domain 11: Onboarding — Routes & Integration Tests
+D11-030 | Routes: onboarding progress, step completion, and middleware gate | scripts/tasks/prompts/d11/D11-030.md | pnpm --filter api vitest run test/integration/onboarding/
+D11-031 | Routes: IMA, AHC11236, PIA document endpoints | scripts/tasks/prompts/d11/D11-031.md | pnpm --filter api vitest run test/integration/onboarding/
+D11-032 | Routes: guided tour, patient import, BA status confirmation | scripts/tasks/prompts/d11/D11-032.md | pnpm --filter api vitest run test/integration/onboarding/
+
+## Domain 11: Onboarding — Security Tests
+D11-040 | Security: authentication enforcement on every onboarding route | scripts/tasks/prompts/d11/D11-040.md | pnpm --filter api vitest run test/security/onboarding/onboarding.authn.security.ts
+D11-041 | Security: authorization and role enforcement for onboarding | scripts/tasks/prompts/d11/D11-041.md | pnpm --filter api vitest run test/security/onboarding/onboarding.authz.security.ts
+D11-042 | Security: cross-physician isolation (tenant scoping) | scripts/tasks/prompts/d11/D11-042.md | pnpm --filter api vitest run test/security/onboarding/onboarding.scoping.security.ts
+D11-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d11/D11-043.md | pnpm --filter api vitest run test/security/onboarding/onboarding.input.security.ts
+D11-044 | Security: data leakage prevention | scripts/tasks/prompts/d11/D11-044.md | pnpm --filter api vitest run test/security/onboarding/onboarding.leakage.security.ts
+D11-045 | Security: audit trail completeness for onboarding | scripts/tasks/prompts/d11/D11-045.md | pnpm --filter api vitest run test/security/onboarding/onboarding.audit.security.ts
+
+## Domain 11: Onboarding — Final Validation
+D11-099 | Full domain test suite: all unit + integration + security tests | scripts/tasks/prompts/d11/D11-099.md | pnpm --filter api vitest run src/domains/onboarding/ test/integration/onboarding/ test/security/onboarding/
