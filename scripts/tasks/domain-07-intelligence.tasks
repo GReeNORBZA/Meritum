@@ -1,0 +1,39 @@
+## Domain 7: Intelligence Engine — Shared Types & Constants
+D07-001 | Intelligence Engine constants: tiers, suggestion categories, priorities, statuses, event types, learning thresholds | scripts/tasks/prompts/d07/D07-001.md | pnpm --filter shared build
+D07-002 | Drizzle schema for ai_rules table | scripts/tasks/prompts/d07/D07-002.md | pnpm --filter shared build
+D07-003 | Drizzle schema for ai_provider_learning and ai_specialty_cohorts tables | scripts/tasks/prompts/d07/D07-003.md | pnpm --filter shared build
+D07-004 | Drizzle schema for ai_suggestion_events audit table | scripts/tasks/prompts/d07/D07-004.md | pnpm --filter shared build
+D07-005 | Zod validation schemas for all Intelligence Engine API endpoints | scripts/tasks/prompts/d07/D07-005.md | pnpm --filter shared build
+D07-006 | Generate and apply database migration for all Intelligence Engine tables | scripts/tasks/prompts/d07/D07-006.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 7: Intelligence Engine — Repository Layer
+D07-010 | Repository: ai_rules CRUD operations (list, get, create, update, activate/deactivate) | scripts/tasks/prompts/d07/D07-010.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-011 | Repository: ai_provider_learning operations (get/upsert learning state, suppression management) | scripts/tasks/prompts/d07/D07-011.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-012 | Repository: ai_specialty_cohorts and ai_suggestion_events operations | scripts/tasks/prompts/d07/D07-012.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+
+## Domain 7: Intelligence Engine — Service Layer
+D07-020 | Service: Tier 1 deterministic rules engine — condition evaluator and claim context builder | scripts/tasks/prompts/d07/D07-020.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-021 | Service: Tier 1 rule execution — evaluate all rules, generate suggestions, apply learning state | scripts/tasks/prompts/d07/D07-021.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-022 | Service: Tier 2 LLM integration — configurable OpenAI-compatible HTTP client, PHI stripping, hallucination guard | scripts/tasks/prompts/d07/D07-022.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-023 | Service: Tier 3 review flagging and suggestion lifecycle (accept/dismiss) | scripts/tasks/prompts/d07/D07-023.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-024 | Service: main analyse endpoint — orchestrate Tier 1 sync + Tier 2 async + store on claim | scripts/tasks/prompts/d07/D07-024.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-025 | Service: learning loop — priority adjustment, rejection feedback, specialty cohort recalculation | scripts/tasks/prompts/d07/D07-025.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-026 | Service: SOMB change impact analysis and contextual help | scripts/tasks/prompts/d07/D07-026.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-027 | Service: MVP rule seeding — initial ~105 rules for modifier eligibility, rejection prevention, WCB, and patterns | scripts/tasks/prompts/d07/D07-027.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+
+## Domain 7: Intelligence Engine — Routes & Integration Tests
+D07-030 | Routes and handlers for suggestion endpoints and learning/preferences endpoints | scripts/tasks/prompts/d07/D07-030.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-031 | Routes and handlers for admin rule management and SOMB change analysis | scripts/tasks/prompts/d07/D07-031.md | pnpm --filter api vitest run src/domains/intel/intel.test.ts
+D07-032 | Integration tests: full analysis pipeline (Tier 1 + Tier 2 + Tier 3 + learning loop) | scripts/tasks/prompts/d07/D07-032.md | pnpm --filter api vitest run test/integration/intelligence/
+D07-033 | Integration tests: Tier 1 rule evaluation with MVP rules (modifier, rejection, WCB, patterns) | scripts/tasks/prompts/d07/D07-033.md | pnpm --filter api vitest run test/integration/intelligence/
+
+## Domain 7: Intelligence Engine — Security Tests
+D07-040 | Security: authentication enforcement on every Intelligence Engine route | scripts/tasks/prompts/d07/D07-040.md | pnpm --filter api vitest run test/security/intelligence/intelligence.authn.security.ts
+D07-041 | Security: authorization and role/permission enforcement | scripts/tasks/prompts/d07/D07-041.md | pnpm --filter api vitest run test/security/intelligence/intelligence.authz.security.ts
+D07-042 | Security: cross-physician tenant isolation for suggestions and learning state | scripts/tasks/prompts/d07/D07-042.md | pnpm --filter api vitest run test/security/intelligence/intelligence.scoping.security.ts
+D07-043 | Security: input validation and injection prevention | scripts/tasks/prompts/d07/D07-043.md | pnpm --filter api vitest run test/security/intelligence/intelligence.input.security.ts
+D07-044 | Security: PHI leakage prevention (especially LLM context isolation) | scripts/tasks/prompts/d07/D07-044.md | pnpm --filter api vitest run test/security/intelligence/intelligence.leakage.security.ts
+D07-045 | Security: audit trail completeness for Intelligence Engine operations | scripts/tasks/prompts/d07/D07-045.md | pnpm --filter api vitest run test/security/intelligence/intelligence.audit.security.ts
+
+## Domain 7: Intelligence Engine — Final Validation
+D07-099 | Full domain test suite: all unit + integration + security tests for Intelligence Engine | scripts/tasks/prompts/d07/D07-099.md | pnpm --filter api vitest run src/domains/intel/ test/integration/intelligence/ test/security/intelligence/

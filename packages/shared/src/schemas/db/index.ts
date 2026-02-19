@@ -223,3 +223,23 @@ export type {
   InsertWcbRemittanceRecord,
   SelectWcbRemittanceRecord,
 } from './wcb.schema.js';
+
+export {
+  aiRules,
+  aiProviderLearning,
+  aiSpecialtyCohorts,
+  aiSuggestionEvents,
+} from './intelligence.schema.js';
+export type {
+  InsertAiRule,
+  SelectAiRule,
+  InsertAiProviderLearning,
+  SelectAiProviderLearning,
+  InsertAiSpecialtyCohort,
+  SelectAiSpecialtyCohort,
+  InsertAiSuggestionEvent,
+  SelectAiSuggestionEvent,
+  Condition,
+  CrossClaimQuery,
+  SuggestionTemplate,
+} from './intelligence.schema.js';

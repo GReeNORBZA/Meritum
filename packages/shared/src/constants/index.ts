@@ -166,3 +166,23 @@ export {
   WCB_EXPEDITED_CONSULTATION_FEE,
   WCB_FORM_TO_FEE_CODE,
 } from './wcb.constants.js';
+
+export {
+  IntelTier,
+  SuggestionCategory,
+  SUGGESTION_CATEGORY_CONFIGS,
+  SuggestionPriority,
+  PRIORITY_THRESHOLD_DEFAULTS,
+  SuggestionStatus,
+  SuggestionEventType,
+  RuleClaimType,
+  SUPPRESSION_THRESHOLD,
+  MIN_COHORT_SIZE,
+  CALIBRATION_CLAIMS,
+  ROLLING_WINDOW_DAYS,
+  LLM_TIMEOUT_MS,
+  LLM_CONFIDENCE_THRESHOLD,
+  MVP_RULE_CATEGORIES,
+  MVP_TOTAL_RULE_COUNT,
+  IntelAuditAction,
+} from './intelligence.constants.js';

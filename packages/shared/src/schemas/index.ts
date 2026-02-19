@@ -297,6 +297,39 @@ export type {
 } from './ahcip.schema.js';
 
 export {
+  analyseClaimSchema,
+  claimSuggestionsParamSchema,
+  intelSuggestionIdParamSchema,
+  acceptSuggestionSchema,
+  intelDismissSuggestionSchema,
+  suggestionResponseSchema,
+  unsuppressRuleParamSchema,
+  updateIntelPreferencesSchema,
+  createRuleSchema,
+  updateRuleSchema,
+  ruleIdParamSchema,
+  activateRuleSchema,
+  ruleListQuerySchema,
+  sombChangeAnalysisSchema,
+} from './intelligence.schema.js';
+export type {
+  AnalyseClaim,
+  ClaimSuggestionsParam,
+  IntelSuggestionIdParam,
+  AcceptSuggestion,
+  IntelDismissSuggestion,
+  SuggestionResponse,
+  UnsuppressRuleParam,
+  UpdateIntelPreferences,
+  CreateRule,
+  UpdateRule,
+  RuleIdParam,
+  ActivateRule,
+  RuleListQuery,
+  SombChangeAnalysis,
+} from './intelligence.schema.js';
+
+export {
   wcbInjurySchema,
   wcbPrescriptionSchema,
   wcbConsultationSchema,

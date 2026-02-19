@@ -274,10 +274,12 @@ ${PROMPT}"
     echo ""
     echo -e "${RED}Task ${TASK_ID} failed after all retries.${NC}"
     echo -e "  Logs: ${RUN_LOG_DIR}/${TASK_ID}-*"
-    read -rp "  Continue to next task? [Y/n] " CONTINUE
-    if [[ "$CONTINUE" =~ ^[Nn] ]]; then
-      echo -e "${YELLOW}Aborting. Resume later with: $0 $MANIFEST --resume${NC}"
-      break
+    if [[ -t 0 ]]; then
+      read -rp "  Continue to next task? [Y/n] " CONTINUE
+      if [[ "$CONTINUE" =~ ^[Nn] ]]; then
+        echo -e "${YELLOW}Aborting. Resume later with: $0 $MANIFEST --resume${NC}"
+        break
+      fi
     fi
   fi
 done
