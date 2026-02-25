@@ -14,10 +14,12 @@ import {
   type InternalPatientIdParam,
   type ValidatePhnParam,
 } from '@meritum/shared/schemas/patient.schema.js';
+import { type PatientCorrection } from '@meritum/shared/schemas/compliance.schema.js';
 import {
   createPatient,
   getPatient,
   updatePatient,
+  correctPatient,
   deactivatePatient,
   reactivatePatient,
   searchPatients,
@@ -31,6 +33,8 @@ import {
   executeMerge,
   requestExport,
   getExportStatus,
+  exportPatientHealthInformation,
+  getPatientAccessExportDownload,
   getPatientClaimContext,
   validatePhnService,
   type PatientServiceDeps,
@@ -415,10 +419,100 @@ export function createPatientHandlers(deps: PatientHandlerDeps) {
     return reply.code(200).send({ data: status });
   }
 
+  // =========================================================================
+  // Patient Access Request Export (IMA S74)
+  // =========================================================================
+
+  async function exportPatientHiHandler(
+    request: FastifyRequest<{ Params: PatientIdParam }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { id } = request.params;
+
+    const result = await exportPatientHealthInformation(
+      serviceDeps,
+      physicianId,
+      id,
+      request.authContext.userId,
+    );
+
+    return reply.code(201).send({
+      data: {
+        exportId: result.exportId,
+        downloadUrl: result.downloadUrl,
+        expiresAt: result.expiresAt.toISOString(),
+      },
+    });
+  }
+
+  async function downloadPatientHiHandler(
+    request: FastifyRequest<{ Params: { id: string; exportId: string } }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { exportId } = request.params;
+
+    const result = await getPatientAccessExportDownload(
+      serviceDeps,
+      exportId,
+      physicianId,
+    );
+
+    return reply
+      .code(200)
+      .header('Content-Type', 'application/zip')
+      .header(
+        'Content-Disposition',
+        `attachment; filename="patient_${result.patientId}_export.zip"`,
+      )
+      .send(result.zipBuffer);
+  }
+
+  // =========================================================================
+  // Correction Handler (IMA S3.10)
+  // =========================================================================
+
+  async function correctPatientHandler(
+    request: FastifyRequest<{ Body: PatientCorrection; Params: PatientIdParam }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { id } = request.params;
+    const body = request.body;
+
+    const corrected = await correctPatient(
+      serviceDeps,
+      id,
+      physicianId,
+      {
+        correctionReason: body.correction_reason,
+        phn: body.phn,
+        firstName: body.first_name,
+        middleName: body.middle_name,
+        lastName: body.last_name,
+        dateOfBirth: body.date_of_birth,
+        gender: body.gender,
+        phone: body.phone,
+        email: body.email,
+        addressLine1: body.address_line1,
+        addressLine2: body.address_line2,
+        city: body.city,
+        province: body.province,
+        postalCode: body.postal_code,
+        notes: body.notes,
+      },
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({ data: corrected });
+  }
+
   return {
     createPatientHandler,
     getPatientHandler,
     updatePatientHandler,
+    correctPatientHandler,
     deactivateHandler,
     reactivateHandler,
     searchHandler,
@@ -432,6 +526,8 @@ export function createPatientHandlers(deps: PatientHandlerDeps) {
     mergeExecuteHandler,
     requestExportHandler,
     exportStatusHandler,
+    exportPatientHiHandler,
+    downloadPatientHiHandler,
   };
 }
 

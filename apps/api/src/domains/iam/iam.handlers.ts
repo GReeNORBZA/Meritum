@@ -18,6 +18,7 @@ import {
   type MfaReconfigure,
   type AuditLogQuery,
 } from '@meritum/shared/schemas/iam.schema.js';
+import { type UpdateSecondaryEmail } from '@meritum/shared/schemas/compliance.schema.js';
 import {
   registerUser,
   verifyEmail,
@@ -44,6 +45,7 @@ import {
   regenerateRecoveryCodes,
   reconfigureMfa,
   queryAuditLog,
+  updateSecondaryEmail,
   type ServiceDeps,
   type MfaServiceDeps,
   type LoginServiceDeps,
@@ -52,6 +54,7 @@ import {
   type DelegateServiceDeps,
   type AccountServiceDeps,
   type AuditLogServiceDeps,
+  type SecondaryEmailServiceDeps,
 } from './iam.service.js';
 import { AppError } from '../../lib/errors.js';
 
@@ -89,6 +92,7 @@ export interface AuthHandlerDeps {
   delegateDeps: DelegateServiceDeps;
   accountDeps: AccountServiceDeps;
   auditLogDeps: AuditLogServiceDeps;
+  secondaryEmailDeps?: SecondaryEmailServiceDeps;
 }
 
 export function createAuthHandlers(deps: AuthHandlerDeps) {
@@ -527,6 +531,27 @@ export function createAuthHandlers(deps: AuthHandlerDeps) {
     return reply.code(200).send(result);
   }
 
+  // -------------------------------------------------------------------------
+  // PUT /api/v1/account/secondary-email
+  // -------------------------------------------------------------------------
+
+  async function updateSecondaryEmailHandler(
+    request: FastifyRequest<{ Body: UpdateSecondaryEmail }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.secondaryEmailDeps) {
+      throw new AppError(500, 'INTERNAL_ERROR', 'Secondary email service not configured');
+    }
+    await updateSecondaryEmail(
+      deps.secondaryEmailDeps,
+      { userId: request.authContext.userId },
+      request.body.secondary_email,
+    );
+    return reply.code(200).send({
+      data: { secondary_email: request.body.secondary_email },
+    });
+  }
+
   return {
     registerHandler,
     verifyEmailHandler,
@@ -556,5 +581,7 @@ export function createAuthHandlers(deps: AuthHandlerDeps) {
     reconfigureMfaHandler,
     deleteAccountHandler,
     auditLogHandler,
+    // Secondary email
+    updateSecondaryEmailHandler,
   };
 }

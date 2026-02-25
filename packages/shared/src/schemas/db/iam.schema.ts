@@ -22,6 +22,7 @@ export const users = pgTable(
   {
     userId: uuid('user_id').primaryKey().defaultRandom(),
     email: varchar('email', { length: 255 }).notNull(),
+    secondaryEmail: varchar('secondary_email', { length: 100 }),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
     fullName: varchar('full_name', { length: 200 }).notNull(),
     phone: varchar('phone', { length: 20 }),

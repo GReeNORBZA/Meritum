@@ -333,3 +333,54 @@ export interface ProviderContext {
   onboarding_completed: boolean;
   status: string;
 }
+
+// ============================================================================
+// PCPCM Payment Reconciliation (D19-023)
+// ============================================================================
+
+import { PcpcmPaymentStatus } from '../constants/provider.constants.js';
+
+const PCPCM_PAYMENT_STATUSES = [
+  PcpcmPaymentStatus.EXPECTED,
+  PcpcmPaymentStatus.RECEIVED,
+  PcpcmPaymentStatus.RECONCILED,
+  PcpcmPaymentStatus.DISCREPANCY,
+] as const;
+
+// --- Create PCPCM Payment ---
+
+export const createPcpcmPaymentSchema = z.object({
+  enrolmentId: z.string().uuid(),
+  paymentPeriodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  paymentPeriodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  expectedAmount: z.number().positive().optional(),
+  actualAmount: z.number().positive().optional(),
+  panelSizeAtPayment: z.number().int().positive().optional(),
+  notes: z.string().max(1000).optional(),
+}).refine(
+  (data) => data.expectedAmount !== undefined || data.actualAmount !== undefined,
+  { message: 'At least one of expectedAmount or actualAmount must be provided' },
+);
+
+export type CreatePcpcmPayment = z.infer<typeof createPcpcmPaymentSchema>;
+
+// --- List PCPCM Payments Query ---
+
+export const listPcpcmPaymentsQuerySchema = z.object({
+  status: z.enum(PCPCM_PAYMENT_STATUSES).optional(),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export type ListPcpcmPaymentsQuery = z.infer<typeof listPcpcmPaymentsQuerySchema>;
+
+// --- Update Panel Size ---
+
+export const updatePanelSizeSchema = z.object({
+  enrolmentId: z.string().uuid(),
+  panelSize: z.number().int().positive('Panel size must be a positive integer'),
+});
+
+export type UpdatePanelSize = z.infer<typeof updatePanelSizeSchema>;

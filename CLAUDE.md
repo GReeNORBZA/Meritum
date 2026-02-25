@@ -6,7 +6,7 @@ Meritum is a self-serve billing platform for Alberta physicians. It handles AHCI
 
 - **Product:** meritum.ca
 - **Company:** Meritum Health Technologies Inc. (separate from SigOct)
-- **Pricing:** $279/month, $2,790/year, $199/month early bird (first 12 months, first 100 physicians)
+- **Pricing:** $279/month, $3,181/year, $199/month early bird, $2,388/year early bird annual (first 12 months, first 100 physicians)
 - **Infrastructure:** DigitalOcean Toronto (Canadian data residency required by HIA)
 - **Regulatory:** Health Information Act (Alberta), FOIP, PIPEDA
 

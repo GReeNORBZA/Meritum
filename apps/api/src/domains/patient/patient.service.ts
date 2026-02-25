@@ -318,6 +318,124 @@ export async function updatePatient(
 }
 
 // ---------------------------------------------------------------------------
+// Service: correctPatient (IMA S3.10 formal correction)
+// ---------------------------------------------------------------------------
+
+export interface PatientCorrectionInput {
+  correctionReason: string;
+  phn?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  phone?: string;
+  email?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  notes?: string;
+}
+
+export async function correctPatient(
+  deps: PatientServiceDeps,
+  patientId: string,
+  physicianId: string,
+  data: PatientCorrectionInput,
+  actorId: string,
+): Promise<SelectPatient> {
+  // Fetch existing patient (tenant-scoped)
+  const existing = await deps.repo.findPatientById(patientId, physicianId);
+  if (!existing) {
+    throw new NotFoundError('Patient');
+  }
+
+  // If PHN is being changed, validate and check uniqueness
+  if (data.phn !== undefined && data.phn !== existing.phn) {
+    const phnProvince = existing.phnProvince ?? DEFAULT_PHN_PROVINCE;
+    const phnValidation = validatePhn(data.phn, phnProvince);
+    if (!phnValidation.valid) {
+      throw new ValidationError(phnValidation.error!);
+    }
+
+    const duplicate = await deps.repo.findPatientByPhn(physicianId, data.phn);
+    if (duplicate && duplicate.patientId !== patientId && duplicate.isActive) {
+      throw new ConflictError('A patient with this PHN already exists');
+    }
+  }
+
+  // Build update payload and field-level diff (server-side comparison only)
+  const changes: Array<{ field: string; old_value: string | null; new_value: string | null }> = [];
+  const updatePayload: Record<string, unknown> = {};
+
+  const fieldMap: Record<string, string> = {
+    phn: 'phn',
+    firstName: 'firstName',
+    middleName: 'middleName',
+    lastName: 'lastName',
+    dateOfBirth: 'dateOfBirth',
+    gender: 'gender',
+    phone: 'phone',
+    email: 'email',
+    addressLine1: 'addressLine1',
+    addressLine2: 'addressLine2',
+    city: 'city',
+    province: 'province',
+    postalCode: 'postalCode',
+    notes: 'notes',
+  };
+
+  for (const [inputKey, dbKey] of Object.entries(fieldMap)) {
+    const newValue = data[inputKey as keyof PatientCorrectionInput];
+    if (newValue !== undefined && inputKey !== 'correctionReason') {
+      const oldValue = existing[dbKey as keyof SelectPatient] as string | null;
+      if (newValue !== oldValue) {
+        // PHN masking in audit detail
+        const oldForAudit = dbKey === 'phn' && oldValue ? maskPhn(oldValue) : (oldValue ?? null);
+        const newForAudit = dbKey === 'phn' && newValue ? maskPhn(newValue as string) : (newValue as string | null);
+        changes.push({ field: dbKey, old_value: oldForAudit, new_value: newForAudit });
+        updatePayload[dbKey] = newValue;
+      }
+    }
+  }
+
+  // If nothing actually changed, return existing
+  if (Object.keys(updatePayload).length === 0) {
+    return existing;
+  }
+
+  const updated = await deps.repo.updatePatient(patientId, physicianId, updatePayload);
+  if (!updated) {
+    throw new NotFoundError('Patient');
+  }
+
+  // Write structured audit log with action patient.correction_applied
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: PatientAuditAction.CORRECTION_APPLIED,
+    category: AUDIT_CATEGORY,
+    resourceType: 'patient',
+    resourceId: patientId,
+    detail: {
+      correction_reason: data.correctionReason,
+      changes,
+    },
+  });
+
+  deps.events.emit(PatientAuditAction.CORRECTION_APPLIED, {
+    patientId,
+    physicianId,
+    actorId,
+    correction_reason: data.correctionReason,
+    changedFields: changes.map((c) => c.field),
+  });
+
+  return updated;
+}
+
+// ---------------------------------------------------------------------------
 // Service: deactivatePatient
 // ---------------------------------------------------------------------------
 
@@ -1421,6 +1539,284 @@ export async function getExportStatus(
 }
 
 // ===========================================================================
+// Patient Access Request Export (IMA S74)
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Access export types
+// ---------------------------------------------------------------------------
+
+export interface PatientAccessExportResult {
+  exportId: string;
+  downloadUrl: string;
+  expiresAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// In-memory access export storage (temporary — production uses DO Spaces)
+// ---------------------------------------------------------------------------
+
+const accessExportStore = new Map<
+  string,
+  {
+    physicianId: string;
+    patientId: string;
+    zipBuffer: Buffer;
+    status: 'PROCESSING' | 'READY' | 'FAILED';
+    downloadUrl: string;
+    createdAt: Date;
+    expiresAt: Date;
+  }
+>();
+
+// ---------------------------------------------------------------------------
+// CSV formatting helpers
+// ---------------------------------------------------------------------------
+
+function toCsvRow(values: string[]): string {
+  return values.map(escapeCsvValue).join(',');
+}
+
+function objectToCsvRows(
+  records: Record<string, unknown>[],
+  columns: string[],
+): string {
+  if (records.length === 0) return '';
+  const header = toCsvRow(columns);
+  const rows = records.map((r) =>
+    toCsvRow(columns.map((col) => String(r[col] ?? ''))),
+  );
+  return [header, ...rows].join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Service: exportPatientHealthInformation
+// ---------------------------------------------------------------------------
+
+/**
+ * IMA S74 patient access request export.
+ *
+ * Retrieves all health information for a specific patient, formats as
+ * CSV files (one per entity type), bundles into a ZIP archive, stores
+ * with a presigned download URL (24h expiry).
+ *
+ * Emits PATIENT_ACCESS_EXPORT_READY notification and audit event.
+ * Audit entry contains ONLY patient_id and provider_id — no PHI.
+ */
+export async function exportPatientHealthInformation(
+  deps: PatientServiceDeps,
+  physicianId: string,
+  patientId: string,
+  actorId: string,
+): Promise<PatientAccessExportResult> {
+  // 1. Fetch all health information (tenant-scoped)
+  const hi = await deps.repo.getPatientHealthInformation(physicianId, patientId);
+  if (!hi) {
+    throw new NotFoundError('Patient');
+  }
+
+  // 2. Build CSV content for each entity type
+  const demographicsCsv = objectToCsvRows(
+    [hi.demographics],
+    [
+      'patientId', 'phn', 'phnProvince', 'firstName', 'middleName',
+      'lastName', 'dateOfBirth', 'gender', 'phone', 'email',
+      'addressLine1', 'addressLine2', 'city', 'province', 'postalCode',
+      'isActive', 'createdAt', 'updatedAt',
+    ],
+  );
+
+  const claimColumns = hi.claims.length > 0
+    ? Object.keys(hi.claims[0])
+    : [];
+  const claimsCsv = objectToCsvRows(hi.claims, claimColumns);
+
+  const ahcipColumns = hi.ahcipDetails.length > 0
+    ? Object.keys(hi.ahcipDetails[0])
+    : [];
+  const ahcipCsv = objectToCsvRows(hi.ahcipDetails, ahcipColumns);
+
+  const wcbColumns = hi.wcbDetails.length > 0
+    ? Object.keys(hi.wcbDetails[0])
+    : [];
+  const wcbCsv = objectToCsvRows(hi.wcbDetails, wcbColumns);
+
+  const auditColumns = hi.auditEntries.length > 0
+    ? Object.keys(hi.auditEntries[0])
+    : [];
+  const auditCsv = objectToCsvRows(hi.auditEntries, auditColumns);
+
+  // 3. Bundle CSVs into a ZIP archive using built-in zlib
+  const { createDeflateRaw } = await import('node:zlib');
+  const { Buffer: NodeBuffer } = await import('node:buffer');
+
+  // Simple ZIP archive construction using raw deflate
+  const files: Array<{ name: string; content: Buffer }> = [];
+  if (demographicsCsv) files.push({ name: 'demographics.csv', content: NodeBuffer.from(demographicsCsv, 'utf-8') });
+  if (claimsCsv) files.push({ name: 'claims.csv', content: NodeBuffer.from(claimsCsv, 'utf-8') });
+  if (ahcipCsv) files.push({ name: 'ahcip_details.csv', content: NodeBuffer.from(ahcipCsv, 'utf-8') });
+  if (wcbCsv) files.push({ name: 'wcb_details.csv', content: NodeBuffer.from(wcbCsv, 'utf-8') });
+  if (auditCsv) files.push({ name: 'audit_entries.csv', content: NodeBuffer.from(auditCsv, 'utf-8') });
+
+  // Build ZIP using store method (no compression) for simplicity
+  const zipBuffer = buildZipArchive(files);
+
+  // 4. Store export with 24h expiry
+  const exportId = crypto.randomUUID();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const downloadUrl = `/api/v1/patients/${patientId}/export/${exportId}/download`;
+
+  accessExportStore.set(exportId, {
+    physicianId,
+    patientId,
+    zipBuffer,
+    status: 'READY',
+    downloadUrl,
+    createdAt: now,
+    expiresAt,
+  });
+
+  // 5. Audit log — NO PHI, only IDs
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: PatientAuditAction.ACCESS_EXPORT_REQUESTED,
+    category: AUDIT_CATEGORY,
+    resourceType: 'patient',
+    resourceId: patientId,
+    detail: {
+      exportId,
+      providerId: physicianId,
+    },
+  });
+
+  // 6. Emit notification and event
+  deps.events.emit(PatientAuditAction.ACCESS_EXPORT_READY, {
+    exportId,
+    patientId,
+    physicianId,
+    actorId,
+  });
+
+  return { exportId, downloadUrl, expiresAt };
+}
+
+// ---------------------------------------------------------------------------
+// Service: getPatientAccessExportDownload
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieve the stored ZIP for a patient access export.
+ * Validates physician scope and expiry.
+ */
+export async function getPatientAccessExportDownload(
+  deps: PatientServiceDeps,
+  exportId: string,
+  physicianId: string,
+): Promise<{ zipBuffer: Buffer; patientId: string }> {
+  const entry = accessExportStore.get(exportId);
+  if (!entry || entry.physicianId !== physicianId) {
+    throw new NotFoundError('Export');
+  }
+
+  if (new Date() > entry.expiresAt) {
+    accessExportStore.delete(exportId);
+    throw new NotFoundError('Export');
+  }
+
+  return { zipBuffer: entry.zipBuffer, patientId: entry.patientId };
+}
+
+// ---------------------------------------------------------------------------
+// ZIP archive builder (store method — no compression for simplicity)
+// ---------------------------------------------------------------------------
+
+function buildZipArchive(files: Array<{ name: string; content: Buffer }>): Buffer {
+  const parts: Buffer[] = [];
+  const centralDir: Buffer[] = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const nameBuffer = Buffer.from(file.name, 'utf-8');
+    const content = file.content;
+
+    // CRC-32 calculation
+    const crc = crc32(content);
+
+    // Local file header (30 bytes + name + content)
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0); // Local file header signature
+    localHeader.writeUInt16LE(20, 4);          // Version needed to extract (2.0)
+    localHeader.writeUInt16LE(0, 6);           // General purpose bit flag
+    localHeader.writeUInt16LE(0, 8);           // Compression method (stored)
+    localHeader.writeUInt16LE(0, 10);          // Last mod file time
+    localHeader.writeUInt16LE(0, 12);          // Last mod file date
+    localHeader.writeUInt32LE(crc, 14);        // CRC-32
+    localHeader.writeUInt32LE(content.length, 18);  // Compressed size
+    localHeader.writeUInt32LE(content.length, 22);  // Uncompressed size
+    localHeader.writeUInt16LE(nameBuffer.length, 26); // File name length
+    localHeader.writeUInt16LE(0, 28);          // Extra field length
+
+    parts.push(localHeader, nameBuffer, content);
+
+    // Central directory entry (46 bytes + name)
+    const centralEntry = Buffer.alloc(46);
+    centralEntry.writeUInt32LE(0x02014b50, 0); // Central directory header signature
+    centralEntry.writeUInt16LE(20, 4);         // Version made by
+    centralEntry.writeUInt16LE(20, 6);         // Version needed to extract
+    centralEntry.writeUInt16LE(0, 8);          // General purpose bit flag
+    centralEntry.writeUInt16LE(0, 10);         // Compression method (stored)
+    centralEntry.writeUInt16LE(0, 12);         // Last mod file time
+    centralEntry.writeUInt16LE(0, 14);         // Last mod file date
+    centralEntry.writeUInt32LE(crc, 16);       // CRC-32
+    centralEntry.writeUInt32LE(content.length, 20);  // Compressed size
+    centralEntry.writeUInt32LE(content.length, 24);  // Uncompressed size
+    centralEntry.writeUInt16LE(nameBuffer.length, 28); // File name length
+    centralEntry.writeUInt16LE(0, 30);         // Extra field length
+    centralEntry.writeUInt16LE(0, 32);         // File comment length
+    centralEntry.writeUInt16LE(0, 34);         // Disk number start
+    centralEntry.writeUInt16LE(0, 36);         // Internal file attributes
+    centralEntry.writeUInt32LE(0, 38);         // External file attributes
+    centralEntry.writeUInt32LE(offset, 42);    // Relative offset of local header
+
+    centralDir.push(centralEntry, nameBuffer);
+
+    offset += localHeader.length + nameBuffer.length + content.length;
+  }
+
+  const centralDirOffset = offset;
+  const centralDirBuf = Buffer.concat(centralDir);
+  const centralDirSize = centralDirBuf.length;
+
+  // End of central directory record (22 bytes)
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);          // EOCD signature
+  eocd.writeUInt16LE(0, 4);                    // Number of this disk
+  eocd.writeUInt16LE(0, 6);                    // Disk with central dir
+  eocd.writeUInt16LE(files.length, 8);         // Entries in central dir (this disk)
+  eocd.writeUInt16LE(files.length, 10);        // Total entries in central dir
+  eocd.writeUInt32LE(centralDirSize, 12);      // Size of central directory
+  eocd.writeUInt32LE(centralDirOffset, 16);    // Offset of central dir
+  eocd.writeUInt16LE(0, 20);                   // Comment length
+
+  return Buffer.concat([...parts, centralDirBuf, eocd]);
+}
+
+/**
+ * CRC-32 computation (ISO 3309 / ITU-T V.42).
+ */
+function crc32(buf: Buffer): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// ===========================================================================
 // Internal API (consumed by Domain 4)
 // ===========================================================================
 
@@ -1496,4 +1892,4 @@ export async function validatePhnService(
 // Export internal stores and caches for testing
 // ---------------------------------------------------------------------------
 
-export { parsedRowsCache as _parsedRowsCache, exportStore as _exportStore };
+export { parsedRowsCache as _parsedRowsCache, exportStore as _exportStore, accessExportStore as _accessExportStore };

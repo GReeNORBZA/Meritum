@@ -1975,6 +1975,7 @@ export interface AccountUserRepo {
     passwordHash: string;
     totpSecretEncrypted: string | null;
     isActive: boolean;
+    secondaryEmail?: string | null;
   } | undefined>;
 
   updateUser(
@@ -2027,6 +2028,7 @@ export interface AccountInfo {
   role: string;
   subscriptionStatus: string;
   mfaConfigured: boolean;
+  secondaryEmail: string | null;
 }
 
 /**
@@ -2050,6 +2052,7 @@ export async function getAccount(
     role: user.role,
     subscriptionStatus: user.subscriptionStatus,
     mfaConfigured: user.mfaConfigured,
+    secondaryEmail: user.secondaryEmail ?? null,
   };
 }
 
@@ -2256,6 +2259,101 @@ export async function checkSubscriptionAccess(
     subscriptionStatus: user.subscriptionStatus,
     accessLevel,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Secondary Email Dependencies
+// ---------------------------------------------------------------------------
+
+export interface SecondaryEmailUserRepo {
+  findUserById(userId: string): Promise<{
+    userId: string;
+    email: string;
+    secondaryEmail: string | null;
+  } | undefined>;
+
+  updateSecondaryEmail(userId: string, email: string | null): Promise<void>;
+  getSecondaryEmail(userId: string): Promise<string | null>;
+}
+
+export interface SecondaryEmailServiceDeps {
+  userRepo: SecondaryEmailUserRepo;
+  auditRepo: AuditRepo;
+  events: EventEmitter;
+}
+
+// ---------------------------------------------------------------------------
+// Service: Update Secondary Email
+// ---------------------------------------------------------------------------
+
+/**
+ * Set or clear the user's secondary email.
+ *
+ * Security: The secondary email cannot equal the primary email.
+ * The secondary email is used for breach and IMA amendment
+ * notifications only — it is NOT an alternative login.
+ */
+export async function updateSecondaryEmail(
+  deps: SecondaryEmailServiceDeps,
+  ctx: { userId: string },
+  email: string | null,
+): Promise<void> {
+  const user = await deps.userRepo.findUserById(ctx.userId);
+  if (!user) {
+    throw new BusinessRuleError('Account not found');
+  }
+
+  if (email !== null) {
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new BusinessRuleError('Invalid email format');
+    }
+
+    // Secondary email must differ from primary
+    if (email.toLowerCase() === user.email.toLowerCase()) {
+      throw new BusinessRuleError(
+        'Secondary email must be different from primary email',
+      );
+    }
+  }
+
+  const oldEmail = user.secondaryEmail;
+
+  await deps.userRepo.updateSecondaryEmail(ctx.userId, email?.toLowerCase() ?? null);
+
+  // Audit: account.secondary_email_updated
+  await deps.auditRepo.appendAuditLog({
+    userId: ctx.userId,
+    action: 'account.secondary_email_updated',
+    category: AuditCategory.ACCOUNT,
+    resourceType: 'user',
+    resourceId: ctx.userId,
+    detail: {
+      oldEmail: oldEmail ?? null,
+      newEmail: email?.toLowerCase() ?? null,
+    },
+  });
+
+  deps.events.emit('ACCOUNT_SECONDARY_EMAIL_UPDATED', {
+    userId: ctx.userId,
+    oldEmail: oldEmail ?? null,
+    newEmail: email?.toLowerCase() ?? null,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Service: Get Secondary Email
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the secondary email for the authenticated user.
+ */
+export async function getSecondaryEmail(
+  deps: SecondaryEmailServiceDeps,
+  ctx: { userId: string },
+): Promise<string | null> {
+  return deps.userRepo.getSecondaryEmail(ctx.userId);
 }
 
 // ---------------------------------------------------------------------------

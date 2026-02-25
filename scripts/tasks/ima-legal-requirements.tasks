@@ -1,0 +1,64 @@
+# ============================================================================
+# IMA Legal Requirements — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/ima-legal-requirements.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Source: Meritum_IMA_Legal_Requirements_FRD.md (Gap Analysis)
+# Generated: 2026-02-24
+# ============================================================================
+
+## Phase 1: Schema & Constants
+
+IMA-001 | Constants: amendment types, breach statuses, notification events, audit actions; change DELETION_GRACE_PERIOD_DAYS 30→45 | scripts/tasks/prompts/ima/IMA-001.md | pnpm --filter shared build
+IMA-002 | Drizzle schema: secondary_email on users, ima_amendments + ima_amendment_responses tables | scripts/tasks/prompts/ima/IMA-002.md | pnpm --filter shared build
+IMA-003 | Drizzle schema: breach_records, breach_affected_custodians, breach_updates, data_destruction_tracking tables | scripts/tasks/prompts/ima/IMA-003.md | pnpm --filter shared build
+IMA-004 | Zod validation schemas for all IMA endpoints (amendments, breach, exports, correction, secondary email) | scripts/tasks/prompts/ima/IMA-004.md | pnpm --filter shared build
+IMA-005 | Generate and apply database migration | scripts/tasks/prompts/ima/IMA-005.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Phase 2: Low-Effort Cross-Cutting Changes
+
+IMA-010 | PHI read-access audit logging: add auditLog config to GET routes across all domains | scripts/tasks/prompts/ima/IMA-010.md | pnpm --filter api vitest run test/security/iam/iam.audit.security.ts
+IMA-011 | Patient correction audit trail: extend PATCH handler with diff + correction_reason | scripts/tasks/prompts/ima/IMA-011.md | pnpm --filter api vitest run test/integration/patient/
+IMA-012 | Export window notifications: wire 4 new event types into platform dunning/cancellation flow | scripts/tasks/prompts/ima/IMA-012.md | pnpm --filter api vitest run test/integration/platform/
+
+## Phase 3: Secondary Email
+
+IMA-015 | Secondary email: repository + service + unit tests | scripts/tasks/prompts/ima/IMA-015.md | pnpm --filter api vitest run src/domains/iam/iam.test.ts
+IMA-016 | Secondary email: extend account handler + route, integration tests, notification dual-delivery | scripts/tasks/prompts/ima/IMA-016.md | pnpm --filter api vitest run test/integration/iam/account.integration.ts
+
+## Phase 4: IMA Amendment System
+
+IMA-020 | IMA amendment: repository (CRUD for amendments + responses) | scripts/tasks/prompts/ima/IMA-020.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-021 | IMA amendment: service (create, acknowledge, accept/reject, gate check, reminders) | scripts/tasks/prompts/ima/IMA-021.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-022 | IMA amendment: handlers + routes + blocking gate middleware | scripts/tasks/prompts/ima/IMA-022.md | pnpm --filter api vitest run test/integration/platform/
+IMA-023 | IMA amendment: integration tests | scripts/tasks/prompts/ima/IMA-023.md | pnpm --filter api vitest run test/integration/platform/amendments.integration.ts
+IMA-024 | IMA amendment: security tests (authn + authz + input + leakage + audit) | scripts/tasks/prompts/ima/IMA-024.md | pnpm --filter api vitest run test/security/platform/
+
+## Phase 5: Breach Notification System
+
+IMA-030 | Breach notification: repository | scripts/tasks/prompts/ima/IMA-030.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-031 | Breach notification: service (create, notify within 72h, update, evidence hold) | scripts/tasks/prompts/ima/IMA-031.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-032 | Breach notification: handlers + routes (admin-only) | scripts/tasks/prompts/ima/IMA-032.md | pnpm --filter api vitest run test/integration/platform/
+IMA-033 | Breach notification: integration tests | scripts/tasks/prompts/ima/IMA-033.md | pnpm --filter api vitest run test/integration/platform/breach.integration.ts
+IMA-034 | Breach notification: security tests (authn + authz + input + leakage + audit) | scripts/tasks/prompts/ima/IMA-034.md | pnpm --filter api vitest run test/security/platform/
+
+## Phase 6: Patient Access Request Export
+
+IMA-040 | Patient access export: repository (cross-table patient HI query) | scripts/tasks/prompts/ima/IMA-040.md | pnpm --filter api vitest run src/domains/patient/patient.test.ts
+IMA-041 | Patient access export: service + handler + route | scripts/tasks/prompts/ima/IMA-041.md | pnpm --filter api vitest run test/integration/patient/
+IMA-042 | Patient access export: integration + security tests | scripts/tasks/prompts/ima/IMA-042.md | pnpm --filter api vitest run test/integration/patient/export.integration.ts test/security/patient/
+
+## Phase 7: Complete Health Information Export
+
+IMA-050 | Complete HI export: repository (cross-table full physician data compilation) | scripts/tasks/prompts/ima/IMA-050.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-051 | Complete HI export: service + handler + route (ZIP generation, presigned URL) | scripts/tasks/prompts/ima/IMA-051.md | pnpm --filter api vitest run test/integration/platform/
+IMA-052 | Complete HI export: integration + security tests | scripts/tasks/prompts/ima/IMA-052.md | pnpm --filter api vitest run test/integration/platform/export.integration.ts test/security/platform/
+
+## Phase 8: Data Destruction Completion
+
+IMA-060 | Data destruction: extend pipeline with DO Spaces cleanup, backup tracking, confirmation email | scripts/tasks/prompts/ima/IMA-060.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+IMA-061 | Data destruction: integration tests for extended pipeline | scripts/tasks/prompts/ima/IMA-061.md | pnpm --filter api vitest run test/integration/platform/destruction.integration.ts
+
+## Final Validation
+
+IMA-099 | Full IMA requirements test suite: all integration + security tests | scripts/tasks/prompts/ima/IMA-099.md | pnpm --filter api vitest run test/integration/platform/ test/integration/patient/ test/integration/iam/ test/security/platform/ test/security/patient/ test/security/iam/

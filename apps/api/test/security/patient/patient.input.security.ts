@@ -1039,6 +1039,25 @@ describe('Patient Input Validation & Injection Prevention (Security)', () => {
       assertNoInternalLeakage(res.body);
     });
 
+    // Patient Access Export (IMA S74) UUID validation
+    it('rejects non-UUID patient id for access export: POST /api/v1/patients/not-a-uuid/export', async () => {
+      const res = await authedRequest('POST', '/api/v1/patients/not-a-uuid/export');
+      expect(res.statusCode).toBe(400);
+      assertNoInternalLeakage(res.body);
+    });
+
+    it('rejects non-UUID patient id for access export download: GET /api/v1/patients/not-a-uuid/export/.../download', async () => {
+      const res = await authedRequest('GET', `/api/v1/patients/not-a-uuid/export/${PLACEHOLDER_UUID}/download`);
+      expect(res.statusCode).toBe(400);
+      assertNoInternalLeakage(res.body);
+    });
+
+    it('rejects non-UUID export id for access export download: GET /api/v1/patients/.../export/not-a-uuid/download', async () => {
+      const res = await authedRequest('GET', `/api/v1/patients/${PLACEHOLDER_UUID}/export/not-a-uuid/download`);
+      expect(res.statusCode).toBe(400);
+      assertNoInternalLeakage(res.body);
+    });
+
     it('rejects SQL injection as UUID parameter', async () => {
       const res = await authedRequest(
         'GET',

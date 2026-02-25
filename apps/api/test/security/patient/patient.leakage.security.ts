@@ -36,7 +36,10 @@ import {
 } from 'fastify-type-provider-zod';
 import { patientRoutes, internalPatientRoutes } from '../../../src/domains/patient/patient.routes.js';
 import { authPluginFp } from '../../../src/plugins/auth.plugin.js';
-import { type PatientServiceDeps } from '../../../src/domains/patient/patient.service.js';
+import {
+  type PatientServiceDeps,
+  _accessExportStore,
+} from '../../../src/domains/patient/patient.service.js';
 import {
   type PatientHandlerDeps,
   type InternalPatientHandlerDeps,
@@ -634,6 +637,32 @@ function createScopedPatientRepo() {
         patientId: patient?.patientId,
       };
     }),
+
+    // Patient Access Export (IMA S74)
+    getPatientHealthInformation: vi.fn(async (physicianId: string, patientId: string) => {
+      const patient = patientsStore[patientId];
+      if (!patient || patient.providerId !== physicianId) return null;
+      return {
+        demographics: {
+          patientId: patient.patientId,
+          phn: patient.phn,
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          dateOfBirth: patient.dateOfBirth,
+          gender: patient.gender,
+          phone: patient.phone,
+          email: patient.email,
+          addressLine1: patient.addressLine1,
+          city: patient.city,
+          province: patient.province,
+          postalCode: patient.postalCode,
+        },
+        claims: [],
+        ahcipDetails: [],
+        wcbDetails: [],
+        auditEntries: [],
+      };
+    }),
   };
 }
 
@@ -862,6 +891,7 @@ describe('Patient PHI Leakage Prevention (Security)', () => {
     seedUsersAndSessions();
     seedTestData();
     auditEntries = [];
+    _accessExportStore.clear();
   });
 
   // =========================================================================
@@ -1561,6 +1591,97 @@ describe('Patient PHI Leakage Prevention (Security)', () => {
   // =========================================================================
   // 9. Error Responses Are Generic and Do Not Reveal Internal State
   // =========================================================================
+
+  // =========================================================================
+  // 9a. Patient Access Export (IMA S74) — Leakage Prevention
+  // =========================================================================
+
+  describe('Patient Access Export (IMA S74) leakage prevention', () => {
+    it('404 for non-existent patient export does not reveal details', async () => {
+      const res = await asPhysician1('POST', `/api/v1/patients/${NONEXISTENT_UUID}/export`);
+      expect(res.statusCode).toBe(404);
+
+      const body = JSON.parse(res.body);
+      expect(body.data).toBeUndefined();
+      expect(body.error).toBeDefined();
+      expect(body.error.message).not.toContain(NONEXISTENT_UUID);
+    });
+
+    it('cross-tenant patient export 404 does not reveal patient existence', async () => {
+      // P1 tries to export P2's patient
+      const crossRes = await asPhysician1('POST', `/api/v1/patients/${P2_PATIENT_ID_A}/export`);
+      const missingRes = await asPhysician1('POST', `/api/v1/patients/${NONEXISTENT_UUID}/export`);
+
+      expect(crossRes.statusCode).toBe(404);
+      expect(missingRes.statusCode).toBe(404);
+
+      const crossBody = JSON.parse(crossRes.body);
+      const missingBody = JSON.parse(missingRes.body);
+
+      // Identical response — no information leakage
+      expect(crossBody.error.code).toBe(missingBody.error.code);
+      expect(crossBody.error.message).toBe(missingBody.error.message);
+
+      // No P2 data leaked
+      expect(crossRes.body).not.toContain('Charlie');
+      expect(crossRes.body).not.toContain(P2_PHN_A);
+      expect(crossRes.body).not.toContain(P2_PROVIDER_ID);
+    });
+
+    it('patient access export download requires authentication', async () => {
+      // Create export as P1
+      const exportRes = await asPhysician1('POST', `/api/v1/patients/${P1_PATIENT_ID_A}/export`);
+      expect(exportRes.statusCode).toBe(201);
+      const { exportId } = JSON.parse(exportRes.body).data;
+
+      // Try to download without auth
+      const unauthRes = await unauthenticated(
+        'GET',
+        `/api/v1/patients/${P1_PATIENT_ID_A}/export/${exportId}/download`,
+      );
+      expect(unauthRes.statusCode).toBe(401);
+
+      const body = JSON.parse(unauthRes.body);
+      expect(body.data).toBeUndefined();
+    });
+
+    it('patient access export download rejects other physicians', async () => {
+      // Create export as P1
+      const exportRes = await asPhysician1('POST', `/api/v1/patients/${P1_PATIENT_ID_A}/export`);
+      expect(exportRes.statusCode).toBe(201);
+      const { exportId } = JSON.parse(exportRes.body).data;
+
+      // P2 tries to download P1's export
+      const crossRes = await asPhysician2(
+        'GET',
+        `/api/v1/patients/${P1_PATIENT_ID_A}/export/${exportId}/download`,
+      );
+      expect(crossRes.statusCode).toBe(404);
+
+      // Should not reveal P1's data
+      expect(crossRes.body).not.toContain('Alice');
+      expect(crossRes.body).not.toContain(P1_PHN_A);
+      expect(crossRes.body).not.toContain(P1_PROVIDER_ID);
+    });
+
+    it('patient access export audit entry does not contain PHI', async () => {
+      const res = await asPhysician1('POST', `/api/v1/patients/${P1_PATIENT_ID_A}/export`);
+      expect(res.statusCode).toBe(201);
+
+      const exportAudits = auditEntries.filter(
+        (e) => e.action === 'export.patient_access_requested',
+      );
+      expect(exportAudits.length).toBeGreaterThan(0);
+
+      const auditString = JSON.stringify(exportAudits);
+      // Must not contain patient name, full PHN, or notes
+      expect(auditString).not.toContain('Alice');
+      expect(auditString).not.toContain('Smith');
+      expect(auditString).not.toContain(P1_PHN_A);
+      expect(auditString).not.toContain('Sensitive clinical notes');
+      expect(auditString).not.toContain('DO NOT LEAK');
+    });
+  });
 
   describe('Error responses are generic and do not reveal internal state', () => {
     it('all 404 responses have consistent error structure', async () => {

@@ -1,0 +1,54 @@
+# ============================================================================
+# Domain 16: Clinic/Practice Tier (Pricing Gap Closure Batch 1) — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-16-clinic-tier.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-19
+# ============================================================================
+
+## Domain 16: Clinic/Practice Tier — Schema Layer
+
+D16-001 | Clinic pricing constants: CLINIC_MONTHLY, CLINIC_ANNUAL plans, CLINIC_MINIMUM_PHYSICIANS, discount constants | scripts/tasks/prompts/d16/D16-001.md | pnpm --filter shared build
+D16-002 | Drizzle schema for practices table | scripts/tasks/prompts/d16/D16-002.md | pnpm --filter shared build
+D16-003 | Drizzle schema for practice_memberships table with billing_mode column | scripts/tasks/prompts/d16/D16-003.md | pnpm --filter shared build
+D16-004 | Drizzle schema for practice_invitations table | scripts/tasks/prompts/d16/D16-004.md | pnpm --filter shared build
+D16-005 | Add practice_id FK to subscriptions table, add PRACTICE_ADMIN role and permissions to IAM constants | scripts/tasks/prompts/d16/D16-005.md | pnpm --filter shared build
+D16-006 | Zod validation schemas for practice management endpoints + generate migration | scripts/tasks/prompts/d16/D16-006.md | pnpm --filter shared build
+
+## Domain 16: Clinic/Practice Tier — Repository Layer
+
+D16-010 | Practice repository: CRUD for practices, membership queries, headcount checks | scripts/tasks/prompts/d16/D16-010.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-011 | Practice membership repository: add/remove members, billing mode queries, end-of-month removal queries | scripts/tasks/prompts/d16/D16-011.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-012 | Practice invitation repository: create, find by token, expire, accept/decline | scripts/tasks/prompts/d16/D16-012.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 16: Clinic/Practice Tier — Service Layer
+
+D16-020 | Service: createPractice — create practice, membership for admin, assign PRACTICE_ADMIN role, create Stripe customer | scripts/tasks/prompts/d16/D16-020.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-021 | Service: invitePhysician — validate PRACTICE_ADMIN, check not on practice/another practice, create invitation, emit notification | scripts/tasks/prompts/d16/D16-021.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-022 | Service: acceptInvitation — validate token, determine billing_mode, create membership, handle subscription transition | scripts/tasks/prompts/d16/D16-022.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-023 | Service: removePhysician — validate PRACTICE_ADMIN, set removal_effective_at, emit notification if below 5 | scripts/tasks/prompts/d16/D16-023.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-024 | Service: handleEndOfMonthRemovals scheduled job — process removals, check headcount, dissolve practice if below 5 | scripts/tasks/prompts/d16/D16-024.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-025 | Service: getPracticeSeats and getPracticeInvoice — ZERO PHI, return only name/email/joinedAt/billingMode | scripts/tasks/prompts/d16/D16-025.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 16: Clinic/Practice Tier — Routes & Integration
+
+D16-030 | Practice routes: all 8 endpoints for practice management | scripts/tasks/prompts/d16/D16-030.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-031 | Practice handlers: thin layer connecting routes to service | scripts/tasks/prompts/d16/D16-031.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D16-032 | Integration tests for all practice routes | scripts/tasks/prompts/d16/D16-032.md | pnpm --filter api vitest run test/integration/platform/
+
+## Domain 16: Clinic/Practice Tier — Stripe Integration
+
+D16-033 | Practice Stripe integration: create subscription with quantity, update on member add/remove/transition, webhooks | scripts/tasks/prompts/d16/D16-033.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 16: Clinic/Practice Tier — Security Tests
+
+D16-040 | Security: authn — every practice route returns 401 without session | scripts/tasks/prompts/d16/D16-040.md | pnpm --filter api vitest run test/security/platform/practice.authn.security.ts
+D16-041 | Security: authz — only PRACTICE_ADMIN can manage seats/invoices, cross-practice isolation | scripts/tasks/prompts/d16/D16-041.md | pnpm --filter api vitest run test/security/platform/practice.authz.security.ts
+D16-042 | Security: scoping — MOST CRITICAL — practice admin NEVER sees PHI, claim data, billing volumes, rejection rates | scripts/tasks/prompts/d16/D16-042.md | pnpm --filter api vitest run test/security/platform/practice.scoping.security.ts
+D16-043 | Security: input — SQL injection/XSS on practice name, invitation email | scripts/tasks/prompts/d16/D16-043.md | pnpm --filter api vitest run test/security/platform/practice.input.security.ts
+D16-044 | Security: leakage — error responses do not leak practice/member details to non-admins | scripts/tasks/prompts/d16/D16-044.md | pnpm --filter api vitest run test/security/platform/practice.leakage.security.ts
+D16-045 | Security: audit — practice creation, invitation, acceptance, removal, dissolution all audit logged | scripts/tasks/prompts/d16/D16-045.md | pnpm --filter api vitest run test/security/platform/practice.audit.security.ts
+
+## Domain 16: Clinic/Practice Tier — Final Validation
+
+D16-099 | Full domain test suite + regression check against existing 10,881 tests | scripts/tasks/prompts/d16/D16-099.md | pnpm --filter api vitest run src/domains/platform/ test/integration/platform/ test/security/platform/

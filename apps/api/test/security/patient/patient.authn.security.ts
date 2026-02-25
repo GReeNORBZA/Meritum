@@ -352,6 +352,26 @@ const AUTHENTICATED_ROUTES: RouteSpec[] = [
     url: `/api/v1/patients/exports/${PLACEHOLDER_UUID}`,
     description: 'Export status',
   },
+
+  // Patient Access Export (IMA S74)
+  {
+    method: 'POST',
+    url: `/api/v1/patients/${PLACEHOLDER_UUID}/export`,
+    description: 'Patient access export request',
+  },
+  {
+    method: 'GET',
+    url: `/api/v1/patients/${PLACEHOLDER_UUID}/export/${PLACEHOLDER_UUID}/download`,
+    description: 'Patient access export download',
+  },
+
+  // Patient Correction
+  {
+    method: 'PATCH' as any,
+    url: `/api/v1/patients/${PLACEHOLDER_UUID}/correct`,
+    payload: { correction_reason: 'Data entry error', first_name: 'Jane' },
+    description: 'Correct patient record',
+  },
 ];
 
 // ---------------------------------------------------------------------------

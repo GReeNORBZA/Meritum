@@ -170,6 +170,19 @@ export const exportIdParamSchema = z.object({
 export type ExportIdParam = z.infer<typeof exportIdParamSchema>;
 
 // ============================================================================
+// Patient Access Export (IMA S74)
+// ============================================================================
+
+// --- Patient Access Export Download Parameter ---
+
+export const patientAccessExportDownloadParamSchema = z.object({
+  id: z.string().uuid(),
+  exportId: z.string().uuid(),
+});
+
+export type PatientAccessExportDownloadParam = z.infer<typeof patientAccessExportDownloadParamSchema>;
+
+// ============================================================================
 // Internal API
 // ============================================================================
 

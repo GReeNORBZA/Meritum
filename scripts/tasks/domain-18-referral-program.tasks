@@ -1,0 +1,45 @@
+# ============================================================================
+# Domain 18: Referral Program (Batch 3) — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-18-referral-program.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-19
+#
+# Depends on: Batch 1 (domain-16-clinic-tier) — needs practice_memberships
+#             for same-practice referral blocking.
+# Spec: docs/frd/Meritum_Pricing_Gap_Closure_Spec.md — BATCH 3 (B3-1..B3-5)
+# ============================================================================
+
+## Domain 18: Referral Program — Schema Redesign
+
+D18-001 | Redesign referral_codes table: remove redemption_count, max_redemptions; rename physician_user_id to referrer_user_id; default is_active to true | scripts/tasks/prompts/d18/D18-001.md | pnpm --filter shared build
+D18-002 | Redesign referral_redemptions table: replace entirely with status workflow, credit tracking, anniversary year cap | scripts/tasks/prompts/d18/D18-002.md | pnpm --filter shared build
+D18-003 | Add referral program constants: referral statuses enum, max credits per year, credit application targets enum | scripts/tasks/prompts/d18/D18-003.md | pnpm --filter shared build
+D18-004 | Zod validation schemas for referral endpoints + generate database migration | scripts/tasks/prompts/d18/D18-004.md | pnpm --filter shared build
+
+## Domain 18: Referral Program — Repository Layer
+
+D18-010 | Repository: referral code CRUD — create code, find by code string, find by user, deactivate | scripts/tasks/prompts/d18/D18-010.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D18-011 | Repository: referral redemption CRUD — create, find pending, count per anniversary year, update status, find by referrer | scripts/tasks/prompts/d18/D18-011.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 18: Referral Program — Service Layer
+
+D18-020 | Service: generateReferralCode — unique 8-char alphanumeric, auto-generated at signup | scripts/tasks/prompts/d18/D18-020.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D18-021 | Service: redeemReferralCode — validate code active, validate new user, block same-practice, create PENDING | scripts/tasks/prompts/d18/D18-021.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D18-022 | Service: checkReferralQualification scheduled job — billing cycle check, credit calculation, 3-per-year cap | scripts/tasks/prompts/d18/D18-022.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D18-023 | Service: applyReferralCredit + clinic physician choice (practice invoice vs individual bank) | scripts/tasks/prompts/d18/D18-023.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D18-024 | Service: referee incentive — first month free after early bird window closes (100% Stripe coupon) | scripts/tasks/prompts/d18/D18-024.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 18: Referral Program — Routes
+
+D18-030 | Routes: referral endpoints — GET my-code, GET my-credits, POST apply, POST public validation + integration tests | scripts/tasks/prompts/d18/D18-030.md | pnpm --filter api vitest run test/integration/platform/
+
+## Domain 18: Referral Program — Security Tests
+
+D18-040 | Security: authn + authz — referral routes require auth (except public validation), only code owner can apply credits | scripts/tasks/prompts/d18/D18-040.md | pnpm --filter api vitest run test/security/platform/referral.authn.security.ts
+D18-041 | Security: scoping — physician can only see own referral code and credits, no cross-user data access | scripts/tasks/prompts/d18/D18-041.md | pnpm --filter api vitest run test/security/platform/referral.scoping.security.ts
+D18-042 | Security: input validation + business rules — same-practice blocked, 3-per-year cap, re-referral blocked | scripts/tasks/prompts/d18/D18-042.md | pnpm --filter api vitest run test/security/platform/referral.input.security.ts
+
+## Domain 18: Referral Program — Final Validation
+
+D18-099 | Full validation: tsc + all platform tests + regression | scripts/tasks/prompts/d18/D18-099.md | pnpm --filter shared build && pnpm --filter api vitest run src/domains/platform/ test/integration/platform/ test/security/platform/

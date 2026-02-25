@@ -148,6 +148,28 @@ export function createUserRepository(db: NodePgDatabase) {
         })
         .where(eq(users.userId, userId));
     },
+
+    async updateSecondaryEmail(
+      userId: string,
+      email: string | null,
+    ): Promise<void> {
+      await db
+        .update(users)
+        .set({
+          secondaryEmail: email,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.userId, userId));
+    },
+
+    async getSecondaryEmail(userId: string): Promise<string | null> {
+      const rows = await db
+        .select({ secondaryEmail: users.secondaryEmail })
+        .from(users)
+        .where(eq(users.userId, userId))
+        .limit(1);
+      return rows[0]?.secondaryEmail ?? null;
+    },
   };
 }
 

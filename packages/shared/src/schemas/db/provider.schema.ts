@@ -9,6 +9,7 @@ import {
   boolean,
   integer,
   decimal,
+  text,
   timestamp,
   date,
   jsonb,
@@ -309,6 +310,76 @@ export const hlinkConfigurations = pgTable(
   },
 );
 
+// --- PCPCM Payments Table ---
+// Tracks PCPCM capitation payments and reconciliation against expected amounts.
+// Physician-scoped via provider_id FK.
+
+export const pcpcmPayments = pgTable(
+  'pcpcm_payments',
+  {
+    paymentId: uuid('payment_id').primaryKey().defaultRandom(),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    enrolmentId: uuid('enrolment_id')
+      .notNull()
+      .references(() => pcpcmEnrolments.enrolmentId),
+    paymentPeriodStart: date('payment_period_start', { mode: 'string' }).notNull(),
+    paymentPeriodEnd: date('payment_period_end', { mode: 'string' }).notNull(),
+    expectedAmount: decimal('expected_amount', { precision: 10, scale: 2 }),
+    actualAmount: decimal('actual_amount', { precision: 10, scale: 2 }),
+    panelSizeAtPayment: integer('panel_size_at_payment'),
+    status: varchar('status', { length: 20 }).notNull().default('EXPECTED'),
+    reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('pcpcm_payments_provider_id_idx').on(table.providerId),
+    index('pcpcm_payments_enrolment_id_idx').on(table.enrolmentId),
+    index('pcpcm_payments_provider_period_idx').on(
+      table.providerId,
+      table.paymentPeriodEnd,
+    ),
+    index('pcpcm_payments_status_idx').on(table.status),
+  ],
+);
+
+// --- PCPCM Panel Estimates Table ---
+// Post-MVP: panel size estimation from claim history. Schema defined, not actively used.
+// Future implementation will estimate panel size from Meritum claim data as a
+// sanity check alongside the manual entry from AH quarterly Panel Attribution Reports.
+
+export const pcpcmPanelEstimates = pgTable(
+  'pcpcm_panel_estimates',
+  {
+    estimateId: uuid('estimate_id').primaryKey().defaultRandom(),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    enrolmentId: uuid('enrolment_id')
+      .notNull()
+      .references(() => pcpcmEnrolments.enrolmentId),
+    estimationMethod: varchar('estimation_method', { length: 30 }).notNull(),
+    estimatedPanelSize: integer('estimated_panel_size').notNull(),
+    uniquePatients12m: integer('unique_patients_12m'),
+    confidence: varchar('confidence', { length: 10 }),
+    periodStart: date('period_start', { mode: 'string' }).notNull(),
+    periodEnd: date('period_end', { mode: 'string' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('pcpcm_panel_estimates_provider_period_idx').on(
+      table.providerId,
+      table.periodEnd,
+    ),
+  ],
+);
+
 // --- Inferred Types ---
 
 export type InsertProvider = typeof providers.$inferInsert;
@@ -334,3 +405,9 @@ export type SelectSubmissionPreferences = typeof submissionPreferences.$inferSel
 
 export type InsertHlinkConfig = typeof hlinkConfigurations.$inferInsert;
 export type SelectHlinkConfig = typeof hlinkConfigurations.$inferSelect;
+
+export type InsertPcpcmPayment = typeof pcpcmPayments.$inferInsert;
+export type SelectPcpcmPayment = typeof pcpcmPayments.$inferSelect;
+
+export type InsertPcpcmPanelEstimate = typeof pcpcmPanelEstimates.$inferInsert;
+export type SelectPcpcmPanelEstimate = typeof pcpcmPanelEstimates.$inferSelect;

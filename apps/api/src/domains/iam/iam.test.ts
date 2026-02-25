@@ -56,10 +56,14 @@ import {
   type AccountUserRepo,
   type AccountSessionRepo,
   type AccountDelegateLinkageRepo,
+  type SecondaryEmailServiceDeps,
+  type SecondaryEmailUserRepo,
   getAccount,
   updateAccount,
   requestAccountDeletion,
   checkSubscriptionAccess,
+  updateSecondaryEmail,
+  getSecondaryEmail,
 } from './iam.service.js';
 
 // ---------------------------------------------------------------------------
@@ -5932,6 +5936,132 @@ describe('IAM Service — updateAccount', () => {
     await expect(
       updateAccount(deps, 'nonexistent', { full_name: 'X' }),
     ).rejects.toThrow('Account not found');
+  });
+});
+
+describe('IAM Service — updateSecondaryEmail / getSecondaryEmail', () => {
+  let deps: SecondaryEmailServiceDeps;
+  let userStore: Record<string, any>[];
+  let auditEntries: Record<string, any>[];
+  let emittedEvents: { event: string; payload: Record<string, unknown> }[];
+
+  function makeDeps(): SecondaryEmailServiceDeps {
+    userStore = [];
+    auditEntries = [];
+    emittedEvents = [];
+
+    const userRepo: SecondaryEmailUserRepo = {
+      async findUserById(userId) {
+        return userStore.find((u) => u.userId === userId) as any;
+      },
+      async updateSecondaryEmail(userId, email) {
+        const user = userStore.find((u) => u.userId === userId);
+        if (user) user.secondaryEmail = email;
+      },
+      async getSecondaryEmail(userId) {
+        const user = userStore.find((u) => u.userId === userId);
+        return user?.secondaryEmail ?? null;
+      },
+    };
+
+    const auditRepo: AuditRepo = {
+      async appendAuditLog(entry) {
+        auditEntries.push(entry);
+        return entry;
+      },
+    };
+
+    const events: EventEmitter = {
+      emit(event, payload) {
+        emittedEvents.push({ event, payload });
+      },
+    };
+
+    return { userRepo, auditRepo, events };
+  }
+
+  beforeEach(() => {
+    deps = makeDeps();
+    userStore.push({
+      userId: 'user-1',
+      email: 'dr.smith@hospital.ca',
+      secondaryEmail: null,
+    });
+  });
+
+  it('updateSecondaryEmail sets the secondary email', async () => {
+    await updateSecondaryEmail(deps, { userId: 'user-1' }, 'backup@example.ca');
+
+    expect(userStore[0].secondaryEmail).toBe('backup@example.ca');
+  });
+
+  it('updateSecondaryEmail rejects email that matches primary', async () => {
+    await expect(
+      updateSecondaryEmail(deps, { userId: 'user-1' }, 'dr.smith@hospital.ca'),
+    ).rejects.toThrow('Secondary email must be different from primary email');
+  });
+
+  it('updateSecondaryEmail rejects email that matches primary (case-insensitive)', async () => {
+    await expect(
+      updateSecondaryEmail(deps, { userId: 'user-1' }, 'DR.SMITH@HOSPITAL.CA'),
+    ).rejects.toThrow('Secondary email must be different from primary email');
+  });
+
+  it('updateSecondaryEmail with null clears the field', async () => {
+    // First set it
+    userStore[0].secondaryEmail = 'old@example.ca';
+
+    await updateSecondaryEmail(deps, { userId: 'user-1' }, null);
+
+    expect(userStore[0].secondaryEmail).toBeNull();
+  });
+
+  it('updateSecondaryEmail emits audit event', async () => {
+    userStore[0].secondaryEmail = 'old@example.ca';
+
+    await updateSecondaryEmail(deps, { userId: 'user-1' }, 'new@example.ca');
+
+    expect(auditEntries).toHaveLength(1);
+    expect(auditEntries[0].action).toBe('account.secondary_email_updated');
+    expect(auditEntries[0].detail).toEqual({
+      oldEmail: 'old@example.ca',
+      newEmail: 'new@example.ca',
+    });
+
+    expect(emittedEvents).toHaveLength(1);
+    expect(emittedEvents[0].event).toBe('ACCOUNT_SECONDARY_EMAIL_UPDATED');
+  });
+
+  it('updateSecondaryEmail rejects invalid email format', async () => {
+    await expect(
+      updateSecondaryEmail(deps, { userId: 'user-1' }, 'not-an-email'),
+    ).rejects.toThrow('Invalid email format');
+  });
+
+  it('updateSecondaryEmail throws for non-existent user', async () => {
+    await expect(
+      updateSecondaryEmail(deps, { userId: 'nonexistent' }, 'test@example.ca'),
+    ).rejects.toThrow('Account not found');
+  });
+
+  it('getSecondaryEmail returns the stored value', async () => {
+    userStore[0].secondaryEmail = 'backup@example.ca';
+
+    const result = await getSecondaryEmail(deps, { userId: 'user-1' });
+
+    expect(result).toBe('backup@example.ca');
+  });
+
+  it('getSecondaryEmail returns null when not set', async () => {
+    const result = await getSecondaryEmail(deps, { userId: 'user-1' });
+
+    expect(result).toBeNull();
+  });
+
+  it('updateSecondaryEmail normalizes email to lowercase', async () => {
+    await updateSecondaryEmail(deps, { userId: 'user-1' }, 'Backup@Example.CA');
+
+    expect(userStore[0].secondaryEmail).toBe('backup@example.ca');
   });
 });
 

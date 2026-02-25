@@ -18,10 +18,13 @@ import {
   getMergeHistory,
   requestExport,
   getExportStatus,
+  exportPatientHealthInformation,
+  getPatientAccessExportDownload,
   getPatientClaimContext,
   validatePhnService,
   _parsedRowsCache,
   _exportStore,
+  _accessExportStore,
   type PatientServiceDeps,
   type PatientSearchInput,
 } from './patient.service.js';
@@ -34,6 +37,9 @@ let patientStore: Record<string, any>[];
 let importBatchStore: Record<string, any>[];
 let mergeHistoryStore: Record<string, any>[];
 let claimsStore: Record<string, any>[];
+let ahcipDetailsStore: Record<string, any>[];
+let wcbDetailsStore: Record<string, any>[];
+let auditLogStore: Record<string, any>[];
 
 // ---------------------------------------------------------------------------
 // Mock Drizzle DB
@@ -298,6 +304,55 @@ function makeMockDb() {
       const queryValues = query?.values ?? [];
       const rawSql = query?.raw ?? '';
 
+      // --- IMA S74: getPatientHealthInformation queries ---
+
+      // SELECT * FROM claims WHERE patient_id = ? AND physician_id = ?
+      if (rawSql.includes('FROM claims') && !rawSql.includes('UPDATE') && !rawSql.includes('COUNT') && !rawSql.includes('count')) {
+        const patientId = queryValues[0];
+        const physicianId = queryValues[1];
+        const matching = claimsStore.filter(
+          (c) => c.patientId === patientId && c.providerId === physicianId,
+        );
+        return { rows: matching };
+      }
+
+      // SELECT acd.* FROM ahcip_claim_details acd INNER JOIN claims c ...
+      if (rawSql.includes('ahcip_claim_details')) {
+        const patientId = queryValues[0];
+        const physicianId = queryValues[1];
+        const physicianClaimIds = claimsStore
+          .filter((c) => c.patientId === patientId && c.providerId === physicianId)
+          .map((c) => c.claimId);
+        const matching = ahcipDetailsStore.filter((d) =>
+          physicianClaimIds.includes(d.claimId),
+        );
+        return { rows: matching };
+      }
+
+      // SELECT wcd.* FROM wcb_claim_details wcd INNER JOIN claims c ...
+      if (rawSql.includes('wcb_claim_details')) {
+        const patientId = queryValues[0];
+        const physicianId = queryValues[1];
+        const physicianClaimIds = claimsStore
+          .filter((c) => c.patientId === patientId && c.providerId === physicianId)
+          .map((c) => c.claimId);
+        const matching = wcbDetailsStore.filter((d) =>
+          physicianClaimIds.includes(d.claimId),
+        );
+        return { rows: matching };
+      }
+
+      // SELECT * FROM audit_log WHERE resource_type = 'patient' AND resource_id = ?
+      if (rawSql.includes('audit_log')) {
+        const patientId = queryValues[0];
+        const matching = auditLogStore.filter(
+          (a) => a.resourceType === 'patient' && a.resourceId === patientId,
+        );
+        return { rows: matching };
+      }
+
+      // --- Merge-related queries (existing) ---
+
       // Detect SELECT COUNT vs UPDATE based on the raw SQL string
       if (rawSql.includes('COUNT') || rawSql.includes('count')) {
         // SELECT COUNT(*)::int AS count FROM claims WHERE patient_id = $1 AND provider_id = $2 AND status IN (...)
@@ -557,6 +612,9 @@ describe('Patient Repository', () => {
     importBatchStore = [];
     mergeHistoryStore = [];
     claimsStore = [];
+    ahcipDetailsStore = [];
+    wcbDetailsStore = [];
+    auditLogStore = [];
     repo = createPatientRepository(makeMockDb());
   });
 
@@ -2330,6 +2388,231 @@ describe('Patient Repository', () => {
     expect(result.valid).toBe(true);
     expect(result.exists).toBe(false);
   });
+
+  // =========================================================================
+  // getPatientHealthInformation (IMA S74 — access request export)
+  // =========================================================================
+
+  it('getPatientHealthInformation returns patient demographics', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.demographics.patientId).toBe(created.patientId);
+    expect(result!.demographics.firstName).toBe('Jane');
+    expect(result!.demographics.lastName).toBe('Smith');
+    expect(result!.demographics.phn).toBe('123456789');
+  });
+
+  it('getPatientHealthInformation returns all claims for that patient', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    // Add claims for this patient
+    claimsStore.push(
+      {
+        claimId: crypto.randomUUID(),
+        physicianId: PHYSICIAN_1,  // Note: mock uses physicianId but raw SQL uses physician_id
+        providerId: PHYSICIAN_1,
+        patientId: created.patientId,
+        claimType: 'AHCIP',
+        state: 'DRAFT',
+        dateOfService: '2026-01-15',
+      },
+      {
+        claimId: crypto.randomUUID(),
+        physicianId: PHYSICIAN_1,
+        providerId: PHYSICIAN_1,
+        patientId: created.patientId,
+        claimType: 'AHCIP',
+        state: 'SUBMITTED',
+        dateOfService: '2026-01-20',
+      },
+    );
+
+    // Add an AHCIP detail for the first claim
+    const firstClaimId = claimsStore[0].claimId;
+    ahcipDetailsStore.push({
+      ahcipDetailId: crypto.randomUUID(),
+      claimId: firstClaimId,
+      healthServiceCode: '03.04A',
+      baNumber: '12345',
+    });
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.claims).toHaveLength(2);
+    expect(result!.ahcipDetails).toHaveLength(1);
+    expect(result!.ahcipDetails[0].claimId).toBe(firstClaimId);
+  });
+
+  it('getPatientHealthInformation scoped to authenticated physician only', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    // Add claims — one for PHYSICIAN_1, one for PHYSICIAN_2
+    claimsStore.push(
+      {
+        claimId: crypto.randomUUID(),
+        physicianId: PHYSICIAN_1,
+        providerId: PHYSICIAN_1,
+        patientId: created.patientId,
+        claimType: 'AHCIP',
+        state: 'DRAFT',
+        dateOfService: '2026-01-15',
+      },
+      {
+        claimId: crypto.randomUUID(),
+        physicianId: PHYSICIAN_2,
+        providerId: PHYSICIAN_2,
+        patientId: created.patientId,
+        claimType: 'AHCIP',
+        state: 'SUBMITTED',
+        dateOfService: '2026-02-01',
+      },
+    );
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    // Only PHYSICIAN_1's claim should be returned
+    expect(result!.claims).toHaveLength(1);
+    expect(result!.claims[0].providerId).toBe(PHYSICIAN_1);
+  });
+
+  it('getPatientHealthInformation returns null for another physician\'s patient', async () => {
+    const created = await repo.createPatient(
+      makePatientData({ providerId: PHYSICIAN_2 }) as any,
+    );
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('getPatientHealthInformation returns empty claims array when patient has no claims', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.demographics.patientId).toBe(created.patientId);
+    expect(result!.claims).toHaveLength(0);
+    expect(result!.ahcipDetails).toHaveLength(0);
+    expect(result!.wcbDetails).toHaveLength(0);
+    expect(result!.auditEntries).toHaveLength(0);
+  });
+
+  it('getPatientHealthInformation returns audit log entries for the patient', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    // Add audit log entries
+    auditLogStore.push(
+      {
+        logId: crypto.randomUUID(),
+        userId: USER_1,
+        action: 'PATIENT_CREATED',
+        category: 'patient',
+        resourceType: 'patient',
+        resourceId: created.patientId,
+        detail: { firstName: 'Jane' },
+        createdAt: new Date(),
+      },
+      {
+        logId: crypto.randomUUID(),
+        userId: USER_1,
+        action: 'PATIENT_UPDATED',
+        category: 'patient',
+        resourceType: 'patient',
+        resourceId: created.patientId,
+        detail: { field: 'phone' },
+        createdAt: new Date(),
+      },
+      // Audit entry for a different patient — should NOT be included
+      {
+        logId: crypto.randomUUID(),
+        userId: USER_1,
+        action: 'PATIENT_CREATED',
+        category: 'patient',
+        resourceType: 'patient',
+        resourceId: crypto.randomUUID(),
+        detail: {},
+        createdAt: new Date(),
+      },
+    );
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.auditEntries).toHaveLength(2);
+    result!.auditEntries.forEach((entry: any) => {
+      expect(entry.resourceId).toBe(created.patientId);
+    });
+  });
+
+  it('getPatientHealthInformation includes WCB details linked to patient claims', async () => {
+    const created = await repo.createPatient(makePatientData() as any);
+
+    const claimId = crypto.randomUUID();
+    claimsStore.push({
+      claimId,
+      physicianId: PHYSICIAN_1,
+      providerId: PHYSICIAN_1,
+      patientId: created.patientId,
+      claimType: 'WCB',
+      state: 'SUBMITTED',
+      dateOfService: '2026-01-10',
+    });
+
+    wcbDetailsStore.push({
+      wcbClaimDetailId: crypto.randomUUID(),
+      claimId,
+      formId: 'C050E',
+      patientPhn: '123456789',
+    });
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.claims).toHaveLength(1);
+    expect(result!.wcbDetails).toHaveLength(1);
+    expect(result!.wcbDetails[0].claimId).toBe(claimId);
+  });
+
+  it('getPatientHealthInformation includes inactive patient data', async () => {
+    const created = await repo.createPatient(
+      makePatientData({ isActive: false }) as any,
+    );
+
+    const result = await repo.getPatientHealthInformation(
+      PHYSICIAN_1,
+      created.patientId,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.demographics.isActive).toBe(false);
+  });
 });
 
 // ===========================================================================
@@ -2347,6 +2630,9 @@ describe('Patient Service', () => {
     importBatchStore = [];
     mergeHistoryStore = [];
     claimsStore = [];
+    ahcipDetailsStore = [];
+    wcbDetailsStore = [];
+    auditLogStore = [];
     repo = createPatientRepository(makeMockDb());
     auditRepo = { appendAuditLog: vi.fn().mockResolvedValue(undefined) };
     events = { emit: vi.fn() };
@@ -3685,6 +3971,230 @@ describe('Patient Service', () => {
   });
 
   // =========================================================================
+  // Patient Access Request Export (IMA S74 — Service Layer)
+  // =========================================================================
+
+  // ----- exportPatientHealthInformation -----
+
+  it('exportPatientHealthInformation returns exportId and downloadUrl', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({ phn: VALID_AB_PHN, firstName: 'Alice', lastName: 'Jones' }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+    events.emit.mockClear();
+
+    const result = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    expect(result.exportId).toBeDefined();
+    expect(result.downloadUrl).toContain(`/api/v1/patients/${patient.patientId}/export/`);
+    expect(result.downloadUrl).toContain('/download');
+    expect(result.expiresAt).toBeInstanceOf(Date);
+    // 24h expiry
+    const diffMs = result.expiresAt.getTime() - Date.now();
+    expect(diffMs).toBeGreaterThan(23 * 60 * 60 * 1000);
+    expect(diffMs).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+  });
+
+  it('exportPatientHealthInformation export contains patient demographics CSV', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({
+        phn: VALID_AB_PHN,
+        firstName: 'Alice',
+        lastName: 'Jones',
+        dateOfBirth: '1990-01-15',
+        gender: 'F',
+      }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+
+    const result = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    // Check that the stored ZIP buffer exists
+    const entry = _accessExportStore.get(result.exportId);
+    expect(entry).toBeDefined();
+    expect(entry!.zipBuffer).toBeInstanceOf(Buffer);
+    expect(entry!.zipBuffer.length).toBeGreaterThan(0);
+
+    // Verify the ZIP contains demographics.csv by scanning for the filename
+    const zipString = entry!.zipBuffer.toString('binary');
+    expect(zipString).toContain('demographics.csv');
+  });
+
+  it('exportPatientHealthInformation scoped to authenticated physician', async () => {
+    // Create patient for physician 1
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({ phn: VALID_AB_PHN, firstName: 'Alice' }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+
+    const result = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    // The stored export is scoped to physician 1
+    const entry = _accessExportStore.get(result.exportId);
+    expect(entry).toBeDefined();
+    expect(entry!.physicianId).toBe(PHYSICIAN_1);
+    expect(entry!.patientId).toBe(patient.patientId);
+  });
+
+  it('exportPatientHealthInformation returns 404 for another physician\'s patient', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_2,
+      makeServiceInput({ firstName: 'Bob' }) as any,
+      USER_1,
+    );
+
+    await expect(
+      exportPatientHealthInformation(deps, PHYSICIAN_1, patient.patientId, USER_1),
+    ).rejects.toThrow('not found');
+  });
+
+  it('exportPatientHealthInformation returns 404 for non-existent patient', async () => {
+    await expect(
+      exportPatientHealthInformation(deps, PHYSICIAN_1, crypto.randomUUID(), USER_1),
+    ).rejects.toThrow('not found');
+  });
+
+  it('exportPatientHealthInformation audit log records export without PHI', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({
+        phn: VALID_AB_PHN,
+        firstName: 'Alice',
+        lastName: 'Jones',
+        notes: 'Private clinical note',
+      }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+    events.emit.mockClear();
+
+    const result = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    // Audit log should be called
+    expect(auditRepo.appendAuditLog).toHaveBeenCalledTimes(1);
+    const auditCall = auditRepo.appendAuditLog.mock.calls[0][0];
+    expect(auditCall.action).toBe('export.patient_access_requested');
+    expect(auditCall.resourceType).toBe('patient');
+    expect(auditCall.resourceId).toBe(patient.patientId);
+
+    // Audit detail contains ONLY IDs — no PHI
+    const detail = auditCall.detail;
+    expect(detail.exportId).toBe(result.exportId);
+    expect(detail.providerId).toBe(PHYSICIAN_1);
+    // Must NOT contain any PHI
+    const detailStr = JSON.stringify(detail);
+    expect(detailStr).not.toContain('Alice');
+    expect(detailStr).not.toContain('Jones');
+    expect(detailStr).not.toContain(VALID_AB_PHN);
+    expect(detailStr).not.toContain('Private clinical note');
+  });
+
+  it('exportPatientHealthInformation emits PATIENT_ACCESS_EXPORT_READY event', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({ phn: VALID_AB_PHN, firstName: 'Alice' }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+    events.emit.mockClear();
+
+    const result = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    expect(events.emit).toHaveBeenCalledTimes(1);
+    const [eventName, eventPayload] = events.emit.mock.calls[0];
+    expect(eventName).toBe('export.patient_access_ready');
+    expect(eventPayload.exportId).toBe(result.exportId);
+    expect(eventPayload.patientId).toBe(patient.patientId);
+    expect(eventPayload.physicianId).toBe(PHYSICIAN_1);
+  });
+
+  // ----- getPatientAccessExportDownload -----
+
+  it('getPatientAccessExportDownload returns ZIP scoped to physician', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({ phn: VALID_AB_PHN, firstName: 'Alice' }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+
+    const exported = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    const download = await getPatientAccessExportDownload(
+      deps,
+      exported.exportId,
+      PHYSICIAN_1,
+    );
+
+    expect(download.zipBuffer).toBeInstanceOf(Buffer);
+    expect(download.patientId).toBe(patient.patientId);
+  });
+
+  it('getPatientAccessExportDownload returns 404 for wrong physician', async () => {
+    const patient = await createPatient(
+      deps,
+      PHYSICIAN_1,
+      makeServiceInput({ phn: VALID_AB_PHN, firstName: 'Alice' }) as any,
+      USER_1,
+    );
+    auditRepo.appendAuditLog.mockClear();
+
+    const exported = await exportPatientHealthInformation(
+      deps,
+      PHYSICIAN_1,
+      patient.patientId,
+      USER_1,
+    );
+
+    await expect(
+      getPatientAccessExportDownload(deps, exported.exportId, PHYSICIAN_2),
+    ).rejects.toThrow('not found');
+  });
+
+  // =========================================================================
   // Internal API — Service Layer (consumed by Domain 4)
   // =========================================================================
 
@@ -3801,5 +4311,6 @@ describe('Patient Service', () => {
   afterEach(() => {
     _parsedRowsCache.clear();
     _exportStore.clear();
+    _accessExportStore.clear();
   });
 });

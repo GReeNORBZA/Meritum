@@ -986,6 +986,7 @@ describe('IAM Data Leakage Prevention & Anti-Enumeration (Security)', () => {
         'role',
         'subscriptionStatus',
         'mfaConfigured',
+        'secondaryEmail',
       ];
 
       const actualFields = Object.keys(body.data);

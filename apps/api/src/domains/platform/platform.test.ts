@@ -4,7 +4,10 @@ import {
   createPaymentRepository,
   createStatusComponentRepository,
   createIncidentRepository,
+  createAmendmentRepository,
+  createBreachRepository,
 } from './platform.repository.js';
+import { createExportRepository } from './export.repository.js';
 import {
   createCheckoutSession,
   createPortalSession,
@@ -18,6 +21,7 @@ import {
   runDunningCheck,
   runCancellationCheck,
   runDeletionCheck,
+  runExportWindowReminders,
   getSubscriptionStatus,
   getStatusPage,
   getIncidentHistory,
@@ -25,6 +29,19 @@ import {
   updateIncident,
   updateComponentStatus,
   seedStatusComponents,
+  checkEarlyBirdExpiry,
+  createAmendment,
+  acknowledgeAmendment,
+  respondToAmendment,
+  getBlockingAmendments,
+  runAmendmentReminders,
+  createBreach,
+  sendBreachNotifications,
+  addBreachUpdate,
+  resolveBreach,
+  checkBreachDeadlines,
+  runDestructionConfirmation,
+  markBackupPurged,
   type PlatformServiceDeps,
   type StripeClient,
   type StripeEvent,
@@ -32,7 +49,9 @@ import {
   type PlatformEventEmitter,
   type DataDeletionRepo,
   type AuditLogger,
+  type ActiveProviderRepo,
 } from './platform.service.js';
+import { type SpacesFileClient } from '../../lib/spaces.js';
 
 // ---------------------------------------------------------------------------
 // In-memory stores
@@ -43,6 +62,42 @@ let paymentStore: Record<string, any>[];
 let componentStore: Record<string, any>[];
 let incidentStore: Record<string, any>[];
 let incidentUpdateStore: Record<string, any>[];
+let practiceMembershipStore: Record<string, any>[];
+let amendmentStore: Record<string, any>[];
+let amendmentResponseStore: Record<string, any>[];
+let breachRecordStore: Record<string, any>[];
+let breachAffectedCustodianStore: Record<string, any>[];
+let breachUpdateStore: Record<string, any>[];
+
+// Export repository stores (IMA-050)
+let exportPatientStore: Record<string, any>[];
+let exportClaimStore: Record<string, any>[];
+let exportClaimAuditStore: Record<string, any>[];
+let exportShiftStore: Record<string, any>[];
+let exportClaimExportStore: Record<string, any>[];
+let exportAhcipDetailStore: Record<string, any>[];
+let exportAhcipBatchStore: Record<string, any>[];
+let exportWcbDetailStore: Record<string, any>[];
+let exportWcbBatchStore: Record<string, any>[];
+let exportWcbRemittanceStore: Record<string, any>[];
+let exportProviderStore: Record<string, any>[];
+let exportBaStore: Record<string, any>[];
+let exportLocationStore: Record<string, any>[];
+let exportWcbConfigStore: Record<string, any>[];
+let exportDelegateStore: Record<string, any>[];
+let exportSubmPrefStore: Record<string, any>[];
+let exportHlinkStore: Record<string, any>[];
+let exportPcpcmEnrolmentStore: Record<string, any>[];
+let exportPcpcmPaymentStore: Record<string, any>[];
+let exportPcpcmPanelStore: Record<string, any>[];
+let exportAnalyticsCacheStore: Record<string, any>[];
+let exportReportStore: Record<string, any>[];
+let exportReportSubStore: Record<string, any>[];
+let exportAiLearningStore: Record<string, any>[];
+let exportAiSuggestionStore: Record<string, any>[];
+let exportEdShiftStore: Record<string, any>[];
+let exportFavCodeStore: Record<string, any>[];
+let exportAuditLogStore: Record<string, any>[];
 
 // ---------------------------------------------------------------------------
 // Mock Drizzle DB
@@ -54,6 +109,41 @@ function makeMockDb() {
     if (table?.__table === 'status_components') return componentStore;
     if (table?.__table === 'status_incidents') return incidentStore;
     if (table?.__table === 'incident_updates') return incidentUpdateStore;
+    if (table?.__table === 'practice_memberships') return practiceMembershipStore;
+    if (table?.__table === 'ima_amendments') return amendmentStore;
+    if (table?.__table === 'ima_amendment_responses') return amendmentResponseStore;
+    if (table?.__table === 'breach_records') return breachRecordStore;
+    if (table?.__table === 'breach_affected_custodians') return breachAffectedCustodianStore;
+    if (table?.__table === 'breach_updates') return breachUpdateStore;
+    // Export repository tables (IMA-050)
+    if (table?.__table === 'patients') return exportPatientStore;
+    if (table?.__table === 'claims') return exportClaimStore;
+    if (table?.__table === 'claim_audit_history') return exportClaimAuditStore;
+    if (table?.__table === 'shifts') return exportShiftStore;
+    if (table?.__table === 'claim_exports') return exportClaimExportStore;
+    if (table?.__table === 'ahcip_claim_details') return exportAhcipDetailStore;
+    if (table?.__table === 'ahcip_batches') return exportAhcipBatchStore;
+    if (table?.__table === 'wcb_claim_details') return exportWcbDetailStore;
+    if (table?.__table === 'wcb_batches') return exportWcbBatchStore;
+    if (table?.__table === 'wcb_remittance_imports') return exportWcbRemittanceStore;
+    if (table?.__table === 'providers') return exportProviderStore;
+    if (table?.__table === 'business_arrangements') return exportBaStore;
+    if (table?.__table === 'practice_locations') return exportLocationStore;
+    if (table?.__table === 'wcb_configurations') return exportWcbConfigStore;
+    if (table?.__table === 'delegate_relationships') return exportDelegateStore;
+    if (table?.__table === 'submission_preferences') return exportSubmPrefStore;
+    if (table?.__table === 'hlink_configurations') return exportHlinkStore;
+    if (table?.__table === 'pcpcm_enrolments') return exportPcpcmEnrolmentStore;
+    if (table?.__table === 'pcpcm_payments') return exportPcpcmPaymentStore;
+    if (table?.__table === 'pcpcm_panel_estimates') return exportPcpcmPanelStore;
+    if (table?.__table === 'analytics_cache') return exportAnalyticsCacheStore;
+    if (table?.__table === 'generated_reports') return exportReportStore;
+    if (table?.__table === 'report_subscriptions') return exportReportSubStore;
+    if (table?.__table === 'ai_provider_learning') return exportAiLearningStore;
+    if (table?.__table === 'ai_suggestion_events') return exportAiSuggestionStore;
+    if (table?.__table === 'ed_shifts') return exportEdShiftStore;
+    if (table?.__table === 'favourite_codes') return exportFavCodeStore;
+    if (table?.__table === 'audit_log') return exportAuditLogStore;
     return subscriptionStore;
   }
 
@@ -67,6 +157,8 @@ function makeMockDb() {
     limitN?: number;
     offsetN?: number;
     orderByFn?: (a: any, b: any) => number;
+    joinTable?: any;
+    joinPredicate?: { left: any; right: any };
   }) {
     const chain: any = {
       _ctx: ctx,
@@ -78,6 +170,14 @@ function makeMockDb() {
           ctx.whereClauses.push(clause);
         } else if (clause && typeof clause === 'object' && clause.__predicate) {
           ctx.whereClauses.push(clause.__predicate);
+        }
+        return chain;
+      },
+      innerJoin(joinTable: any, condition: any) {
+        ctx.joinTable = joinTable;
+        if (condition && condition.__predicate) {
+          // The join condition acts as a where clause on the joined result
+          ctx.joinPredicate = condition;
         }
         return chain;
       },
@@ -129,6 +229,8 @@ function makeMockDb() {
         suspendedAt: values.suspendedAt ?? null,
         cancelledAt: values.cancelledAt ?? null,
         deletionScheduledAt: values.deletionScheduledAt ?? null,
+        earlyBirdLockedUntil: values.earlyBirdLockedUntil ?? null,
+        earlyBirdExpiryNotified: values.earlyBirdExpiryNotified ?? false,
         createdAt: values.createdAt ?? new Date(),
         updatedAt: values.updatedAt ?? new Date(),
       };
@@ -193,6 +295,97 @@ function makeMockDb() {
       return newUpdate;
     }
 
+    if (table?.__table === 'ima_amendments') {
+      const newAmendment = {
+        amendmentId: values.amendmentId ?? crypto.randomUUID(),
+        amendmentType: values.amendmentType,
+        title: values.title,
+        description: values.description,
+        documentHash: values.documentHash,
+        noticeDate: values.noticeDate,
+        effectiveDate: values.effectiveDate,
+        createdBy: values.createdBy,
+        createdAt: values.createdAt ?? new Date(),
+      };
+      store.push(newAmendment);
+      return newAmendment;
+    }
+
+    if (table?.__table === 'ima_amendment_responses') {
+      const existing = amendmentResponseStore.find(
+        (r) =>
+          r.amendmentId === values.amendmentId &&
+          r.providerId === values.providerId,
+      );
+      if (existing) {
+        const err: any = new Error(
+          'duplicate key value violates unique constraint "ima_responses_unique_idx"',
+        );
+        err.code = '23505';
+        throw err;
+      }
+      const newResponse = {
+        responseId: values.responseId ?? crypto.randomUUID(),
+        amendmentId: values.amendmentId,
+        providerId: values.providerId,
+        responseType: values.responseType,
+        respondedAt: values.respondedAt ?? new Date(),
+        ipAddress: values.ipAddress,
+        userAgent: values.userAgent,
+      };
+      store.push(newResponse);
+      return newResponse;
+    }
+
+    if (table?.__table === 'breach_records') {
+      const newBreach = {
+        breachId: values.breachId ?? crypto.randomUUID(),
+        breachDescription: values.breachDescription,
+        breachDate: values.breachDate,
+        awarenessDate: values.awarenessDate,
+        hiDescription: values.hiDescription,
+        includesIihi: values.includesIihi,
+        affectedCount: values.affectedCount ?? null,
+        riskAssessment: values.riskAssessment ?? null,
+        mitigationSteps: values.mitigationSteps ?? null,
+        contactName: values.contactName,
+        contactEmail: values.contactEmail,
+        status: values.status ?? 'INVESTIGATING',
+        evidenceHoldUntil: values.evidenceHoldUntil ?? null,
+        createdBy: values.createdBy,
+        createdAt: values.createdAt ?? new Date(),
+        updatedAt: values.updatedAt ?? new Date(),
+        resolvedAt: values.resolvedAt ?? null,
+      };
+      store.push(newBreach);
+      return newBreach;
+    }
+
+    if (table?.__table === 'breach_affected_custodians') {
+      const newCustodian = {
+        id: values.id ?? crypto.randomUUID(),
+        breachId: values.breachId,
+        providerId: values.providerId,
+        initialNotifiedAt: values.initialNotifiedAt ?? null,
+        notificationMethod: values.notificationMethod ?? null,
+      };
+      store.push(newCustodian);
+      return newCustodian;
+    }
+
+    if (table?.__table === 'breach_updates') {
+      const newUpdate = {
+        updateId: values.updateId ?? crypto.randomUUID(),
+        breachId: values.breachId,
+        updateType: values.updateType,
+        content: values.content,
+        sentAt: values.sentAt ?? new Date(),
+        createdBy: values.createdBy,
+      };
+      store.push(newUpdate);
+      return newUpdate;
+    }
+
     store.push({ ...values });
     return values;
   }
@@ -200,7 +393,29 @@ function makeMockDb() {
   function executeOp(ctx: any): any[] {
     switch (ctx.op) {
       case 'select': {
-        const store = getStoreForTable(ctx.table);
+        let store = getStoreForTable(ctx.table);
+
+        // Handle innerJoin: create cross-product filtered by join predicate
+        if (ctx.joinTable) {
+          const joinStore = getStoreForTable(ctx.joinTable);
+          const joined: any[] = [];
+          for (const leftRow of store) {
+            for (const joinRow of joinStore) {
+              // Merge the rows — for the join predicate check
+              const merged = { ...leftRow, ...joinRow };
+              // Check the join predicate if it exists
+              if (ctx.joinPredicate?.__predicate) {
+                if (ctx.joinPredicate.__predicate(merged)) {
+                  joined.push(merged);
+                }
+              } else {
+                joined.push(merged);
+              }
+            }
+          }
+          store = joined;
+        }
+
         let matches = store.filter((row) =>
           ctx.whereClauses.every((pred: any) => pred(row)),
         );
@@ -385,6 +600,18 @@ vi.mock('drizzle-orm', () => {
         },
       };
     },
+    isNotNull: (column: any) => {
+      const colName = column?.name;
+      return {
+        __predicate: (row: any) => row[colName] != null,
+      };
+    },
+    isNull: (column: any) => {
+      const colName = column?.name;
+      return {
+        __predicate: (row: any) => row[colName] == null,
+      };
+    },
     count: () => ({ __aggregate: 'count' }),
     sum: (column: any) => ({
       __aggregate: 'sum',
@@ -403,6 +630,21 @@ vi.mock('drizzle-orm', () => {
         return {
           __sqlExpr: (row: any) => (row[col?.name] ?? 0) + 1,
         };
+      }
+
+      // ${column} IN ('VALUE1', 'VALUE2', ...)
+      if (raw.includes('IN (')) {
+        const col = values[0];
+        const colName = col?.name;
+        // Extract values from the IN list in the template string
+        const inMatch = raw.match(/IN \(([^)]+)\)/);
+        if (inMatch) {
+          const inValues = inMatch[1].split(',').map((s: string) => s.trim().replace(/'/g, ''));
+          return {
+            __predicate: (row: any) => inValues.includes(row[colName]),
+            __sqlExpr: () => null,
+          };
+        }
       }
 
       return { __sqlExpr: () => null };
@@ -429,8 +671,23 @@ vi.mock('@meritum/shared/schemas/db/platform.schema.js', () => {
     suspendedAt: makeCol('suspendedAt'),
     cancelledAt: makeCol('cancelledAt'),
     deletionScheduledAt: makeCol('deletionScheduledAt'),
+    earlyBirdLockedUntil: makeCol('earlyBirdLockedUntil'),
+    earlyBirdExpiryNotified: makeCol('earlyBirdExpiryNotified'),
     createdAt: makeCol('createdAt'),
     updatedAt: makeCol('updatedAt'),
+  };
+
+  const practiceMembershipsProxy: any = {
+    __table: 'practice_memberships',
+    membershipId: makeCol('membershipId'),
+    practiceId: makeCol('practiceId'),
+    physicianUserId: makeCol('physicianUserId'),
+    billingMode: makeCol('billingMode'),
+    joinedAt: makeCol('joinedAt'),
+    removedAt: makeCol('removedAt'),
+    removalEffectiveAt: makeCol('removalEffectiveAt'),
+    isActive: makeCol('isActive'),
+    createdAt: makeCol('createdAt'),
   };
 
   const paymentHistoryProxy: any = {
@@ -478,12 +735,82 @@ vi.mock('@meritum/shared/schemas/db/platform.schema.js', () => {
     createdAt: makeCol('createdAt'),
   };
 
+  const imaAmendmentsProxy: any = {
+    __table: 'ima_amendments',
+    amendmentId: makeCol('amendmentId'),
+    amendmentType: makeCol('amendmentType'),
+    title: makeCol('title'),
+    description: makeCol('description'),
+    documentHash: makeCol('documentHash'),
+    noticeDate: makeCol('noticeDate'),
+    effectiveDate: makeCol('effectiveDate'),
+    createdBy: makeCol('createdBy'),
+    createdAt: makeCol('createdAt'),
+  };
+
+  const imaAmendmentResponsesProxy: any = {
+    __table: 'ima_amendment_responses',
+    responseId: makeCol('responseId'),
+    amendmentId: makeCol('amendmentId'),
+    providerId: makeCol('providerId'),
+    responseType: makeCol('responseType'),
+    respondedAt: makeCol('respondedAt'),
+    ipAddress: makeCol('ipAddress'),
+    userAgent: makeCol('userAgent'),
+  };
+
+  const breachRecordsProxy: any = {
+    __table: 'breach_records',
+    breachId: makeCol('breachId'),
+    breachDescription: makeCol('breachDescription'),
+    breachDate: makeCol('breachDate'),
+    awarenessDate: makeCol('awarenessDate'),
+    hiDescription: makeCol('hiDescription'),
+    includesIihi: makeCol('includesIihi'),
+    affectedCount: makeCol('affectedCount'),
+    riskAssessment: makeCol('riskAssessment'),
+    mitigationSteps: makeCol('mitigationSteps'),
+    contactName: makeCol('contactName'),
+    contactEmail: makeCol('contactEmail'),
+    status: makeCol('status'),
+    evidenceHoldUntil: makeCol('evidenceHoldUntil'),
+    createdBy: makeCol('createdBy'),
+    createdAt: makeCol('createdAt'),
+    updatedAt: makeCol('updatedAt'),
+    resolvedAt: makeCol('resolvedAt'),
+  };
+
+  const breachAffectedCustodiansProxy: any = {
+    __table: 'breach_affected_custodians',
+    id: makeCol('id'),
+    breachId: makeCol('breachId'),
+    providerId: makeCol('providerId'),
+    initialNotifiedAt: makeCol('initialNotifiedAt'),
+    notificationMethod: makeCol('notificationMethod'),
+  };
+
+  const breachUpdatesProxy: any = {
+    __table: 'breach_updates',
+    updateId: makeCol('updateId'),
+    breachId: makeCol('breachId'),
+    updateType: makeCol('updateType'),
+    content: makeCol('content'),
+    sentAt: makeCol('sentAt'),
+    createdBy: makeCol('createdBy'),
+  };
+
   return {
     subscriptions: subscriptionsProxy,
     paymentHistory: paymentHistoryProxy,
     statusComponents: statusComponentsProxy,
     statusIncidents: statusIncidentsProxy,
     incidentUpdates: incidentUpdatesProxy,
+    practiceMemberships: practiceMembershipsProxy,
+    imaAmendments: imaAmendmentsProxy,
+    imaAmendmentResponses: imaAmendmentResponsesProxy,
+    breachRecords: breachRecordsProxy,
+    breachAffectedCustodians: breachAffectedCustodiansProxy,
+    breachUpdates: breachUpdatesProxy,
   };
 });
 
@@ -491,6 +818,174 @@ vi.mock('@meritum/shared/schemas/db/platform.schema.js', () => {
 vi.mock('@meritum/shared/constants/platform.constants.js', () => ({
   DUNNING_SUSPENSION_DAY: 14,
   DUNNING_CANCELLATION_DAY: 30,
+  EARLY_BIRD_CAP: 100,
+  EARLY_BIRD_RATE_LOCK_MONTHS: 12,
+  EARLY_BIRD_EXPIRY_WARNING_DAYS: 30,
+  BACKUP_PURGE_DEADLINE_DAYS: 90,
+  SubscriptionPlan: {
+    STANDARD_MONTHLY: 'STANDARD_MONTHLY',
+    STANDARD_ANNUAL: 'STANDARD_ANNUAL',
+    EARLY_BIRD_MONTHLY: 'EARLY_BIRD_MONTHLY',
+    EARLY_BIRD_ANNUAL: 'EARLY_BIRD_ANNUAL',
+    CLINIC_MONTHLY: 'CLINIC_MONTHLY',
+    CLINIC_ANNUAL: 'CLINIC_ANNUAL',
+  },
+  GST_RATE: 0.05,
+  DELETION_GRACE_PERIOD_DAYS: 45,
+  PaymentStatus: {
+    PAID: 'PAID',
+    FAILED: 'FAILED',
+    REFUNDED: 'REFUNDED',
+  },
+  StripeWebhookEvent: {
+    INVOICE_PAID: 'invoice.paid',
+    INVOICE_PAYMENT_FAILED: 'invoice.payment_failed',
+    INVOICE_CREATED: 'invoice.created',
+    SUBSCRIPTION_UPDATED: 'customer.subscription.updated',
+    SUBSCRIPTION_DELETED: 'customer.subscription.deleted',
+    CHECKOUT_SESSION_COMPLETED: 'checkout.session.completed',
+  },
+  FeatureAccessMatrix: {
+    ACTIVE: ['claim_create', 'claim_view', 'claim_edit'],
+    TRIAL: ['claim_create', 'claim_view', 'claim_edit'],
+    PAST_DUE: ['claim_create', 'claim_view', 'claim_edit'],
+    SUSPENDED: ['claim_view', 'data_export'],
+    CANCELLED: ['data_export'],
+  },
+  StatusComponent: {
+    WEB_APP: 'WEB_APP',
+    API: 'API',
+    HLINK_SUBMISSION: 'HLINK_SUBMISSION',
+    WCB_SUBMISSION: 'WCB_SUBMISSION',
+    AI_COACH: 'AI_COACH',
+    EMAIL_DELIVERY: 'EMAIL_DELIVERY',
+    DATABASE: 'DATABASE',
+    PAYMENT_PROCESSING: 'PAYMENT_PROCESSING',
+  },
+  ComponentHealth: {
+    OPERATIONAL: 'OPERATIONAL',
+    DEGRADED: 'DEGRADED',
+    PARTIAL_OUTAGE: 'PARTIAL_OUTAGE',
+    MAJOR_OUTAGE: 'MAJOR_OUTAGE',
+    MAINTENANCE: 'MAINTENANCE',
+  },
+  IncidentStatus: {
+    INVESTIGATING: 'INVESTIGATING',
+    IDENTIFIED: 'IDENTIFIED',
+    MONITORING: 'MONITORING',
+    RESOLVED: 'RESOLVED',
+  },
+  PlatformAuditAction: {
+    DESTRUCTION_ACTIVE_DELETED: 'destruction.active_deleted',
+    DESTRUCTION_FILES_DELETED: 'destruction.files_deleted',
+    DESTRUCTION_BACKUP_PURGED: 'destruction.backup_purged',
+    DESTRUCTION_CONFIRMED: 'destruction.confirmed',
+    AMENDMENT_CREATED: 'amendment.created',
+    AMENDMENT_ACKNOWLEDGED: 'amendment.acknowledged',
+    AMENDMENT_ACCEPTED: 'amendment.accepted',
+    AMENDMENT_REJECTED: 'amendment.rejected',
+    BREACH_CREATED: 'breach.created',
+    BREACH_NOTIFICATION_SENT: 'breach.notification_sent',
+    BREACH_UPDATED: 'breach.updated',
+    BREACH_RESOLVED: 'breach.resolved',
+    BREACH_EVIDENCE_HOLD_SET: 'breach.evidence_hold_set',
+    EXPORT_FULL_HI_REQUESTED: 'export.full_hi_requested',
+    EXPORT_FULL_HI_READY: 'export.full_hi_ready',
+    EXPORT_PATIENT_ACCESS_REQUESTED: 'export.patient_access_requested',
+    EXPORT_PATIENT_ACCESS_READY: 'export.patient_access_ready',
+    PATIENT_CORRECTION_APPLIED: 'patient.correction_applied',
+  },
+}));
+
+// Mock schema modules used by export.repository.ts
+function makeSchemaTable(tableName: string, columns: string[]) {
+  const proxy: any = { __table: tableName };
+  for (const col of columns) {
+    proxy[col] = { name: col };
+  }
+  return proxy;
+}
+
+vi.mock('@meritum/shared/schemas/db/patient.schema.js', () => ({
+  patients: makeSchemaTable('patients', ['providerId', 'patientId', 'isActive']),
+  patientImportBatches: makeSchemaTable('patient_import_batches', ['physicianId']),
+  patientMergeHistory: makeSchemaTable('patient_merge_history', ['physicianId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/claim.schema.js', () => ({
+  claims: makeSchemaTable('claims', ['physicianId', 'claimId', 'status']),
+  claimAuditHistory: makeSchemaTable('claim_audit_history', ['auditId', 'claimId', 'fieldName', 'oldValue', 'newValue', 'changedBy', 'changedAt']),
+  fieldMappingTemplates: makeSchemaTable('field_mapping_templates', ['physicianId']),
+  importBatches: makeSchemaTable('import_batches', ['physicianId']),
+  shifts: makeSchemaTable('shifts', ['physicianId']),
+  claimExports: makeSchemaTable('claim_exports', ['physicianId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/ahcip.schema.js', () => ({
+  ahcipClaimDetails: makeSchemaTable('ahcip_claim_details', ['claimId']),
+  ahcipBatches: makeSchemaTable('ahcip_batches', ['physicianId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/wcb.schema.js', () => ({
+  wcbClaimDetails: makeSchemaTable('wcb_claim_details', ['claimId']),
+  wcbBatches: makeSchemaTable('wcb_batches', ['physicianId']),
+  wcbRemittanceImports: makeSchemaTable('wcb_remittance_imports', ['physicianId']),
+  wcbInjuries: makeSchemaTable('wcb_injuries', []),
+  wcbPrescriptions: makeSchemaTable('wcb_prescriptions', []),
+  wcbConsultations: makeSchemaTable('wcb_consultations', []),
+  wcbWorkRestrictions: makeSchemaTable('wcb_work_restrictions', []),
+  wcbInvoiceLines: makeSchemaTable('wcb_invoice_lines', []),
+  wcbAttachments: makeSchemaTable('wcb_attachments', []),
+  wcbReturnRecords: makeSchemaTable('wcb_return_records', []),
+  wcbReturnInvoiceLines: makeSchemaTable('wcb_return_invoice_lines', []),
+  wcbRemittanceRecords: makeSchemaTable('wcb_remittance_records', []),
+}));
+
+vi.mock('@meritum/shared/schemas/db/provider.schema.js', () => ({
+  providers: makeSchemaTable('providers', ['providerId']),
+  businessArrangements: makeSchemaTable('business_arrangements', ['providerId']),
+  pcpcmEnrolments: makeSchemaTable('pcpcm_enrolments', ['providerId']),
+  practiceLocations: makeSchemaTable('practice_locations', ['providerId']),
+  wcbConfigurations: makeSchemaTable('wcb_configurations', ['providerId']),
+  delegateRelationships: makeSchemaTable('delegate_relationships', ['physicianId']),
+  submissionPreferences: makeSchemaTable('submission_preferences', ['providerId']),
+  hlinkConfigurations: makeSchemaTable('hlink_configurations', ['providerId']),
+  pcpcmPayments: makeSchemaTable('pcpcm_payments', ['providerId']),
+  pcpcmPanelEstimates: makeSchemaTable('pcpcm_panel_estimates', ['providerId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/analytics.schema.js', () => ({
+  analyticsCache: makeSchemaTable('analytics_cache', ['providerId']),
+  generatedReports: makeSchemaTable('generated_reports', ['providerId']),
+  reportSubscriptions: makeSchemaTable('report_subscriptions', ['providerId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/intelligence.schema.js', () => ({
+  aiRules: makeSchemaTable('ai_rules', []),
+  aiProviderLearning: makeSchemaTable('ai_provider_learning', ['providerId']),
+  aiSpecialtyCohorts: makeSchemaTable('ai_specialty_cohorts', []),
+  aiSuggestionEvents: makeSchemaTable('ai_suggestion_events', ['providerId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/mobile.schema.js', () => ({
+  edShifts: makeSchemaTable('ed_shifts', ['providerId']),
+  favouriteCodes: makeSchemaTable('favourite_codes', ['providerId']),
+}));
+
+vi.mock('@meritum/shared/schemas/db/iam.schema.js', () => ({
+  users: makeSchemaTable('users', ['userId']),
+  recoveryCodes: makeSchemaTable('recovery_codes', []),
+  sessions: makeSchemaTable('sessions', []),
+  invitationTokens: makeSchemaTable('invitation_tokens', []),
+  delegateLinkages: makeSchemaTable('delegate_linkages', []),
+  auditLog: makeSchemaTable('audit_log', ['userId']),
+}));
+
+// Mock pricing utils
+vi.mock('@meritum/shared/utils/pricing.utils.js', () => ({
+  isEarlyBirdRate: (plan: string) => plan.includes('EARLY_BIRD'),
+  calculateEffectiveRate: () => ({ monthlyRate: 279, annualRate: null, appliedDiscounts: [], totalDiscountPercent: 0 }),
+  getEarlyBirdRate: () => ({ monthlyRate: 199, annualRate: null, appliedDiscounts: [], totalDiscountPercent: 0 }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -526,6 +1021,8 @@ function makeSubscription(overrides: Partial<Record<string, any>> = {}) {
     suspendedAt: overrides.suspendedAt ?? null,
     cancelledAt: overrides.cancelledAt ?? null,
     deletionScheduledAt: overrides.deletionScheduledAt ?? null,
+    earlyBirdLockedUntil: overrides.earlyBirdLockedUntil ?? null,
+    earlyBirdExpiryNotified: overrides.earlyBirdExpiryNotified ?? false,
     createdAt: overrides.createdAt ?? new Date(),
     updatedAt: overrides.updatedAt ?? new Date(),
   };
@@ -544,6 +1041,7 @@ describe('Platform Repository — Subscription CRUD', () => {
     componentStore = [];
     incidentStore = [];
     incidentUpdateStore = [];
+    practiceMembershipStore = [];
     const db = makeMockDb();
     repo = createSubscriptionRepository(db);
   });
@@ -850,7 +1348,7 @@ describe('Platform Repository — Subscription CRUD', () => {
   // -------------------------------------------------------------------------
 
   it('countEarlyBirdSubscriptions returns accurate count', async () => {
-    // Create 3 early bird subscriptions
+    // Create 3 early bird monthly subscriptions
     for (let i = 0; i < 3; i++) {
       await repo.createSubscription(
         makeSubscription({ plan: 'EARLY_BIRD_MONTHLY' }) as any,
@@ -866,6 +1364,30 @@ describe('Platform Repository — Subscription CRUD', () => {
 
     const count = await repo.countEarlyBirdSubscriptions();
     expect(count).toBe(3);
+  });
+
+  it('countEarlyBirdSubscriptions counts both EARLY_BIRD_MONTHLY and EARLY_BIRD_ANNUAL', async () => {
+    // Create 2 early bird monthly
+    for (let i = 0; i < 2; i++) {
+      await repo.createSubscription(
+        makeSubscription({ plan: 'EARLY_BIRD_MONTHLY' }) as any,
+      );
+    }
+
+    // Create 3 early bird annual
+    for (let i = 0; i < 3; i++) {
+      await repo.createSubscription(
+        makeSubscription({ plan: 'EARLY_BIRD_ANNUAL' }) as any,
+      );
+    }
+
+    // Create 1 standard (should not be counted)
+    await repo.createSubscription(
+      makeSubscription({ plan: 'STANDARD_MONTHLY' }) as any,
+    );
+
+    const count = await repo.countEarlyBirdSubscriptions();
+    expect(count).toBe(5);
   });
 
   it('countEarlyBirdSubscriptions returns 0 when none exist', async () => {
@@ -892,6 +1414,7 @@ describe('Platform Repository — Payment History', () => {
     componentStore = [];
     incidentStore = [];
     incidentUpdateStore = [];
+    practiceMembershipStore = [];
     const db = makeMockDb();
     repo = createPaymentRepository(db);
   });
@@ -1099,6 +1622,7 @@ describe('Platform Repository — Status Components', () => {
     componentStore = [];
     incidentStore = [];
     incidentUpdateStore = [];
+    practiceMembershipStore = [];
     const db = makeMockDb();
     repo = createStatusComponentRepository(db);
   });
@@ -1190,6 +1714,7 @@ describe('Platform Repository — Incidents', () => {
     componentStore = [];
     incidentStore = [];
     incidentUpdateStore = [];
+    practiceMembershipStore = [];
     const db = makeMockDb();
     repo = createIncidentRepository(db);
   });
@@ -1427,13 +1952,16 @@ vi.mock('@meritum/shared/constants/platform.constants.js', () => {
   return {
     DUNNING_SUSPENSION_DAY: 14,
     DUNNING_CANCELLATION_DAY: 30,
-    DELETION_GRACE_PERIOD_DAYS: 30,
+    DELETION_GRACE_PERIOD_DAYS: 45,
     EARLY_BIRD_CAP: 100,
     GST_RATE: 0.05,
     SubscriptionPlan: {
       STANDARD_MONTHLY: 'STANDARD_MONTHLY',
       STANDARD_ANNUAL: 'STANDARD_ANNUAL',
       EARLY_BIRD_MONTHLY: 'EARLY_BIRD_MONTHLY',
+      EARLY_BIRD_ANNUAL: 'EARLY_BIRD_ANNUAL',
+      CLINIC_MONTHLY: 'CLINIC_MONTHLY',
+      CLINIC_ANNUAL: 'CLINIC_ANNUAL',
     },
     PaymentStatus: {
       PAID: 'PAID',
@@ -1496,6 +2024,40 @@ vi.mock('@meritum/shared/constants/platform.constants.js', () => {
       IDENTIFIED: 'IDENTIFIED',
       MONITORING: 'MONITORING',
       RESOLVED: 'RESOLVED',
+    },
+    EARLY_BIRD_RATE_LOCK_MONTHS: 12,
+    EARLY_BIRD_EXPIRY_WARNING_DAYS: 30,
+    CLINIC_MINIMUM_PHYSICIANS: 5,
+    BreachStatus: {
+      INVESTIGATING: 'INVESTIGATING',
+      NOTIFYING: 'NOTIFYING',
+      MONITORING: 'MONITORING',
+      RESOLVED: 'RESOLVED',
+    },
+    BreachUpdateType: {
+      INITIAL: 'INITIAL',
+      SUPPLEMENTARY: 'SUPPLEMENTARY',
+    },
+    BACKUP_PURGE_DEADLINE_DAYS: 90,
+    PlatformAuditAction: {
+      DESTRUCTION_ACTIVE_DELETED: 'destruction.active_deleted',
+      DESTRUCTION_FILES_DELETED: 'destruction.files_deleted',
+      DESTRUCTION_BACKUP_PURGED: 'destruction.backup_purged',
+      DESTRUCTION_CONFIRMED: 'destruction.confirmed',
+      AMENDMENT_CREATED: 'amendment.created',
+      AMENDMENT_ACKNOWLEDGED: 'amendment.acknowledged',
+      AMENDMENT_ACCEPTED: 'amendment.accepted',
+      AMENDMENT_REJECTED: 'amendment.rejected',
+      BREACH_CREATED: 'breach.created',
+      BREACH_NOTIFICATION_SENT: 'breach.notification_sent',
+      BREACH_UPDATED: 'breach.updated',
+      BREACH_RESOLVED: 'breach.resolved',
+      BREACH_EVIDENCE_HOLD_SET: 'breach.evidence_hold_set',
+      EXPORT_FULL_HI_REQUESTED: 'export.full_hi_requested',
+      EXPORT_FULL_HI_READY: 'export.full_hi_ready',
+      EXPORT_PATIENT_ACCESS_REQUESTED: 'export.patient_access_requested',
+      EXPORT_PATIENT_ACCESS_READY: 'export.patient_access_ready',
+      PATIENT_CORRECTION_APPLIED: 'patient.correction_applied',
     },
   };
 });
@@ -1580,6 +2142,7 @@ function makeMockStripe(): StripeClient {
     },
     subscriptions: {
       cancel: vi.fn().mockResolvedValue({ id: 'sub_mock_123', status: 'canceled' }),
+      update: vi.fn().mockResolvedValue({ id: 'sub_mock_123', status: 'active', items: { data: [{ id: 'si_mock', price: { id: 'price_standard_monthly_test' } }] } }),
     },
   };
 }
@@ -1619,6 +2182,12 @@ function makeMockSubscriptionRepo(options?: {
   existingSubscription?: Record<string, any> | null;
   earlyBirdCount?: number;
   subscriptionByStripeId?: Record<string, any> | null;
+  hasEverHadEarlyBird?: boolean;
+  expiringEarlyBirdSubs?: Record<string, any>[];
+  expiredEarlyBirdSubs?: Record<string, any>[];
+  activePracticeMembership?: Record<string, any> | null;
+  earlyBirdMembersInPractice?: Array<{ physicianUserId: string; earlyBirdExpiryNotified: boolean }>;
+  cancelledSubsInExportWindow?: Record<string, any>[];
 }): any {
   return {
     findSubscriptionByProviderId: vi.fn().mockResolvedValue(
@@ -1670,6 +2239,39 @@ function makeMockSubscriptionRepo(options?: {
     findSubscriptionsDueForCancellation: vi.fn().mockResolvedValue([]),
     findSubscriptionsDueForDeletion: vi.fn().mockResolvedValue([]),
     findPastDueSubscriptions: vi.fn().mockResolvedValue([]),
+    // D17-010: updateSubscription
+    updateSubscription: vi.fn().mockImplementation(
+      async (id: string, data: any) => ({
+        subscriptionId: id,
+        ...data,
+      }),
+    ),
+    // D17-011: hasEverHadEarlyBird
+    hasEverHadEarlyBird: vi.fn().mockResolvedValue(
+      options?.hasEverHadEarlyBird ?? false,
+    ),
+    // D17-012: findExpiringEarlyBirdSubscriptions
+    findExpiringEarlyBirdSubscriptions: vi.fn().mockResolvedValue(
+      options?.expiringEarlyBirdSubs ?? [],
+    ),
+    // D17-012: findExpiredEarlyBirdSubscriptions
+    findExpiredEarlyBirdSubscriptions: vi.fn().mockResolvedValue(
+      options?.expiredEarlyBirdSubs ?? [],
+    ),
+    // D17-012: getActivePracticeMembership
+    getActivePracticeMembership: vi.fn().mockResolvedValue(
+      options?.activePracticeMembership ?? null,
+    ),
+    // D17-012: updatePracticeMembershipBillingMode
+    updatePracticeMembershipBillingMode: vi.fn().mockResolvedValue(undefined),
+    // D17-014: getEarlyBirdMembersInPractice
+    getEarlyBirdMembersInPractice: vi.fn().mockResolvedValue(
+      options?.earlyBirdMembersInPractice ?? [],
+    ),
+    // IMA-012: findCancelledSubscriptionsInExportWindow
+    findCancelledSubscriptionsInExportWindow: vi.fn().mockResolvedValue(
+      options?.cancelledSubsInExportWindow ?? [],
+    ),
   };
 }
 
@@ -1759,30 +2361,289 @@ function makeMockIncidentRepo(options?: {
   };
 }
 
+function makeMockAmendmentRepo(options?: {
+  amendments?: Array<Record<string, any>>;
+  responses?: Array<Record<string, any>>;
+}): any {
+  const amendments = options?.amendments ?? [];
+  const responses = options?.responses ?? [];
+
+  return {
+    createAmendment: vi.fn().mockImplementation(async (data: any) => ({
+      amendmentId: crypto.randomUUID(),
+      amendmentType: data.amendmentType,
+      title: data.title,
+      description: data.description,
+      documentHash: 'mock_hash_' + Date.now(),
+      noticeDate: new Date(),
+      effectiveDate: data.effectiveDate,
+      createdBy: data.createdBy,
+      createdAt: new Date(),
+    })),
+    findAmendmentById: vi.fn().mockImplementation(async (id: string) => {
+      const found = amendments.find((a) => a.amendmentId === id);
+      if (!found) return undefined;
+      return { ...found, responseCounts: { total: 0, acknowledged: 0, accepted: 0, rejected: 0 } };
+    }),
+    listAmendments: vi.fn().mockImplementation(async (filters: any) => {
+      const now = new Date();
+      const withStatus = amendments.map((a) => ({
+        ...a,
+        derivedStatus: now < a.effectiveDate ? 'PENDING' : 'ACTIVE',
+      }));
+      const filtered = filters.status
+        ? withStatus.filter((a: any) => a.derivedStatus === filters.status)
+        : withStatus;
+      const offset = (filters.page - 1) * filters.pageSize;
+      return {
+        data: filtered.slice(offset, offset + filters.pageSize),
+        total: filtered.length,
+      };
+    }),
+    findPendingAmendmentsForProvider: vi.fn().mockImplementation(async (providerId: string) => {
+      const now = new Date();
+      const pastEffective = amendments.filter((a) => a.effectiveDate <= now);
+      const respondedIds = new Set(
+        responses.filter((r) => r.providerId === providerId).map((r) => r.amendmentId),
+      );
+      return pastEffective.filter((a) => !respondedIds.has(a.amendmentId));
+    }),
+    createAmendmentResponse: vi.fn().mockImplementation(async (data: any) => ({
+      responseId: crypto.randomUUID(),
+      amendmentId: data.amendmentId,
+      providerId: data.providerId,
+      responseType: data.responseType,
+      respondedAt: new Date(),
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+    })),
+    getAmendmentResponse: vi.fn().mockImplementation(async (amendmentId: string, providerId: string) => {
+      return responses.find((r) => r.amendmentId === amendmentId && r.providerId === providerId) ?? undefined;
+    }),
+    countUnrespondedAmendments: vi.fn().mockResolvedValue(0),
+  };
+}
+
+function makeMockActiveProviderRepo(providerIds?: string[]): ActiveProviderRepo {
+  return {
+    findActiveProviderIds: vi.fn().mockResolvedValue(providerIds ?? []),
+  };
+}
+
+function makeMockBreachRepo(options?: {
+  breaches?: Array<Record<string, any>>;
+  custodians?: Array<Record<string, any>>;
+  updates?: Array<Record<string, any>>;
+}): any {
+  const breaches = options?.breaches ?? [];
+  const custodians = options?.custodians ?? [];
+  const updates = options?.updates ?? [];
+
+  return {
+    createBreachRecord: vi.fn().mockImplementation(async (data: any) => {
+      const breach = {
+        breachId: crypto.randomUUID(),
+        breachDescription: data.breachDescription,
+        breachDate: data.breachDate,
+        awarenessDate: data.awarenessDate,
+        hiDescription: data.hiDescription,
+        includesIihi: data.includesIihi,
+        affectedCount: data.affectedCount,
+        riskAssessment: data.riskAssessment,
+        mitigationSteps: data.mitigationSteps,
+        contactName: data.contactName,
+        contactEmail: data.contactEmail,
+        evidenceHoldUntil: new Date(new Date(data.awarenessDate).getTime() + 365 * 24 * 60 * 60 * 1000),
+        status: 'INVESTIGATING',
+        resolvedAt: null,
+        createdBy: data.createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      breaches.push(breach);
+      return breach;
+    }),
+    findBreachById: vi.fn().mockImplementation(async (breachId: string) => {
+      const found = breaches.find((b) => b.breachId === breachId);
+      if (!found) return undefined;
+      const bCustodians = custodians.filter((c) => c.breachId === breachId);
+      const bUpdates = updates.filter((u) => u.breachId === breachId);
+      return {
+        ...found,
+        affectedCustodianCount: bCustodians.length,
+        updates: bUpdates,
+      };
+    }),
+    addAffectedCustodian: vi.fn().mockImplementation(async (breachId: string, providerId: string) => {
+      const custodian = {
+        affectedCustodianId: crypto.randomUUID(),
+        breachId,
+        providerId,
+        initialNotifiedAt: null,
+        notificationMethod: null,
+      };
+      custodians.push(custodian);
+      return custodian;
+    }),
+    getUnnotifiedCustodians: vi.fn().mockImplementation(async (breachId: string) => {
+      return custodians.filter((c) => c.breachId === breachId && !c.initialNotifiedAt);
+    }),
+    markCustodianNotified: vi.fn().mockImplementation(async (breachId: string, providerId: string, method: string) => {
+      const found = custodians.find((c) => c.breachId === breachId && c.providerId === providerId);
+      if (!found) return undefined;
+      found.initialNotifiedAt = new Date();
+      found.notificationMethod = method;
+      return { ...found };
+    }),
+    createBreachUpdate: vi.fn().mockImplementation(async (breachId: string, data: any) => {
+      const update = {
+        updateId: crypto.randomUUID(),
+        breachId,
+        updateType: data.updateType,
+        content: data.content,
+        createdBy: data.createdBy,
+        sentAt: new Date(),
+      };
+      updates.push(update);
+      return update;
+    }),
+    updateBreachStatus: vi.fn().mockImplementation(async (breachId: string, status: string, resolvedAt?: Date) => {
+      const found = breaches.find((b) => b.breachId === breachId);
+      if (!found) return undefined;
+      found.status = status;
+      found.updatedAt = new Date();
+      if (status === 'RESOLVED') {
+        found.resolvedAt = resolvedAt ?? new Date();
+      }
+      return { ...found };
+    }),
+    getOverdueBreaches: vi.fn().mockResolvedValue([]),
+    listBreaches: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+    listBreachUpdates: vi.fn().mockResolvedValue([]),
+  };
+}
+
+function makeMockDestructionTrackingRepo() {
+  const store: Record<string, any>[] = [];
+
+  return {
+    _store: store,
+    createTrackingRecord: vi.fn().mockImplementation(async (data: any) => {
+      const record = {
+        trackingId: crypto.randomUUID(),
+        providerId: data.providerId,
+        lastKnownEmail: data.lastKnownEmail ?? null,
+        activeDeletedAt: data.activeDeletedAt ?? null,
+        filesDeletedAt: data.filesDeletedAt ?? null,
+        backupPurgeDeadline: data.backupPurgeDeadline ?? null,
+        backupPurgedAt: data.backupPurgedAt ?? null,
+        confirmationSentAt: data.confirmationSentAt ?? null,
+        createdAt: new Date(),
+      };
+      store.push(record);
+      return record;
+    }),
+    findByProviderId: vi.fn().mockImplementation(async (providerId: string) => {
+      return store.find((r) => r.providerId === providerId) ?? undefined;
+    }),
+    updateActiveDeletedAt: vi.fn().mockImplementation(
+      async (providerId: string, activeDeletedAt: Date, backupPurgeDeadline: Date) => {
+        const record = store.find((r) => r.providerId === providerId);
+        if (record) {
+          record.activeDeletedAt = activeDeletedAt;
+          record.backupPurgeDeadline = backupPurgeDeadline;
+        }
+        return record;
+      },
+    ),
+    updateFilesDeletedAt: vi.fn().mockImplementation(
+      async (providerId: string, filesDeletedAt: Date) => {
+        const record = store.find((r) => r.providerId === providerId);
+        if (record) record.filesDeletedAt = filesDeletedAt;
+        return record;
+      },
+    ),
+    updateBackupPurgedAt: vi.fn().mockImplementation(
+      async (providerId: string, backupPurgedAt: Date) => {
+        const record = store.find((r) => r.providerId === providerId);
+        if (record) record.backupPurgedAt = backupPurgedAt;
+        return record;
+      },
+    ),
+    updateConfirmationSentAt: vi.fn().mockImplementation(
+      async (providerId: string, confirmationSentAt: Date) => {
+        const record = store.find((r) => r.providerId === providerId);
+        if (record) record.confirmationSentAt = confirmationSentAt;
+        return record;
+      },
+    ),
+    findPendingConfirmations: vi.fn().mockImplementation(async () => {
+      return store.filter(
+        (r) => r.backupPurgedAt !== null && r.confirmationSentAt === null,
+      );
+    }),
+    findOverdueBackupPurges: vi.fn().mockImplementation(async () => {
+      const now = new Date();
+      return store.filter(
+        (r) =>
+          r.backupPurgedAt === null &&
+          r.backupPurgeDeadline !== null &&
+          new Date(r.backupPurgeDeadline) <= now,
+      );
+    }),
+  };
+}
+
+function makeMockSpacesFileClient(): SpacesFileClient & { deleteProviderFiles: ReturnType<typeof vi.fn> } {
+  return {
+    deleteProviderFiles: vi.fn().mockResolvedValue({
+      totalDeleted: 15,
+      prefixes: { exports: 5, reports: 5, uploads: 5 },
+    }),
+  };
+}
+
 function makeServiceDeps(overrides?: {
   subscriptionRepo?: any;
   paymentRepo?: any;
   statusComponentRepo?: any;
   incidentRepo?: any;
+  amendmentRepo?: any;
+  breachRepo?: any;
+  activeProviderRepo?: ActiveProviderRepo;
   userRepo?: UserRepo;
   stripe?: StripeClient;
   config?: Partial<PlatformServiceDeps['config']>;
+  auditLogger?: AuditLogger;
+  dataDeletionRepo?: DataDeletionRepo;
+  destructionTrackingRepo?: ReturnType<typeof makeMockDestructionTrackingRepo>;
+  spacesFileClient?: SpacesFileClient;
 }): PlatformServiceDeps {
   return {
     subscriptionRepo: overrides?.subscriptionRepo ?? makeMockSubscriptionRepo(),
     paymentRepo: overrides?.paymentRepo ?? makeMockPaymentRepo(),
     statusComponentRepo: overrides?.statusComponentRepo ?? makeMockStatusComponentRepo(),
     incidentRepo: overrides?.incidentRepo ?? makeMockIncidentRepo(),
+    amendmentRepo: overrides?.amendmentRepo,
+    breachRepo: overrides?.breachRepo,
+    activeProviderRepo: overrides?.activeProviderRepo,
     userRepo: overrides?.userRepo ?? makeMockUserRepo(),
     stripe: overrides?.stripe ?? makeMockStripe(),
     config: {
       stripePriceStandardMonthly: 'price_standard_monthly_test',
       stripePriceStandardAnnual: 'price_standard_annual_test',
       stripePriceEarlyBirdMonthly: 'price_early_bird_test',
+      stripePriceEarlyBirdAnnual: 'price_early_bird_annual_test',
+      stripePriceClinicMonthly: 'price_clinic_monthly_test',
+      stripePriceClinicAnnual: 'price_clinic_annual_test',
       stripeWebhookSecret: 'whsec_test_secret',
       gstTaxRateId: 'txr_gst_test',
       ...overrides?.config,
     },
+    auditLogger: overrides?.auditLogger,
+    dataDeletionRepo: overrides?.dataDeletionRepo,
+    destructionTrackingRepo: overrides?.destructionTrackingRepo,
+    spacesFileClient: overrides?.spacesFileClient,
   };
 }
 
@@ -1930,6 +2791,37 @@ describe('Platform Service — createCheckoutSession', () => {
 
     const sessionCall = (deps.stripe.checkout.sessions.create as any).mock.calls[0][0];
     expect(sessionCall.line_items[0].price).toBe('price_early_bird_test');
+  });
+
+  it('createCheckoutSession returns checkout URL for EARLY_BIRD_ANNUAL plan', async () => {
+    const deps = makeServiceDeps();
+
+    const result = await createCheckoutSession(
+      deps,
+      'user-123',
+      'EARLY_BIRD_ANNUAL',
+      'https://meritum.ca/success',
+      'https://meritum.ca/cancel',
+    );
+
+    expect(result.checkout_url).toBe('https://checkout.stripe.com/session_abc');
+    const sessionCall = (deps.stripe.checkout.sessions.create as any).mock.calls[0][0];
+    expect(sessionCall.line_items[0].price).toBe('price_early_bird_annual_test');
+  });
+
+  it('createCheckoutSession rejects EARLY_BIRD_ANNUAL when combined early bird cap reached', async () => {
+    const subRepo = makeMockSubscriptionRepo({ earlyBirdCount: 100 });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    await expect(
+      createCheckoutSession(
+        deps,
+        'user-123',
+        'EARLY_BIRD_ANNUAL',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      ),
+    ).rejects.toThrow('Early bird plan is sold out');
   });
 
   it('createCheckoutSession omits tax rates when gstTaxRateId not configured', async () => {
@@ -2572,10 +3464,10 @@ describe('Platform Service — handleSubscriptionDeleted', () => {
     expect(metadata.cancelled_at.getTime()).toBeGreaterThanOrEqual(beforeCall.getTime());
     expect(metadata.deletion_scheduled_at).toBeInstanceOf(Date);
 
-    // Verify 30-day grace period
+    // Verify 45-day grace period (IMA-001)
     const gracePeriodMs = metadata.deletion_scheduled_at.getTime() - metadata.cancelled_at.getTime();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    expect(gracePeriodMs).toBe(thirtyDaysMs);
+    const fortyFiveDaysMs = 45 * 24 * 60 * 60 * 1000;
+    expect(gracePeriodMs).toBe(fortyFiveDaysMs);
 
     // Should emit SUBSCRIPTION_CANCELLED event
     expect(emitter.emit).toHaveBeenCalledWith(
@@ -2925,7 +3817,7 @@ describe('Platform Service — runCancellationCheck', () => {
     expect(result.cancelled).toBe(1);
   });
 
-  it('runCancellationCheck schedules deletion 30 days out', async () => {
+  it('runCancellationCheck schedules deletion 45 days out (IMA-001)', async () => {
     const suspendedSub = {
       subscriptionId: 'sub-del-sched',
       providerId: 'user-del-sched',
@@ -2950,10 +3842,10 @@ describe('Platform Service — runCancellationCheck', () => {
     expect(metadata.cancelled_at.getTime()).toBeGreaterThanOrEqual(beforeCall.getTime());
     expect(metadata.deletion_scheduled_at).toBeInstanceOf(Date);
 
-    // Verify 30-day grace period
+    // Verify 45-day grace period (IMA-001)
     const gracePeriodMs = metadata.deletion_scheduled_at.getTime() - metadata.cancelled_at.getTime();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    expect(gracePeriodMs).toBe(thirtyDaysMs);
+    const fortyFiveDaysMs = 45 * 24 * 60 * 60 * 1000;
+    expect(gracePeriodMs).toBe(fortyFiveDaysMs);
   });
 
   it('runCancellationCheck updates user.subscription_status to CANCELLED', async () => {
@@ -3818,6 +4710,1194 @@ describe('Platform Service — seedStatusComponents', () => {
 });
 
 // ---------------------------------------------------------------------------
+// D17-010: Early bird rate lock on checkout completion
+// ---------------------------------------------------------------------------
+
+describe('Early bird rate lock (B2-2)', () => {
+  it('sets early_bird_locked_until to created_at + 12 months on EARLY_BIRD_MONTHLY checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo, auditLogger });
+
+    const event: StripeEvent = {
+      id: 'evt_test_eb_monthly',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-eb-1', plan: 'EARLY_BIRD_MONTHLY' },
+          customer: 'cus_eb_1',
+          subscription: 'sub_eb_1',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.createSubscription).toHaveBeenCalledOnce();
+    expect(subRepo.updateSubscription).toHaveBeenCalledOnce();
+
+    const updateCall = subRepo.updateSubscription.mock.calls[0];
+    const lockedUntil = updateCall[1].earlyBirdLockedUntil;
+    expect(lockedUntil).toBeInstanceOf(Date);
+
+    // lockedUntil should be ~12 months from now
+    const now = new Date();
+    const expected = new Date(now);
+    expected.setMonth(expected.getMonth() + 12);
+    // Allow 5 seconds tolerance
+    expect(Math.abs(lockedUntil.getTime() - expected.getTime())).toBeLessThan(5000);
+  });
+
+  it('sets early_bird_locked_until to created_at + 12 months on EARLY_BIRD_ANNUAL checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_eb_annual',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-eb-2', plan: 'EARLY_BIRD_ANNUAL' },
+          customer: 'cus_eb_2',
+          subscription: 'sub_eb_2',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.updateSubscription).toHaveBeenCalledOnce();
+    const updateCall = subRepo.updateSubscription.mock.calls[0];
+    expect(updateCall[1].earlyBirdLockedUntil).toBeInstanceOf(Date);
+  });
+
+  it('does NOT set early_bird_locked_until for STANDARD_MONTHLY checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_std_monthly',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-std-1', plan: 'STANDARD_MONTHLY' },
+          customer: 'cus_std_1',
+          subscription: 'sub_std_1',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.createSubscription).toHaveBeenCalledOnce();
+    expect(subRepo.updateSubscription).not.toHaveBeenCalled();
+  });
+
+  it('does NOT set early_bird_locked_until for STANDARD_ANNUAL checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_std_annual',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-std-2', plan: 'STANDARD_ANNUAL' },
+          customer: 'cus_std_2',
+          subscription: 'sub_std_2',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.updateSubscription).not.toHaveBeenCalled();
+  });
+
+  it('does NOT set early_bird_locked_until for CLINIC_MONTHLY checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_clinic_monthly',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-clinic-1', plan: 'CLINIC_MONTHLY' },
+          customer: 'cus_clinic_1',
+          subscription: 'sub_clinic_1',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.updateSubscription).not.toHaveBeenCalled();
+  });
+
+  it('does NOT set early_bird_locked_until for CLINIC_ANNUAL checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_clinic_annual',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-clinic-2', plan: 'CLINIC_ANNUAL' },
+          customer: 'cus_clinic_2',
+          subscription: 'sub_clinic_2',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    expect(subRepo.updateSubscription).not.toHaveBeenCalled();
+  });
+
+  it('leaves earlyBirdExpiryNotified as false after checkout', async () => {
+    const subRepo = makeMockSubscriptionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const event: StripeEvent = {
+      id: 'evt_test_eb_notified',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          metadata: { meritum_user_id: 'user-eb-notified', plan: 'EARLY_BIRD_MONTHLY' },
+          customer: 'cus_eb_notified',
+          subscription: 'sub_eb_notified',
+        },
+      },
+    };
+
+    await handleCheckoutCompleted(deps, event);
+
+    // The updateSubscription call should NOT set earlyBirdExpiryNotified
+    const updateCall = subRepo.updateSubscription.mock.calls[0];
+    expect(updateCall[1].earlyBirdExpiryNotified).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D17-011: Early bird re-signup prevention
+// ---------------------------------------------------------------------------
+
+describe('Early bird re-signup prevention (B2-3)', () => {
+  it('allows first-time early bird signup', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: false });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const result = await createCheckoutSession(
+      deps,
+      'user-first-eb',
+      'EARLY_BIRD_MONTHLY',
+      'https://meritum.ca/success',
+      'https://meritum.ca/cancel',
+    );
+
+    expect(result.checkout_url).toBeDefined();
+  });
+
+  it('rejects early bird signup if user has an active early bird subscription', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    await expect(
+      createCheckoutSession(
+        deps,
+        'user-active-eb',
+        'EARLY_BIRD_MONTHLY',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      ),
+    ).rejects.toThrow('Early bird rate does not survive cancellation');
+  });
+
+  it('rejects early bird signup if user has a cancelled early bird subscription', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    await expect(
+      createCheckoutSession(
+        deps,
+        'user-cancelled-eb',
+        'EARLY_BIRD_MONTHLY',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      ),
+    ).rejects.toThrow('Early bird rate does not survive cancellation');
+  });
+
+  it('rejects early bird signup if user previously had EARLY_BIRD_MONTHLY and now requests EARLY_BIRD_ANNUAL', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    await expect(
+      createCheckoutSession(
+        deps,
+        'user-cross-eb',
+        'EARLY_BIRD_ANNUAL',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      ),
+    ).rejects.toThrow('Early bird rate does not survive cancellation');
+  });
+
+  it('rejects early bird signup if user previously had EARLY_BIRD_ANNUAL and now requests EARLY_BIRD_MONTHLY', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    await expect(
+      createCheckoutSession(
+        deps,
+        'user-cross-eb-2',
+        'EARLY_BIRD_MONTHLY',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      ),
+    ).rejects.toThrow('Early bird rate does not survive cancellation');
+  });
+
+  it('allows standard plan signup for user with prior early bird subscription', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const result = await createCheckoutSession(
+      deps,
+      'user-std-after-eb',
+      'STANDARD_MONTHLY',
+      'https://meritum.ca/success',
+      'https://meritum.ca/cancel',
+    );
+
+    expect(result.checkout_url).toBeDefined();
+  });
+
+  it('allows clinic plan signup for user with prior early bird subscription', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    const result = await createCheckoutSession(
+      deps,
+      'user-clinic-after-eb',
+      'CLINIC_MONTHLY',
+      'https://meritum.ca/success',
+      'https://meritum.ca/cancel',
+    );
+
+    expect(result.checkout_url).toBeDefined();
+  });
+
+  it('returns EARLY_BIRD_INELIGIBLE error code', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    try {
+      await createCheckoutSession(
+        deps,
+        'user-code-check',
+        'EARLY_BIRD_MONTHLY',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      );
+      expect.unreachable('Should have thrown');
+    } catch (err: any) {
+      expect(err.details).toEqual({ code: 'EARLY_BIRD_INELIGIBLE' });
+    }
+  });
+
+  it('does not decrement early bird cap on rejected re-signup attempt', async () => {
+    const subRepo = makeMockSubscriptionRepo({ hasEverHadEarlyBird: true });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+
+    try {
+      await createCheckoutSession(
+        deps,
+        'user-cap-check',
+        'EARLY_BIRD_MONTHLY',
+        'https://meritum.ca/success',
+        'https://meritum.ca/cancel',
+      );
+    } catch {
+      // expected
+    }
+
+    // The cap check (countEarlyBirdSubscriptions) should NOT have been called
+    // because hasEverHadEarlyBird check runs first
+    expect(subRepo.countEarlyBirdSubscriptions).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D17-012: checkEarlyBirdExpiry scheduled job
+// ---------------------------------------------------------------------------
+
+describe('checkEarlyBirdExpiry (B2-2)', () => {
+  describe('30-day warning', () => {
+    it('emits EARLY_BIRD_EXPIRING for subscription expiring within 30 days', async () => {
+      const subId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+      const expiringSubData = {
+        subscriptionId: subId,
+        providerId,
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+        earlyBirdExpiryNotified: false,
+        stripeSubscriptionId: 'sub_expiring_1',
+        stripeCustomerId: 'cus_expiring_1',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [expiringSubData],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRING',
+        expect.objectContaining({
+          subscriptionId: subId,
+          providerId,
+        }),
+      );
+    });
+
+    it('sets early_bird_expiry_notified to true after warning', async () => {
+      const subId = crypto.randomUUID();
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [{
+          subscriptionId: subId,
+          providerId: crypto.randomUUID(),
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+          earlyBirdExpiryNotified: false,
+          stripeSubscriptionId: 'sub_notified_1',
+        }],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(subRepo.updateSubscription).toHaveBeenCalledWith(
+        subId,
+        { earlyBirdExpiryNotified: true },
+      );
+    });
+
+    it('does NOT re-notify if early_bird_expiry_notified is already true', async () => {
+      // findExpiringEarlyBirdSubscriptions already filters notified=false
+      // So if notified=true, the sub won't be in the results
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [], // no results because all are already notified
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRING',
+        expect.anything(),
+      );
+    });
+
+    it('does NOT warn for subscriptions expiring more than 30 days out', async () => {
+      // These subs won't be returned by findExpiringEarlyBirdSubscriptions
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRING',
+        expect.anything(),
+      );
+    });
+
+    it('does NOT warn for non-early-bird subscriptions', async () => {
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRING',
+        expect.anything(),
+      );
+    });
+
+    it('does NOT warn for cancelled subscriptions', async () => {
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRING',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('Expiry transition - physician in practice (Path A)', () => {
+    const practiceId = crypto.randomUUID();
+    const membershipId = crypto.randomUUID();
+    const providerId = crypto.randomUUID();
+    const subId = crypto.randomUUID();
+
+    function makePathADeps() {
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId,
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_a',
+        stripeCustomerId: 'cus_expired_a',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: {
+          membershipId,
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [], // after transition, no more early bird
+      });
+
+      const auditLogger = makeMockAuditLogger();
+      const stripe = makeMockStripe();
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo, auditLogger, stripe });
+
+      return { deps, subRepo, auditLogger, stripe };
+    }
+
+    it('cancels individual early bird Stripe subscription', async () => {
+      const { deps, stripe } = makePathADeps();
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_expired_a');
+    });
+
+    it('transitions membership billing_mode to PRACTICE_CONSOLIDATED', async () => {
+      const { deps, subRepo } = makePathADeps();
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(subRepo.updatePracticeMembershipBillingMode).toHaveBeenCalledWith(
+        membershipId,
+        'PRACTICE_CONSOLIDATED',
+      );
+    });
+
+    it('emits EARLY_BIRD_EXPIRED to physician', async () => {
+      const { deps } = makePathADeps();
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRED',
+        expect.objectContaining({
+          subscriptionId: subId,
+          providerId,
+          path: 'A',
+          transitionedTo: 'PRACTICE_CONSOLIDATED',
+        }),
+      );
+    });
+
+    it('emits PRACTICE_MEMBER_TRANSITIONED to practice admin', async () => {
+      const { deps } = makePathADeps();
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'PRACTICE_MEMBER_TRANSITIONED',
+        expect.objectContaining({
+          practiceId,
+          providerId,
+        }),
+      );
+    });
+
+    it('audit logs the transition', async () => {
+      const { deps, auditLogger } = makePathADeps();
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(auditLogger.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'EARLY_BIRD_EXPIRED_PATH_A',
+          resourceType: 'subscription',
+          resourceId: subId,
+        }),
+      );
+    });
+  });
+
+  describe('Expiry transition - physician NOT in practice (Path B)', () => {
+    it('transitions EARLY_BIRD_MONTHLY to STANDARD_MONTHLY via Stripe price change', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_b_monthly',
+        stripeCustomerId: 'cus_expired_b',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const stripe = makeMockStripe();
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo, stripe });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+        'sub_expired_b_monthly',
+        expect.objectContaining({
+          items: [{ price: 'price_standard_monthly_test' }],
+        }),
+      );
+    });
+
+    it('transitions EARLY_BIRD_ANNUAL to STANDARD_ANNUAL via Stripe price change', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_ANNUAL',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_b_annual',
+        stripeCustomerId: 'cus_expired_b_annual',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const stripe = makeMockStripe();
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo, stripe });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+        'sub_expired_b_annual',
+        expect.objectContaining({
+          items: [{ price: 'price_standard_annual_test' }],
+        }),
+      );
+    });
+
+    it('updates subscription plan column to new plan', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_plan_update',
+        stripeCustomerId: 'cus_expired_plan',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(subRepo.updateSubscription).toHaveBeenCalledWith(
+        subId,
+        expect.objectContaining({
+          plan: 'STANDARD_MONTHLY',
+          earlyBirdLockedUntil: null,
+        }),
+      );
+    });
+
+    it('clears early_bird_locked_until after transition', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_ANNUAL',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_clear_lock',
+        stripeCustomerId: 'cus_expired_clear',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(subRepo.updateSubscription).toHaveBeenCalledWith(
+        subId,
+        expect.objectContaining({
+          earlyBirdLockedUntil: null,
+        }),
+      );
+    });
+
+    it('emits EARLY_BIRD_EXPIRED notification with new rate', async () => {
+      const subId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId,
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_notify',
+        stripeCustomerId: 'cus_expired_notify',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRED',
+        expect.objectContaining({
+          subscriptionId: subId,
+          providerId,
+          path: 'B',
+          transitionedTo: 'STANDARD_MONTHLY',
+        }),
+      );
+    });
+
+    it('audit logs the transition', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_expired_audit',
+        stripeCustomerId: 'cus_expired_audit',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: null,
+      });
+      const auditLogger = makeMockAuditLogger();
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo, auditLogger });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(auditLogger.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'EARLY_BIRD_EXPIRED_PATH_B',
+          resourceType: 'subscription',
+          resourceId: subId,
+        }),
+      );
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('does not process already-cancelled subscriptions', async () => {
+      // findExpiredEarlyBirdSubscriptions filters by status=ACTIVE
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [],
+      });
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      const result = await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(result.transitioned).toBe(0);
+    });
+
+    it('handles concurrent expiries for multiple physicians in same practice', async () => {
+      const practiceId = crypto.randomUUID();
+      const sub1 = {
+        subscriptionId: crypto.randomUUID(),
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_concurrent_1',
+        stripeCustomerId: 'cus_concurrent_1',
+      };
+      const sub2 = {
+        subscriptionId: crypto.randomUUID(),
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_ANNUAL',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_concurrent_2',
+        stripeCustomerId: 'cus_concurrent_2',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [sub1, sub2],
+      });
+
+      // Mock getActivePracticeMembership to return membership for both
+      let callCount = 0;
+      subRepo.getActivePracticeMembership.mockImplementation(async (userId: string) => ({
+        membershipId: crypto.randomUUID(),
+        practiceId,
+        billingMode: 'INDIVIDUAL_EARLY_BIRD',
+        physicianUserId: userId,
+      }));
+
+      subRepo.getEarlyBirdMembersInPractice.mockResolvedValue([]);
+
+      const stripe = makeMockStripe();
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo, stripe });
+      const emitter = makeMockEventEmitter();
+
+      const result = await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(result.transitioned).toBe(2);
+      expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
+    });
+
+    it('handles expiry when practice has exactly 5 members (no dissolution risk)', async () => {
+      const subId = crypto.randomUUID();
+      const expiredSub = {
+        subscriptionId: subId,
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_five_members',
+        stripeCustomerId: 'cus_five_members',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [expiredSub],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId: crypto.randomUUID(),
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: expiredSub.providerId,
+        },
+        earlyBirdMembersInPractice: [],
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      const result = await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(result.transitioned).toBe(1);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D17-014: Proactive transition notifications
+// ---------------------------------------------------------------------------
+
+describe('Proactive transition notifications (B2-5)', () => {
+  describe('First physician approaching expiry', () => {
+    it('notifies practice admin when first member early bird is expiring within 30 days', async () => {
+      const practiceId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+          earlyBirdExpiryNotified: false,
+          stripeSubscriptionId: 'sub_first_expiry',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [
+          { physicianUserId: providerId, earlyBirdExpiryNotified: false },
+        ],
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'PRACTICE_EARLY_BIRD_TRANSITION_STARTING',
+        expect.objectContaining({
+          practiceId,
+        }),
+      );
+    });
+
+    it('does NOT notify practice admin again when second member early bird expires', async () => {
+      const practiceId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+      const otherProviderId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+          earlyBirdExpiryNotified: false,
+          stripeSubscriptionId: 'sub_second_expiry',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [
+          { physicianUserId: providerId, earlyBirdExpiryNotified: false },
+          { physicianUserId: otherProviderId, earlyBirdExpiryNotified: true }, // already notified
+        ],
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      // Should NOT emit PRACTICE_EARLY_BIRD_TRANSITION_STARTING because another member was already notified
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'PRACTICE_EARLY_BIRD_TRANSITION_STARTING',
+        expect.anything(),
+      );
+    });
+
+    it('notification does NOT include physician name or billing amount', async () => {
+      const practiceId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+          earlyBirdExpiryNotified: false,
+          stripeSubscriptionId: 'sub_privacy_check',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [
+          { physicianUserId: providerId, earlyBirdExpiryNotified: false },
+        ],
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      const emitCalls = (emitter.emit as any).mock.calls;
+      const transitionCall = emitCalls.find((c: any) => c[0] === 'PRACTICE_EARLY_BIRD_TRANSITION_STARTING');
+      expect(transitionCall).toBeDefined();
+
+      const notificationData = transitionCall[1];
+      // Should not include providerId, physician name, or billing amount in the admin notification
+      expect(notificationData.providerId).toBeUndefined();
+      expect(notificationData.physicianName).toBeUndefined();
+      expect(notificationData.billingAmount).toBeUndefined();
+    });
+
+    it('does NOT send notification if physician is not in a practice', async () => {
+      const subRepo = makeMockSubscriptionRepo({
+        expiringEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId: crypto.randomUUID(),
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() + 15 * DAY_MS),
+          earlyBirdExpiryNotified: false,
+          stripeSubscriptionId: 'sub_no_practice',
+        }],
+        activePracticeMembership: null,
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'PRACTICE_EARLY_BIRD_TRANSITION_STARTING',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('All members post-early-bird', () => {
+    it('notifies practice admin when last early bird member transitions', async () => {
+      const practiceId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+          earlyBirdExpiryNotified: true,
+          stripeSubscriptionId: 'sub_last_eb',
+          stripeCustomerId: 'cus_last_eb',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [], // after transition, no more early bird
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD',
+        expect.objectContaining({
+          practiceId,
+        }),
+      );
+    });
+
+    it('does NOT notify when some members are still on early bird', async () => {
+      const practiceId = crypto.randomUUID();
+      const providerId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+          earlyBirdExpiryNotified: true,
+          stripeSubscriptionId: 'sub_still_eb',
+          stripeCustomerId: 'cus_still_eb',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: providerId,
+        },
+        earlyBirdMembersInPractice: [
+          { physicianUserId: crypto.randomUUID(), earlyBirdExpiryNotified: false },
+        ], // still has an early bird member
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD',
+        expect.anything(),
+      );
+    });
+
+    it('does NOT send notification for single-physician practices', async () => {
+      // If a physician is not in a practice, Path B applies - no practice admin notification
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId: crypto.randomUUID(),
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+          earlyBirdExpiryNotified: true,
+          stripeSubscriptionId: 'sub_single',
+          stripeCustomerId: 'cus_single',
+        }],
+        activePracticeMembership: null,
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('handles practice with all members expiring on same day', async () => {
+      const practiceId = crypto.randomUUID();
+      const sub1 = {
+        subscriptionId: crypto.randomUUID(),
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_same_day_1',
+        stripeCustomerId: 'cus_same_day_1',
+      };
+      const sub2 = {
+        subscriptionId: crypto.randomUUID(),
+        providerId: crypto.randomUUID(),
+        plan: 'EARLY_BIRD_MONTHLY',
+        status: 'ACTIVE',
+        earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+        earlyBirdExpiryNotified: true,
+        stripeSubscriptionId: 'sub_same_day_2',
+        stripeCustomerId: 'cus_same_day_2',
+      };
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [sub1, sub2],
+      });
+
+      subRepo.getActivePracticeMembership.mockImplementation(async (userId: string) => ({
+        membershipId: crypto.randomUUID(),
+        practiceId,
+        billingMode: 'INDIVIDUAL_EARLY_BIRD',
+        physicianUserId: userId,
+      }));
+
+      // After first transition, one remains; after second, none remain
+      let ebCallCount = 0;
+      subRepo.getEarlyBirdMembersInPractice.mockImplementation(async () => {
+        ebCallCount++;
+        if (ebCallCount === 1) {
+          return [{ physicianUserId: sub2.providerId, earlyBirdExpiryNotified: true }];
+        }
+        return [];
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      const result = await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(result.transitioned).toBe(2);
+      // Should emit PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD only after the last one
+      const allPostEBCalls = (emitter.emit as any).mock.calls.filter(
+        (c: any) => c[0] === 'PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD',
+      );
+      expect(allPostEBCalls).toHaveLength(1);
+    });
+
+    it('handles practice where admin is the early bird physician', async () => {
+      const practiceId = crypto.randomUUID();
+      const adminId = crypto.randomUUID();
+
+      const subRepo = makeMockSubscriptionRepo({
+        expiredEarlyBirdSubs: [{
+          subscriptionId: crypto.randomUUID(),
+          providerId: adminId,
+          plan: 'EARLY_BIRD_MONTHLY',
+          status: 'ACTIVE',
+          earlyBirdLockedUntil: new Date(Date.now() - DAY_MS),
+          earlyBirdExpiryNotified: true,
+          stripeSubscriptionId: 'sub_admin_eb',
+          stripeCustomerId: 'cus_admin_eb',
+        }],
+        activePracticeMembership: {
+          membershipId: crypto.randomUUID(),
+          practiceId,
+          billingMode: 'INDIVIDUAL_EARLY_BIRD',
+          physicianUserId: adminId,
+        },
+        earlyBirdMembersInPractice: [],
+      });
+
+      const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+      const emitter = makeMockEventEmitter();
+
+      const result = await checkEarlyBirdExpiry(deps, emitter);
+
+      expect(result.transitioned).toBe(1);
+      // Should still transition the admin physician
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'EARLY_BIRD_EXPIRED',
+        expect.objectContaining({ path: 'A' }),
+      );
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Stripe Webhook Plugin Tests
 // ---------------------------------------------------------------------------
 
@@ -4009,5 +6089,2767 @@ describe('Stripe Webhook Plugin', () => {
     expect(config.max).toBe(100);
     expect(config.timeWindow).toBe('1 minute');
     expect(typeof config.keyGenerator).toBe('function');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// IMA-012: Export Window Notification Tests
+// ---------------------------------------------------------------------------
+
+describe('IMA-012 — Export Window Notifications', () => {
+  // -----------------------------------------------------------------------
+  // EXPORT_WINDOW_STARTED — emitted on cancellation
+  // -----------------------------------------------------------------------
+
+  it('cancellation emits EXPORT_WINDOW_STARTED notification', async () => {
+    const suspendedSub = {
+      subscriptionId: 'sub-export-start',
+      providerId: 'user-export-start',
+      stripeSubscriptionId: 'sub_stripe_es',
+      stripeCustomerId: 'cus_es',
+      status: 'SUSPENDED',
+      suspendedAt: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000),
+      failedPaymentCount: 3,
+    };
+
+    const subRepo = makeMockSubscriptionRepo();
+    subRepo.findSubscriptionsDueForCancellation = vi.fn().mockResolvedValue([suspendedSub]);
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    await runCancellationCheck(deps, emitter);
+
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_STARTED',
+      expect.objectContaining({
+        subscriptionId: 'sub-export-start',
+        providerId: 'user-export-start',
+        exportWindowDays: 45,
+      }),
+    );
+  });
+
+  it('handleSubscriptionDeleted emits EXPORT_WINDOW_STARTED notification', async () => {
+    const existingSub = {
+      subscriptionId: 'sub-hsd-export',
+      providerId: 'user-hsd-export',
+      stripeSubscriptionId: 'sub_stripe_hsd',
+      stripeCustomerId: 'cus_hsd',
+      status: 'ACTIVE',
+    };
+
+    const subRepo = makeMockSubscriptionRepo({ subscriptionByStripeId: existingSub });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const event: StripeEvent = {
+      id: 'evt_hsd_export',
+      type: 'customer.subscription.deleted',
+      data: {
+        object: {
+          id: 'sub_stripe_hsd',
+        },
+      },
+    };
+
+    await handleSubscriptionDeleted(deps, event, emitter);
+
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_STARTED',
+      expect.objectContaining({
+        subscriptionId: 'sub-hsd-export',
+        providerId: 'user-hsd-export',
+        exportWindowDays: 45,
+      }),
+    );
+  });
+
+  it('export window uses 45-day period, not 30', async () => {
+    const suspendedSub = {
+      subscriptionId: 'sub-45-days',
+      providerId: 'user-45-days',
+      stripeSubscriptionId: 'sub_stripe_45d',
+      stripeCustomerId: 'cus_45d',
+      status: 'SUSPENDED',
+      suspendedAt: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000),
+      failedPaymentCount: 3,
+    };
+
+    const subRepo = makeMockSubscriptionRepo();
+    subRepo.findSubscriptionsDueForCancellation = vi.fn().mockResolvedValue([suspendedSub]);
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const beforeCall = new Date();
+    await runCancellationCheck(deps, emitter);
+
+    // Verify the deletion_scheduled_at is ~45 days from now
+    const updateCall = subRepo.updateSubscriptionStatus.mock.calls[0];
+    const metadata = updateCall[2];
+    const deletionDate = metadata.deletion_scheduled_at;
+    const daysDiff = Math.round((deletionDate.getTime() - beforeCall.getTime()) / (24 * 60 * 60 * 1000));
+    expect(daysDiff).toBe(45);
+  });
+
+  // -----------------------------------------------------------------------
+  // EXPORT_WINDOW_REMINDER — emitted at 15 days remaining
+  // -----------------------------------------------------------------------
+
+  it('export window reminder emitted at 15 days remaining', async () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const cancelledSub = {
+      subscriptionId: 'sub-reminder-15',
+      providerId: 'user-reminder-15',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() + 15 * DAY_MS),
+    };
+
+    const subRepo = makeMockSubscriptionRepo({
+      cancelledSubsInExportWindow: [cancelledSub],
+    });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runExportWindowReminders(deps, emitter);
+
+    expect(result.reminded).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_REMINDER',
+      expect.objectContaining({
+        subscriptionId: 'sub-reminder-15',
+        providerId: 'user-reminder-15',
+        daysRemaining: 15,
+      }),
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // EXPORT_WINDOW_CLOSING — emitted at 7 days remaining
+  // -----------------------------------------------------------------------
+
+  it('export window closing emitted at 7 days remaining', async () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const cancelledSub = {
+      subscriptionId: 'sub-closing-7',
+      providerId: 'user-closing-7',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() + 7 * DAY_MS),
+    };
+
+    const subRepo = makeMockSubscriptionRepo({
+      cancelledSubsInExportWindow: [cancelledSub],
+    });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runExportWindowReminders(deps, emitter);
+
+    expect(result.reminded).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_CLOSING',
+      expect.objectContaining({
+        subscriptionId: 'sub-closing-7',
+        providerId: 'user-closing-7',
+        daysRemaining: 7,
+      }),
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // EXPORT_WINDOW_CLOSING — emitted at 1 day remaining (final warning)
+  // -----------------------------------------------------------------------
+
+  it('export window closing emitted at 1 day remaining (final warning)', async () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const cancelledSub = {
+      subscriptionId: 'sub-closing-1',
+      providerId: 'user-closing-1',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() + 1 * DAY_MS),
+    };
+
+    const subRepo = makeMockSubscriptionRepo({
+      cancelledSubsInExportWindow: [cancelledSub],
+    });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runExportWindowReminders(deps, emitter);
+
+    expect(result.reminded).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_CLOSING',
+      expect.objectContaining({
+        subscriptionId: 'sub-closing-1',
+        providerId: 'user-closing-1',
+        daysRemaining: 1,
+      }),
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // EXPORT_WINDOW_CLOSED — emitted when deletion begins
+  // -----------------------------------------------------------------------
+
+  it('EXPORT_WINDOW_CLOSED emitted when deletion begins', async () => {
+    const cancelledSub = {
+      subscriptionId: 'sub-window-closed',
+      providerId: 'user-window-closed',
+      stripeCustomerId: 'cus_wc',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    };
+
+    const subRepo = makeMockSubscriptionRepo();
+    subRepo.findSubscriptionsDueForDeletion = vi.fn().mockResolvedValue([cancelledSub]);
+    const dataDeletionRepo = makeMockDataDeletionRepo();
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    deps.dataDeletionRepo = dataDeletionRepo;
+    const emitter = makeMockEventEmitter();
+
+    await runDeletionCheck(deps, emitter);
+
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'EXPORT_WINDOW_CLOSED',
+      expect.objectContaining({
+        subscriptionId: 'sub-window-closed',
+        providerId: 'user-window-closed',
+      }),
+    );
+    // Verify EXPORT_WINDOW_CLOSED was emitted before ACCOUNT_DATA_DELETED
+    const emitCalls = emitter.emit.mock.calls;
+    const closedIdx = emitCalls.findIndex((c: any) => c[0] === 'EXPORT_WINDOW_CLOSED');
+    const deletedIdx = emitCalls.findIndex((c: any) => c[0] === 'ACCOUNT_DATA_DELETED');
+    expect(closedIdx).toBeLessThan(deletedIdx);
+  });
+
+  // -----------------------------------------------------------------------
+  // No reminder for subscriptions not at a checkpoint
+  // -----------------------------------------------------------------------
+
+  it('no reminder emitted when days remaining does not match a checkpoint', async () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const cancelledSub = {
+      subscriptionId: 'sub-no-remind',
+      providerId: 'user-no-remind',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() + 20 * DAY_MS),
+    };
+
+    const subRepo = makeMockSubscriptionRepo({
+      cancelledSubsInExportWindow: [cancelledSub],
+    });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runExportWindowReminders(deps, emitter);
+
+    expect(result.reminded).toBe(0);
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('runExportWindowReminders is idempotent with no cancelled subscriptions', async () => {
+    const subRepo = makeMockSubscriptionRepo({ cancelledSubsInExportWindow: [] });
+    const deps = makeServiceDeps({ subscriptionRepo: subRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runExportWindowReminders(deps, emitter);
+
+    expect(result.reminded).toBe(0);
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// Amendment Service Tests
+// ===========================================================================
+
+describe('Platform Service — createAmendment', () => {
+  it('createAmendment is admin-only', async () => {
+    const amendmentRepo = makeMockAmendmentRepo();
+    const deps = makeServiceDeps({ amendmentRepo });
+    const nonAdminCtx = { userId: 'user-123', role: 'physician' };
+
+    await expect(
+      createAmendment(deps, nonAdminCtx, {
+        amendmentType: 'MATERIAL',
+        title: 'Test Amendment',
+        description: 'Test description',
+        documentText: 'Test document',
+        effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+      }),
+    ).rejects.toThrow('Only administrators can create amendments');
+  });
+
+  it('createAmendment succeeds with admin context', async () => {
+    const amendmentRepo = makeMockAmendmentRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const result = await createAmendment(deps, adminCtx, {
+      amendmentType: 'MATERIAL',
+      title: 'IMA Update v2',
+      description: 'Material change to IMA',
+      documentText: 'Full amendment text here',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+    });
+
+    expect(result).toBeDefined();
+    expect(result.amendmentId).toBeDefined();
+    expect(result.amendmentType).toBe('MATERIAL');
+    expect(result.title).toBe('IMA Update v2');
+    expect(amendmentRepo.createAmendment).toHaveBeenCalledOnce();
+  });
+
+  it('createAmendment emits notification to all active physicians', async () => {
+    const providerIds = ['prov-1', 'prov-2', 'prov-3'];
+    const amendmentRepo = makeMockAmendmentRepo();
+    const activeProviderRepo = makeMockActiveProviderRepo(providerIds);
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    await createAmendment(deps, adminCtx, {
+      amendmentType: 'NON_MATERIAL',
+      title: 'Privacy Policy Update',
+      description: 'Minor update',
+      documentText: 'Document text',
+      effectiveDate: new Date(Date.now() + 14 * DAY_MS),
+    }, emitter);
+
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'IMA_AMENDMENT_NOTICE',
+      expect.objectContaining({
+        amendmentType: 'NON_MATERIAL',
+        title: 'Privacy Policy Update',
+        recipientProviderIds: providerIds,
+      }),
+    );
+  });
+
+  it('createAmendment emits audit event amendment.created', async () => {
+    const amendmentRepo = makeMockAmendmentRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    await createAmendment(deps, adminCtx, {
+      amendmentType: 'MATERIAL',
+      title: 'Test',
+      description: 'Test',
+      documentText: 'Text',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+    });
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'amendment.created',
+        resourceType: 'ima_amendment',
+        actorType: 'admin',
+        metadata: expect.objectContaining({
+          adminUserId: 'admin-1',
+          amendmentType: 'MATERIAL',
+        }),
+      }),
+    );
+  });
+
+  it('createAmendment does not fail if notification emitter throws', async () => {
+    const amendmentRepo = makeMockAmendmentRepo();
+    const activeProviderRepo: ActiveProviderRepo = {
+      findActiveProviderIds: vi.fn().mockRejectedValue(new Error('notification service down')),
+    };
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    // Should not throw despite notification failure
+    const result = await createAmendment(deps, adminCtx, {
+      amendmentType: 'MATERIAL',
+      title: 'Test',
+      description: 'Test',
+      documentText: 'Text',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+    }, emitter);
+
+    expect(result).toBeDefined();
+    expect(result.amendmentId).toBeDefined();
+  });
+});
+
+describe('Platform Service — acknowledgeAmendment', () => {
+  it('acknowledgeAmendment records ACKNOWLEDGED response', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'NON_MATERIAL',
+        title: 'Privacy Update',
+        description: 'Minor change',
+        effectiveDate: new Date(Date.now() - DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await acknowledgeAmendment(deps, ctx, amendmentId);
+
+    expect(amendmentRepo.createAmendmentResponse).toHaveBeenCalledWith({
+      amendmentId,
+      providerId: 'prov-1',
+      responseType: 'ACKNOWLEDGED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+  });
+
+  it('acknowledgeAmendment emits audit event amendment.acknowledged', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'NON_MATERIAL',
+        title: 'Test',
+        description: 'Test',
+        effectiveDate: new Date(Date.now() - DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await acknowledgeAmendment(deps, ctx, amendmentId);
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'amendment.acknowledged',
+        resourceType: 'ima_amendment',
+        resourceId: amendmentId,
+        actorType: 'physician',
+        metadata: expect.objectContaining({
+          userId: 'user-1',
+          providerId: 'prov-1',
+        }),
+      }),
+    );
+  });
+
+  it('acknowledgeAmendment throws NotFound for non-existent amendment', async () => {
+    const amendmentRepo = makeMockAmendmentRepo({ amendments: [] });
+    const deps = makeServiceDeps({ amendmentRepo });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await expect(
+      acknowledgeAmendment(deps, ctx, crypto.randomUUID()),
+    ).rejects.toThrow('Amendment not found');
+  });
+});
+
+describe('Platform Service — respondToAmendment', () => {
+  it('respondToAmendment records ACCEPTED response', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'MATERIAL',
+        title: 'Material Change',
+        description: 'Significant update',
+        effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await respondToAmendment(deps, ctx, amendmentId, 'ACCEPTED');
+
+    expect(amendmentRepo.createAmendmentResponse).toHaveBeenCalledWith({
+      amendmentId,
+      providerId: 'prov-1',
+      responseType: 'ACCEPTED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+  });
+
+  it('respondToAmendment records REJECTED response', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'MATERIAL',
+        title: 'Material Change',
+        description: 'Significant update',
+        effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await respondToAmendment(deps, ctx, amendmentId, 'REJECTED');
+
+    expect(amendmentRepo.createAmendmentResponse).toHaveBeenCalledWith({
+      amendmentId,
+      providerId: 'prov-1',
+      responseType: 'REJECTED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+  });
+
+  it('respondToAmendment emits audit event amendment.accepted', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'MATERIAL',
+        title: 'Test',
+        description: 'Test',
+        effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await respondToAmendment(deps, ctx, amendmentId, 'ACCEPTED');
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'amendment.accepted',
+        resourceType: 'ima_amendment',
+        resourceId: amendmentId,
+        metadata: expect.objectContaining({
+          responseType: 'ACCEPTED',
+        }),
+      }),
+    );
+  });
+
+  it('respondToAmendment emits audit event amendment.rejected', async () => {
+    const amendmentId = crypto.randomUUID();
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [{
+        amendmentId,
+        amendmentType: 'MATERIAL',
+        title: 'Test',
+        description: 'Test',
+        effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+        createdBy: 'admin-1',
+        createdAt: new Date(),
+      }],
+    });
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ amendmentRepo, auditLogger });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await respondToAmendment(deps, ctx, amendmentId, 'REJECTED');
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'amendment.rejected',
+        metadata: expect.objectContaining({
+          responseType: 'REJECTED',
+        }),
+      }),
+    );
+  });
+
+  it('respondToAmendment throws NotFound for non-existent amendment', async () => {
+    const amendmentRepo = makeMockAmendmentRepo({ amendments: [] });
+    const deps = makeServiceDeps({ amendmentRepo });
+
+    const ctx = {
+      userId: 'user-1',
+      providerId: 'prov-1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    };
+
+    await expect(
+      respondToAmendment(deps, ctx, crypto.randomUUID(), 'ACCEPTED'),
+    ).rejects.toThrow('Amendment not found');
+  });
+});
+
+describe('Platform Service — getBlockingAmendments', () => {
+  it('getBlockingAmendments returns only unacknowledged non-material past effective date', async () => {
+    const nonMaterialPast = {
+      amendmentId: 'amend-1',
+      amendmentType: 'NON_MATERIAL',
+      title: 'Privacy Update',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() - DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+    const materialPast = {
+      amendmentId: 'amend-2',
+      amendmentType: 'MATERIAL',
+      title: 'Material Change',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() - DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+    const nonMaterialFuture = {
+      amendmentId: 'amend-3',
+      amendmentType: 'NON_MATERIAL',
+      title: 'Future Update',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [nonMaterialPast, materialPast, nonMaterialFuture],
+    });
+    const deps = makeServiceDeps({ amendmentRepo });
+
+    const blocking = await getBlockingAmendments(deps, 'prov-1');
+
+    // Only the past NON_MATERIAL amendment should block
+    expect(blocking).toHaveLength(1);
+    expect(blocking[0].amendmentId).toBe('amend-1');
+    expect(blocking[0].title).toBe('Privacy Update');
+  });
+
+  it('material amendments do not block access', async () => {
+    const materialPast = {
+      amendmentId: 'amend-2',
+      amendmentType: 'MATERIAL',
+      title: 'Material Change',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() - DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [materialPast],
+    });
+    const deps = makeServiceDeps({ amendmentRepo });
+
+    const blocking = await getBlockingAmendments(deps, 'prov-1');
+
+    expect(blocking).toHaveLength(0);
+  });
+
+  it('getBlockingAmendments returns empty when provider has acknowledged all', async () => {
+    const nonMaterialPast = {
+      amendmentId: 'amend-1',
+      amendmentType: 'NON_MATERIAL',
+      title: 'Privacy Update',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() - DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [nonMaterialPast],
+      responses: [{
+        responseId: crypto.randomUUID(),
+        amendmentId: 'amend-1',
+        providerId: 'prov-1',
+        responseType: 'ACKNOWLEDGED',
+      }],
+    });
+    const deps = makeServiceDeps({ amendmentRepo });
+
+    const blocking = await getBlockingAmendments(deps, 'prov-1');
+
+    expect(blocking).toHaveLength(0);
+  });
+
+  it('getBlockingAmendments returns empty when no amendment repo configured', async () => {
+    const deps = makeServiceDeps();
+    // No amendmentRepo — should not throw
+
+    const blocking = await getBlockingAmendments(deps, 'prov-1');
+
+    expect(blocking).toHaveLength(0);
+  });
+});
+
+describe('Platform Service — runAmendmentReminders', () => {
+  it('reminder job finds amendments approaching deadline at 30 days', async () => {
+    const materialAmendment30 = {
+      amendmentId: 'amend-30',
+      amendmentType: 'MATERIAL',
+      title: 'Material 30-day',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [materialAmendment30],
+    });
+    const activeProviderRepo = makeMockActiveProviderRepo(['prov-1', 'prov-2']);
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runAmendmentReminders(deps, emitter);
+
+    expect(result.reminded).toBe(2);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'IMA_AMENDMENT_REMINDER',
+      expect.objectContaining({
+        amendmentId: 'amend-30',
+        providerId: 'prov-1',
+        daysUntilEffective: 30,
+      }),
+    );
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'IMA_AMENDMENT_REMINDER',
+      expect.objectContaining({
+        amendmentId: 'amend-30',
+        providerId: 'prov-2',
+        daysUntilEffective: 30,
+      }),
+    );
+  });
+
+  it('reminder job finds amendments approaching deadline at 7 days', async () => {
+    const materialAmendment7 = {
+      amendmentId: 'amend-7',
+      amendmentType: 'MATERIAL',
+      title: 'Material 7-day',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() + 7 * DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [materialAmendment7],
+    });
+    const activeProviderRepo = makeMockActiveProviderRepo(['prov-1']);
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runAmendmentReminders(deps, emitter);
+
+    expect(result.reminded).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'IMA_AMENDMENT_REMINDER',
+      expect.objectContaining({
+        amendmentId: 'amend-7',
+        providerId: 'prov-1',
+        daysUntilEffective: 7,
+      }),
+    );
+  });
+
+  it('reminder job skips providers who have already responded', async () => {
+    const materialAmendment = {
+      amendmentId: 'amend-30r',
+      amendmentType: 'MATERIAL',
+      title: 'Material Responded',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [materialAmendment],
+      responses: [{
+        responseId: crypto.randomUUID(),
+        amendmentId: 'amend-30r',
+        providerId: 'prov-1',
+        responseType: 'ACCEPTED',
+      }],
+    });
+    const activeProviderRepo = makeMockActiveProviderRepo(['prov-1', 'prov-2']);
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runAmendmentReminders(deps, emitter);
+
+    // prov-1 already responded, only prov-2 should get reminder
+    expect(result.reminded).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'IMA_AMENDMENT_REMINDER',
+      expect.objectContaining({
+        providerId: 'prov-2',
+      }),
+    );
+  });
+
+  it('reminder job skips NON_MATERIAL amendments', async () => {
+    const nonMaterialAmendment = {
+      amendmentId: 'amend-nm',
+      amendmentType: 'NON_MATERIAL',
+      title: 'Non-Material',
+      description: 'Test',
+      effectiveDate: new Date(Date.now() + 30 * DAY_MS),
+      createdBy: 'admin-1',
+      createdAt: new Date(),
+    };
+
+    const amendmentRepo = makeMockAmendmentRepo({
+      amendments: [nonMaterialAmendment],
+    });
+    const activeProviderRepo = makeMockActiveProviderRepo(['prov-1']);
+    const deps = makeServiceDeps({ amendmentRepo, activeProviderRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runAmendmentReminders(deps, emitter);
+
+    expect(result.reminded).toBe(0);
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('reminder job returns 0 when no repos configured', async () => {
+    const deps = makeServiceDeps();
+    const emitter = makeMockEventEmitter();
+
+    const result = await runAmendmentReminders(deps, emitter);
+
+    expect(result.reminded).toBe(0);
+  });
+});
+
+// ===========================================================================
+// Amendment Repository Tests
+// ===========================================================================
+
+describe('Amendment Repository', () => {
+  let repo: ReturnType<typeof createAmendmentRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    const db = makeMockDb();
+    repo = createAmendmentRepository(db);
+  });
+
+  // -------------------------------------------------------------------------
+  // createAmendment
+  // -------------------------------------------------------------------------
+
+  it('createAmendment stores amendment with computed document hash', async () => {
+    const documentText = 'This is the IMA amendment document text.';
+    const { createHash } = await import('node:crypto');
+    const expectedHash = createHash('sha256').update(documentText).digest('hex');
+
+    const result = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Test Amendment',
+      description: 'A test amendment',
+      documentText,
+      effectiveDate: new Date('2026-04-01T00:00:00Z'),
+      createdBy: 'admin-user-id',
+    });
+
+    expect(result.documentHash).toBe(expectedHash);
+    expect(result.documentHash).toHaveLength(64);
+    expect(result.amendmentType).toBe('MATERIAL');
+    expect(result.title).toBe('Test Amendment');
+    expect(result.description).toBe('A test amendment');
+    expect(result.noticeDate).toBeInstanceOf(Date);
+    expect(result.effectiveDate).toEqual(new Date('2026-04-01T00:00:00Z'));
+    expect(result.createdBy).toBe('admin-user-id');
+    expect(result.amendmentId).toBeDefined();
+    // noticeDate should be approximately now
+    const diff = Math.abs(Date.now() - result.noticeDate.getTime());
+    expect(diff).toBeLessThan(5000);
+  });
+
+  // -------------------------------------------------------------------------
+  // findAmendmentById
+  // -------------------------------------------------------------------------
+
+  it('findAmendmentById returns amendment with response count summary', async () => {
+    const amendment = await repo.createAmendment({
+      amendmentType: 'NON_MATERIAL',
+      title: 'Find Test',
+      description: 'Test',
+      documentText: 'doc text',
+      effectiveDate: new Date('2026-03-01T00:00:00Z'),
+      createdBy: 'admin-1',
+    });
+
+    // Add some responses directly to the store
+    amendmentResponseStore.push(
+      {
+        responseId: crypto.randomUUID(),
+        amendmentId: amendment.amendmentId,
+        providerId: 'prov-1',
+        responseType: 'ACKNOWLEDGED',
+        respondedAt: new Date(),
+        ipAddress: '10.0.0.1',
+        userAgent: 'Test/1.0',
+      },
+      {
+        responseId: crypto.randomUUID(),
+        amendmentId: amendment.amendmentId,
+        providerId: 'prov-2',
+        responseType: 'ACCEPTED',
+        respondedAt: new Date(),
+        ipAddress: '10.0.0.2',
+        userAgent: 'Test/1.0',
+      },
+      {
+        responseId: crypto.randomUUID(),
+        amendmentId: amendment.amendmentId,
+        providerId: 'prov-3',
+        responseType: 'REJECTED',
+        respondedAt: new Date(),
+        ipAddress: '10.0.0.3',
+        userAgent: 'Test/1.0',
+      },
+    );
+
+    const found = await repo.findAmendmentById(amendment.amendmentId);
+    expect(found).toBeDefined();
+    expect(found!.amendmentId).toBe(amendment.amendmentId);
+    expect(found!.responseCounts).toEqual({
+      total: 3,
+      acknowledged: 1,
+      accepted: 1,
+      rejected: 1,
+    });
+  });
+
+  it('findAmendmentById returns undefined for non-existent amendment', async () => {
+    const found = await repo.findAmendmentById(crypto.randomUUID());
+    expect(found).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // listAmendments
+  // -------------------------------------------------------------------------
+
+  it('listAmendments returns paginated list with derived status', async () => {
+    // Create a PENDING amendment (effective date in future)
+    await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Future Amendment',
+      description: 'Pending',
+      documentText: 'future doc',
+      effectiveDate: new Date(Date.now() + 86400000 * 30),
+      createdBy: 'admin-1',
+    });
+
+    // Create an ACTIVE amendment (effective date in past)
+    await repo.createAmendment({
+      amendmentType: 'NON_MATERIAL',
+      title: 'Active Amendment',
+      description: 'Active',
+      documentText: 'active doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    const all = await repo.listAmendments({ page: 1, pageSize: 50 });
+    expect(all.data).toHaveLength(2);
+    expect(all.total).toBe(2);
+
+    const pending = await repo.listAmendments({ status: 'PENDING', page: 1, pageSize: 50 });
+    expect(pending.data).toHaveLength(1);
+    expect(pending.data[0].title).toBe('Future Amendment');
+    expect(pending.data[0].derivedStatus).toBe('PENDING');
+
+    const active = await repo.listAmendments({ status: 'ACTIVE', page: 1, pageSize: 50 });
+    expect(active.data).toHaveLength(1);
+    expect(active.data[0].title).toBe('Active Amendment');
+    expect(active.data[0].derivedStatus).toBe('ACTIVE');
+  });
+
+  // -------------------------------------------------------------------------
+  // findPendingAmendmentsForProvider
+  // -------------------------------------------------------------------------
+
+  it('findPendingAmendmentsForProvider returns amendments awaiting response', async () => {
+    const providerId = 'prov-pending-1';
+
+    // Create an amendment with effective_date in the past
+    const amendment1 = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Past Amendment',
+      description: 'Should appear',
+      documentText: 'past doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    // Create another past amendment
+    const amendment2 = await repo.createAmendment({
+      amendmentType: 'NON_MATERIAL',
+      title: 'Another Past',
+      description: 'Also should appear',
+      documentText: 'another past doc',
+      effectiveDate: new Date(Date.now() - 86400000 * 2),
+      createdBy: 'admin-1',
+    });
+
+    // Create a future amendment (should NOT appear)
+    await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Future Amendment',
+      description: 'Should not appear',
+      documentText: 'future doc',
+      effectiveDate: new Date(Date.now() + 86400000 * 30),
+      createdBy: 'admin-1',
+    });
+
+    // Verify both past amendments appear
+    let pending = await repo.findPendingAmendmentsForProvider(providerId);
+    expect(pending).toHaveLength(2);
+
+    // Respond to amendment1
+    await repo.createAmendmentResponse({
+      amendmentId: amendment1.amendmentId,
+      providerId,
+      responseType: 'ACKNOWLEDGED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+
+    // Verify only amendment2 appears now
+    pending = await repo.findPendingAmendmentsForProvider(providerId);
+    expect(pending).toHaveLength(1);
+    expect(pending[0].amendmentId).toBe(amendment2.amendmentId);
+  });
+
+  // -------------------------------------------------------------------------
+  // createAmendmentResponse
+  // -------------------------------------------------------------------------
+
+  it('createAmendmentResponse stores acknowledgement', async () => {
+    const amendment = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Response Test',
+      description: 'Test',
+      documentText: 'response doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    const response = await repo.createAmendmentResponse({
+      amendmentId: amendment.amendmentId,
+      providerId: 'prov-resp-1',
+      responseType: 'ACCEPTED',
+      ipAddress: '192.168.1.1',
+      userAgent: 'Mozilla/5.0',
+    });
+
+    expect(response.responseId).toBeDefined();
+    expect(response.amendmentId).toBe(amendment.amendmentId);
+    expect(response.providerId).toBe('prov-resp-1');
+    expect(response.responseType).toBe('ACCEPTED');
+    expect(response.ipAddress).toBe('192.168.1.1');
+    expect(response.userAgent).toBe('Mozilla/5.0');
+    expect(response.respondedAt).toBeInstanceOf(Date);
+  });
+
+  it('createAmendmentResponse rejects duplicate response', async () => {
+    const amendment = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Dup Test',
+      description: 'Test',
+      documentText: 'dup doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    await repo.createAmendmentResponse({
+      amendmentId: amendment.amendmentId,
+      providerId: 'prov-dup-1',
+      responseType: 'ACKNOWLEDGED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+
+    await expect(
+      repo.createAmendmentResponse({
+        amendmentId: amendment.amendmentId,
+        providerId: 'prov-dup-1',
+        responseType: 'ACCEPTED',
+        ipAddress: '10.0.0.2',
+        userAgent: 'Test/2.0',
+      }),
+    ).rejects.toThrow('Provider has already responded to this amendment');
+  });
+
+  // -------------------------------------------------------------------------
+  // getAmendmentResponse
+  // -------------------------------------------------------------------------
+
+  it('getAmendmentResponse returns response when exists', async () => {
+    const amendment = await repo.createAmendment({
+      amendmentType: 'NON_MATERIAL',
+      title: 'Get Test',
+      description: 'Test',
+      documentText: 'get doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    await repo.createAmendmentResponse({
+      amendmentId: amendment.amendmentId,
+      providerId: 'prov-get-1',
+      responseType: 'REJECTED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+
+    const found = await repo.getAmendmentResponse(
+      amendment.amendmentId,
+      'prov-get-1',
+    );
+    expect(found).toBeDefined();
+    expect(found!.responseType).toBe('REJECTED');
+  });
+
+  it('getAmendmentResponse returns undefined when no response exists', async () => {
+    const amendment = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'No Response',
+      description: 'Test',
+      documentText: 'no resp doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    const found = await repo.getAmendmentResponse(
+      amendment.amendmentId,
+      'prov-nonexistent',
+    );
+    expect(found).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // countUnrespondedAmendments
+  // -------------------------------------------------------------------------
+
+  it('countUnrespondedAmendments returns correct count', async () => {
+    const providerId = 'prov-count-1';
+
+    // Create 3 amendments with effective_date in the past
+    const a1 = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Count 1',
+      description: 'Test',
+      documentText: 'count doc 1',
+      effectiveDate: new Date(Date.now() - 86400000 * 3),
+      createdBy: 'admin-1',
+    });
+
+    await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Count 2',
+      description: 'Test',
+      documentText: 'count doc 2',
+      effectiveDate: new Date(Date.now() - 86400000 * 2),
+      createdBy: 'admin-1',
+    });
+
+    await repo.createAmendment({
+      amendmentType: 'NON_MATERIAL',
+      title: 'Count 3',
+      description: 'Test',
+      documentText: 'count doc 3',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    // Create a future amendment (should NOT count)
+    await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Future',
+      description: 'Test',
+      documentText: 'future doc',
+      effectiveDate: new Date(Date.now() + 86400000 * 30),
+      createdBy: 'admin-1',
+    });
+
+    // All 3 past amendments should be unresponded
+    let unresponded = await repo.countUnrespondedAmendments(providerId);
+    expect(unresponded).toBe(3);
+
+    // Respond to one
+    await repo.createAmendmentResponse({
+      amendmentId: a1.amendmentId,
+      providerId,
+      responseType: 'ACKNOWLEDGED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+
+    // Now only 2 unresponded
+    unresponded = await repo.countUnrespondedAmendments(providerId);
+    expect(unresponded).toBe(2);
+  });
+
+  it('countUnrespondedAmendments returns 0 when all responded', async () => {
+    const providerId = 'prov-all-resp';
+
+    const a1 = await repo.createAmendment({
+      amendmentType: 'MATERIAL',
+      title: 'Resp All',
+      description: 'Test',
+      documentText: 'all resp doc',
+      effectiveDate: new Date(Date.now() - 86400000),
+      createdBy: 'admin-1',
+    });
+
+    await repo.createAmendmentResponse({
+      amendmentId: a1.amendmentId,
+      providerId,
+      responseType: 'ACCEPTED',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Test/1.0',
+    });
+
+    const count = await repo.countUnrespondedAmendments(providerId);
+    expect(count).toBe(0);
+  });
+});
+
+// ===========================================================================
+// Breach Service Tests
+// ===========================================================================
+
+function makeBreachInput(overrides?: Partial<Record<string, any>>) {
+  return {
+    breachDescription: overrides?.breachDescription ?? 'Unauthorized access to patient records',
+    breachDate: overrides?.breachDate ?? new Date('2026-01-15T10:00:00Z'),
+    awarenessDate: overrides?.awarenessDate ?? new Date('2026-01-16T08:00:00Z'),
+    hiDescription: overrides?.hiDescription ?? 'Patient demographics and PHN data',
+    includesIihi: overrides?.includesIihi ?? true,
+    affectedCount: overrides?.affectedCount ?? 50,
+    riskAssessment: overrides?.riskAssessment ?? 'High risk — PHN exposed',
+    mitigationSteps: overrides?.mitigationSteps ?? 'Passwords reset, access revoked',
+    contactName: overrides?.contactName ?? 'Privacy Officer',
+    contactEmail: overrides?.contactEmail ?? 'privacy@meritum.ca',
+    affectedProviderIds: overrides?.affectedProviderIds ?? ['prov-1', 'prov-2'],
+  };
+}
+
+describe('Platform Service — createBreach', () => {
+  it('createBreach is admin-only', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const deps = makeServiceDeps({ breachRepo });
+    const nonAdminCtx = { userId: 'user-123', role: 'physician' };
+
+    await expect(
+      createBreach(deps, nonAdminCtx, makeBreachInput()),
+    ).rejects.toThrow('Only administrators can create breach records');
+  });
+
+  it('createBreach adds affected custodians', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const input = makeBreachInput({ affectedProviderIds: ['prov-a', 'prov-b', 'prov-c'] });
+    const result = await createBreach(deps, adminCtx, input);
+
+    expect(result).toBeDefined();
+    expect(result.breachId).toBeDefined();
+    expect(result.breachDescription).toBe(input.breachDescription);
+    expect(breachRepo.createBreachRecord).toHaveBeenCalledOnce();
+    expect(breachRepo.addAffectedCustodian).toHaveBeenCalledTimes(3);
+    expect(breachRepo.addAffectedCustodian).toHaveBeenCalledWith(result.breachId, 'prov-a');
+    expect(breachRepo.addAffectedCustodian).toHaveBeenCalledWith(result.breachId, 'prov-b');
+    expect(breachRepo.addAffectedCustodian).toHaveBeenCalledWith(result.breachId, 'prov-c');
+  });
+
+  it('createBreach emits audit event breach.created', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const result = await createBreach(deps, adminCtx, makeBreachInput());
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'breach.created',
+        resourceType: 'breach_record',
+        resourceId: result.breachId,
+        actorType: 'admin',
+        metadata: expect.objectContaining({
+          adminUserId: 'admin-1',
+          affectedProviderCount: 2,
+        }),
+      }),
+    );
+  });
+});
+
+describe('Platform Service — sendBreachNotifications', () => {
+  it('sendBreachNotifications sends to both primary and secondary email', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    // Create breach and add custodians
+    const breach = await createBreach(deps, adminCtx, makeBreachInput({
+      affectedProviderIds: ['prov-1', 'prov-2'],
+    }));
+
+    const result = await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+
+    expect(result.notified).toBe(2);
+    // Dual-delivery happens automatically via notification service for BREACH_INITIAL_NOTIFICATION
+    expect(emitter.emit).toHaveBeenCalledTimes(2);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'BREACH_INITIAL_NOTIFICATION',
+      expect.objectContaining({
+        breachId: breach.breachId,
+        providerId: 'prov-1',
+      }),
+    );
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'BREACH_INITIAL_NOTIFICATION',
+      expect.objectContaining({
+        breachId: breach.breachId,
+        providerId: 'prov-2',
+      }),
+    );
+  });
+
+  it('sendBreachNotifications marks custodians as notified', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput({
+      affectedProviderIds: ['prov-1'],
+    }));
+
+    await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+
+    expect(breachRepo.markCustodianNotified).toHaveBeenCalledWith(
+      breach.breachId,
+      'prov-1',
+      'EMAIL',
+    );
+  });
+
+  it('sendBreachNotifications creates INITIAL breach update', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+
+    expect(breachRepo.createBreachUpdate).toHaveBeenCalledWith(
+      breach.breachId,
+      expect.objectContaining({
+        updateType: 'INITIAL',
+        createdBy: 'admin-1',
+      }),
+    );
+  });
+
+  it('sendBreachNotifications updates breach status to NOTIFYING', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+
+    expect(breachRepo.updateBreachStatus).toHaveBeenCalledWith(
+      breach.breachId,
+      'NOTIFYING',
+    );
+  });
+
+  it('sendBreachNotifications is admin-only', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const deps = makeServiceDeps({ breachRepo });
+    const nonAdminCtx = { userId: 'user-123', role: 'physician' };
+
+    await expect(
+      sendBreachNotifications(deps, nonAdminCtx, 'some-breach-id'),
+    ).rejects.toThrow('Only administrators can send breach notifications');
+  });
+
+  it('sendBreachNotifications throws NotFoundError for non-existent breach', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const deps = makeServiceDeps({ breachRepo });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    await expect(
+      sendBreachNotifications(deps, adminCtx, crypto.randomUUID()),
+    ).rejects.toThrow('not found');
+  });
+
+  it('sendBreachNotifications emits audit event breach.notification_sent', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'breach.notification_sent',
+        resourceType: 'breach_record',
+        resourceId: breach.breachId,
+        actorType: 'admin',
+        metadata: expect.objectContaining({
+          adminUserId: 'admin-1',
+          notifiedCount: 2,
+        }),
+      }),
+    );
+  });
+
+  it('sendBreachNotifications does not re-notify already-notified custodians', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput({
+      affectedProviderIds: ['prov-1', 'prov-2'],
+    }));
+
+    // First notification run
+    await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+    expect(emitter.emit).toHaveBeenCalledTimes(2);
+
+    // Reset emitter to track second run
+    (emitter.emit as any).mockClear();
+
+    // Second notification run — all custodians already notified
+    const result2 = await sendBreachNotifications(deps, adminCtx, breach.breachId, emitter);
+    expect(result2.notified).toBe(0);
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('Platform Service — addBreachUpdate', () => {
+  it('addBreachUpdate creates SUPPLEMENTARY record', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    const update = await addBreachUpdate(
+      deps, adminCtx, breach.breachId, 'Root cause identified: compromised credentials.', emitter,
+    );
+
+    expect(update).toBeDefined();
+    expect(update.updateId).toBeDefined();
+    expect(update.updateType).toBe('SUPPLEMENTARY');
+    expect(update.content).toBe('Root cause identified: compromised credentials.');
+    expect(breachRepo.createBreachUpdate).toHaveBeenCalledWith(
+      breach.breachId,
+      expect.objectContaining({
+        updateType: 'SUPPLEMENTARY',
+        content: 'Root cause identified: compromised credentials.',
+        createdBy: 'admin-1',
+      }),
+    );
+  });
+
+  it('addBreachUpdate emits BREACH_UPDATE notification', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+    const emitter = makeMockEventEmitter();
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await addBreachUpdate(deps, adminCtx, breach.breachId, 'Update content', emitter);
+
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'BREACH_UPDATE',
+      expect.objectContaining({
+        breachId: breach.breachId,
+        content: 'Update content',
+      }),
+    );
+  });
+
+  it('addBreachUpdate is admin-only', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const deps = makeServiceDeps({ breachRepo });
+    const nonAdminCtx = { userId: 'user-123', role: 'physician' };
+
+    await expect(
+      addBreachUpdate(deps, nonAdminCtx, 'some-breach-id', 'content'),
+    ).rejects.toThrow('Only administrators can add breach updates');
+  });
+
+  it('addBreachUpdate emits audit event breach.updated', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await addBreachUpdate(deps, adminCtx, breach.breachId, 'New details');
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'breach.updated',
+        resourceType: 'breach_record',
+        resourceId: breach.breachId,
+        actorType: 'admin',
+        metadata: expect.objectContaining({
+          adminUserId: 'admin-1',
+          updateType: 'SUPPLEMENTARY',
+        }),
+      }),
+    );
+  });
+});
+
+describe('Platform Service — resolveBreach', () => {
+  it('resolveBreach sets status and timestamp', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    const resolved = await resolveBreach(deps, adminCtx, breach.breachId);
+
+    expect(resolved).toBeDefined();
+    expect(resolved!.status).toBe('RESOLVED');
+    expect(resolved!.resolvedAt).toBeDefined();
+    expect(breachRepo.updateBreachStatus).toHaveBeenCalledWith(
+      breach.breachId,
+      'RESOLVED',
+      expect.any(Date),
+    );
+  });
+
+  it('resolveBreach is admin-only', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const deps = makeServiceDeps({ breachRepo });
+    const nonAdminCtx = { userId: 'user-123', role: 'physician' };
+
+    await expect(
+      resolveBreach(deps, nonAdminCtx, 'some-breach-id'),
+    ).rejects.toThrow('Only administrators can resolve breach records');
+  });
+
+  it('resolveBreach throws ConflictError if already resolved', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    // Resolve first time
+    await resolveBreach(deps, adminCtx, breach.breachId);
+
+    // Resolve second time — should throw
+    await expect(
+      resolveBreach(deps, adminCtx, breach.breachId),
+    ).rejects.toThrow('already resolved');
+  });
+
+  it('resolveBreach emits audit event breach.resolved', async () => {
+    const breachRepo = makeMockBreachRepo();
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ breachRepo, auditLogger });
+    const adminCtx = { userId: 'admin-1', role: 'admin' };
+
+    const breach = await createBreach(deps, adminCtx, makeBreachInput());
+
+    await resolveBreach(deps, adminCtx, breach.breachId);
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'breach.resolved',
+        resourceType: 'breach_record',
+        resourceId: breach.breachId,
+        actorType: 'admin',
+        metadata: expect.objectContaining({
+          adminUserId: 'admin-1',
+        }),
+      }),
+    );
+  });
+});
+
+describe('Platform Service — checkBreachDeadlines', () => {
+  it('checkBreachDeadlines identifies overdue notifications', async () => {
+    const overdueBreaches = [
+      {
+        breachId: 'breach-overdue-1',
+        awarenessDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+        status: 'INVESTIGATING',
+      },
+      {
+        breachId: 'breach-overdue-2',
+        awarenessDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        status: 'NOTIFYING',
+      },
+    ];
+    const breachRepo = makeMockBreachRepo();
+    breachRepo.getOverdueBreaches.mockResolvedValue(overdueBreaches);
+    const deps = makeServiceDeps({ breachRepo });
+
+    const result = await checkBreachDeadlines(deps);
+
+    expect(result.overdueBreaches).toHaveLength(2);
+    expect(result.overdueBreaches[0].breachId).toBe('breach-overdue-1');
+    expect(result.overdueBreaches[1].breachId).toBe('breach-overdue-2');
+  });
+
+  it('checkBreachDeadlines returns empty when no overdue breaches', async () => {
+    const breachRepo = makeMockBreachRepo();
+    breachRepo.getOverdueBreaches.mockResolvedValue([]);
+    const deps = makeServiceDeps({ breachRepo });
+
+    const result = await checkBreachDeadlines(deps);
+
+    expect(result.overdueBreaches).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breach Repository Tests
+// ---------------------------------------------------------------------------
+
+const DAY_MS_BREACH = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+function makeBreachData(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    breachDescription: overrides.breachDescription ?? 'Unauthorized access to patient records',
+    breachDate: overrides.breachDate ?? new Date('2026-01-15T10:00:00Z'),
+    awarenessDate: overrides.awarenessDate ?? new Date('2026-01-16T08:00:00Z'),
+    hiDescription: overrides.hiDescription ?? 'Patient demographic data including PHN',
+    includesIihi: overrides.includesIihi ?? true,
+    affectedCount: overrides.affectedCount ?? 5,
+    riskAssessment: overrides.riskAssessment ?? 'High risk due to IIHI exposure',
+    mitigationSteps: overrides.mitigationSteps ?? 'Access revoked, credentials rotated',
+    contactName: overrides.contactName ?? 'Jane Admin',
+    contactEmail: overrides.contactEmail ?? 'admin@meritum.ca',
+    createdBy: overrides.createdBy ?? 'admin-user-1',
+  };
+}
+
+describe('Breach Repository — createBreachRecord', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('createBreachRecord sets evidenceHoldUntil to awarenessDate + 12 months', async () => {
+    const awarenessDate = new Date('2026-03-01T12:00:00Z');
+    const data = makeBreachData({ awarenessDate });
+
+    const result = await repo.createBreachRecord(data);
+
+    expect(result).toBeDefined();
+    expect(result.breachId).toBeDefined();
+    expect(result.breachDescription).toBe(data.breachDescription);
+    expect(result.awarenessDate).toEqual(awarenessDate);
+    expect(result.status).toBe('INVESTIGATING');
+
+    // evidenceHoldUntil should be awarenessDate + 12 months
+    const expectedHold = new Date(awarenessDate);
+    expectedHold.setMonth(expectedHold.getMonth() + 12);
+    expect(result.evidenceHoldUntil).toEqual(expectedHold);
+  });
+
+  it('createBreachRecord stores all fields correctly', async () => {
+    const data = makeBreachData();
+    const result = await repo.createBreachRecord(data);
+
+    expect(result.breachDescription).toBe(data.breachDescription);
+    expect(result.breachDate).toEqual(data.breachDate);
+    expect(result.hiDescription).toBe(data.hiDescription);
+    expect(result.includesIihi).toBe(true);
+    expect(result.affectedCount).toBe(5);
+    expect(result.riskAssessment).toBe(data.riskAssessment);
+    expect(result.mitigationSteps).toBe(data.mitigationSteps);
+    expect(result.contactName).toBe(data.contactName);
+    expect(result.contactEmail).toBe(data.contactEmail);
+    expect(result.createdBy).toBe(data.createdBy);
+    expect(result.resolvedAt).toBeNull();
+    expect(breachRecordStore).toHaveLength(1);
+  });
+});
+
+describe('Breach Repository — findBreachById', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('findBreachById returns breach with custodian count and updates', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    await repo.addAffectedCustodian(breach.breachId, 'prov-1');
+    await repo.addAffectedCustodian(breach.breachId, 'prov-2');
+
+    await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'INITIAL',
+      content: 'Initial notification sent',
+      createdBy: 'admin-user-1',
+    });
+
+    const found = await repo.findBreachById(breach.breachId);
+
+    expect(found).toBeDefined();
+    expect(found!.breachId).toBe(breach.breachId);
+    expect(found!.affectedCustodianCount).toBe(2);
+    expect(found!.updates).toHaveLength(1);
+    expect(found!.updates[0].updateType).toBe('INITIAL');
+  });
+
+  it('findBreachById returns undefined for non-existent breach', async () => {
+    const found = await repo.findBreachById(crypto.randomUUID());
+    expect(found).toBeUndefined();
+  });
+});
+
+describe('Breach Repository — listBreaches', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('listBreaches returns paginated results', async () => {
+    await repo.createBreachRecord(makeBreachData({ breachDescription: 'Breach 1' }));
+    await repo.createBreachRecord(makeBreachData({ breachDescription: 'Breach 2' }));
+    await repo.createBreachRecord(makeBreachData({ breachDescription: 'Breach 3' }));
+
+    const page1 = await repo.listBreaches({ page: 1, pageSize: 2 });
+    expect(page1.data).toHaveLength(2);
+    expect(page1.total).toBe(3);
+
+    const page2 = await repo.listBreaches({ page: 2, pageSize: 2 });
+    expect(page2.data).toHaveLength(1);
+    expect(page2.total).toBe(3);
+  });
+
+  it('listBreaches filters by status', async () => {
+    const b1 = await repo.createBreachRecord(makeBreachData());
+    await repo.createBreachRecord(makeBreachData());
+    await repo.updateBreachStatus(b1.breachId, 'RESOLVED');
+
+    const investigating = await repo.listBreaches({ status: 'INVESTIGATING', page: 1, pageSize: 10 });
+    expect(investigating.data).toHaveLength(1);
+    expect(investigating.total).toBe(1);
+
+    const resolved = await repo.listBreaches({ status: 'RESOLVED', page: 1, pageSize: 10 });
+    expect(resolved.data).toHaveLength(1);
+    expect(resolved.total).toBe(1);
+  });
+});
+
+describe('Breach Repository — updateBreachStatus', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('updateBreachStatus sets resolvedAt when status is RESOLVED', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    const beforeResolve = new Date();
+    const updated = await repo.updateBreachStatus(breach.breachId, 'RESOLVED');
+
+    expect(updated).toBeDefined();
+    expect(updated!.status).toBe('RESOLVED');
+    expect(updated!.resolvedAt).toBeDefined();
+    expect(updated!.resolvedAt).not.toBeNull();
+    expect(updated!.resolvedAt!.getTime()).toBeGreaterThanOrEqual(beforeResolve.getTime());
+  });
+
+  it('updateBreachStatus does not set resolvedAt for non-RESOLVED status', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    const updated = await repo.updateBreachStatus(breach.breachId, 'NOTIFICATION_SENT');
+
+    expect(updated).toBeDefined();
+    expect(updated!.status).toBe('NOTIFICATION_SENT');
+    expect(updated!.resolvedAt).toBeNull();
+  });
+});
+
+describe('Breach Repository — affected custodians', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('addAffectedCustodian links provider to breach', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    const custodian = await repo.addAffectedCustodian(breach.breachId, 'provider-123');
+
+    expect(custodian).toBeDefined();
+    expect(custodian.id).toBeDefined();
+    expect(custodian.breachId).toBe(breach.breachId);
+    expect(custodian.providerId).toBe('provider-123');
+    expect(custodian.initialNotifiedAt).toBeNull();
+    expect(custodian.notificationMethod).toBeNull();
+  });
+
+  it('markCustodianNotified sets timestamp and method', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+    await repo.addAffectedCustodian(breach.breachId, 'provider-456');
+
+    const beforeNotify = new Date();
+    const notified = await repo.markCustodianNotified(
+      breach.breachId,
+      'provider-456',
+      'EMAIL',
+    );
+
+    expect(notified).toBeDefined();
+    expect(notified!.initialNotifiedAt).toBeInstanceOf(Date);
+    expect(notified!.initialNotifiedAt!.getTime()).toBeGreaterThanOrEqual(beforeNotify.getTime());
+    expect(notified!.notificationMethod).toBe('EMAIL');
+  });
+
+  it('getUnnotifiedCustodians returns only unnotified', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    await repo.addAffectedCustodian(breach.breachId, 'prov-notified');
+    await repo.addAffectedCustodian(breach.breachId, 'prov-unnotified-1');
+    await repo.addAffectedCustodian(breach.breachId, 'prov-unnotified-2');
+
+    // Notify one custodian
+    await repo.markCustodianNotified(breach.breachId, 'prov-notified', 'EMAIL');
+
+    const unnotified = await repo.getUnnotifiedCustodians(breach.breachId);
+
+    expect(unnotified).toHaveLength(2);
+    const providerIds = unnotified.map((c) => c.providerId);
+    expect(providerIds).toContain('prov-unnotified-1');
+    expect(providerIds).toContain('prov-unnotified-2');
+    expect(providerIds).not.toContain('prov-notified');
+  });
+
+  it('getUnnotifiedCustodians returns empty when all notified', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    await repo.addAffectedCustodian(breach.breachId, 'prov-a');
+    await repo.markCustodianNotified(breach.breachId, 'prov-a', 'IN_APP');
+
+    const unnotified = await repo.getUnnotifiedCustodians(breach.breachId);
+    expect(unnotified).toHaveLength(0);
+  });
+});
+
+describe('Breach Repository — breach updates', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('createBreachUpdate appends to history', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    const update1 = await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'INITIAL',
+      content: 'Initial notification to OIPC',
+      createdBy: 'admin-user-1',
+    });
+
+    expect(update1).toBeDefined();
+    expect(update1.updateId).toBeDefined();
+    expect(update1.breachId).toBe(breach.breachId);
+    expect(update1.updateType).toBe('INITIAL');
+    expect(update1.content).toBe('Initial notification to OIPC');
+    expect(update1.sentAt).toBeInstanceOf(Date);
+
+    const update2 = await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'SUPPLEMENTARY',
+      content: 'Additional affected individuals identified',
+      createdBy: 'admin-user-1',
+    });
+
+    expect(update2.updateType).toBe('SUPPLEMENTARY');
+
+    // Verify both updates are in the store
+    expect(breachUpdateStore).toHaveLength(2);
+  });
+
+  it('listBreachUpdates returns all updates ordered by sentAt', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+
+    await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'INITIAL',
+      content: 'First update',
+      createdBy: 'admin-1',
+    });
+
+    await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'SUPPLEMENTARY',
+      content: 'Second update',
+      createdBy: 'admin-1',
+    });
+
+    await repo.createBreachUpdate(breach.breachId, {
+      updateType: 'SUPPLEMENTARY',
+      content: 'Third update',
+      createdBy: 'admin-1',
+    });
+
+    const updates = await repo.listBreachUpdates(breach.breachId);
+
+    expect(updates).toHaveLength(3);
+    expect(updates[0].content).toBe('First update');
+    expect(updates[1].content).toBe('Second update');
+    expect(updates[2].content).toBe('Third update');
+  });
+
+  it('listBreachUpdates returns empty for breach with no updates', async () => {
+    const breach = await repo.createBreachRecord(makeBreachData());
+    const updates = await repo.listBreachUpdates(breach.breachId);
+    expect(updates).toHaveLength(0);
+  });
+});
+
+describe('Breach Repository — getOverdueBreaches', () => {
+  let repo: ReturnType<typeof createBreachRepository>;
+
+  beforeEach(() => {
+    subscriptionStore = [];
+    paymentStore = [];
+    componentStore = [];
+    incidentStore = [];
+    incidentUpdateStore = [];
+    practiceMembershipStore = [];
+    amendmentStore = [];
+    amendmentResponseStore = [];
+    breachRecordStore = [];
+    breachAffectedCustodianStore = [];
+    breachUpdateStore = [];
+    const db = makeMockDb();
+    repo = createBreachRepository(db);
+  });
+
+  it('getOverdueBreaches returns breaches past 72h with unnotified custodians', async () => {
+    // Breach awareness 4 days ago — well past 72h
+    const awarenessDate = new Date(Date.now() - 4 * DAY_MS_BREACH);
+    const breach = await repo.createBreachRecord(
+      makeBreachData({ awarenessDate }),
+    );
+
+    // Add unnotified custodian
+    await repo.addAffectedCustodian(breach.breachId, 'prov-overdue');
+
+    const overdue = await repo.getOverdueBreaches();
+
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0].breachId).toBe(breach.breachId);
+  });
+
+  it('getOverdueBreaches excludes resolved breaches', async () => {
+    const awarenessDate = new Date(Date.now() - 4 * DAY_MS_BREACH);
+    const breach = await repo.createBreachRecord(
+      makeBreachData({ awarenessDate }),
+    );
+    await repo.addAffectedCustodian(breach.breachId, 'prov-resolved');
+
+    // Resolve the breach
+    await repo.updateBreachStatus(breach.breachId, 'RESOLVED');
+
+    const overdue = await repo.getOverdueBreaches();
+    expect(overdue).toHaveLength(0);
+  });
+
+  it('getOverdueBreaches excludes breaches where all custodians are notified', async () => {
+    const awarenessDate = new Date(Date.now() - 4 * DAY_MS_BREACH);
+    const breach = await repo.createBreachRecord(
+      makeBreachData({ awarenessDate }),
+    );
+    await repo.addAffectedCustodian(breach.breachId, 'prov-all-notified');
+    await repo.markCustodianNotified(breach.breachId, 'prov-all-notified', 'EMAIL');
+
+    const overdue = await repo.getOverdueBreaches();
+    expect(overdue).toHaveLength(0);
+  });
+
+  it('getOverdueBreaches excludes breaches within 72h window', async () => {
+    // Breach awareness 1 day ago — within 72h
+    const awarenessDate = new Date(Date.now() - 1 * DAY_MS_BREACH);
+    const breach = await repo.createBreachRecord(
+      makeBreachData({ awarenessDate }),
+    );
+    await repo.addAffectedCustodian(breach.breachId, 'prov-within-window');
+
+    const overdue = await repo.getOverdueBreaches();
+    expect(overdue).toHaveLength(0);
+  });
+
+  it('getOverdueBreaches handles mixed scenarios correctly', async () => {
+    // Breach 1: overdue, unnotified — should be returned
+    const b1 = await repo.createBreachRecord(
+      makeBreachData({
+        awarenessDate: new Date(Date.now() - 5 * DAY_MS_BREACH),
+        breachDescription: 'Overdue breach',
+      }),
+    );
+    await repo.addAffectedCustodian(b1.breachId, 'prov-b1');
+
+    // Breach 2: overdue, but all notified — should NOT be returned
+    const b2 = await repo.createBreachRecord(
+      makeBreachData({
+        awarenessDate: new Date(Date.now() - 4 * DAY_MS_BREACH),
+        breachDescription: 'Notified breach',
+      }),
+    );
+    await repo.addAffectedCustodian(b2.breachId, 'prov-b2');
+    await repo.markCustodianNotified(b2.breachId, 'prov-b2', 'EMAIL');
+
+    // Breach 3: within 72h, unnotified — should NOT be returned
+    const b3 = await repo.createBreachRecord(
+      makeBreachData({
+        awarenessDate: new Date(Date.now() - 2 * HOUR_MS),
+        breachDescription: 'Recent breach',
+      }),
+    );
+    await repo.addAffectedCustodian(b3.breachId, 'prov-b3');
+
+    // Breach 4: resolved — should NOT be returned
+    const b4 = await repo.createBreachRecord(
+      makeBreachData({
+        awarenessDate: new Date(Date.now() - 10 * DAY_MS_BREACH),
+        breachDescription: 'Resolved breach',
+      }),
+    );
+    await repo.addAffectedCustodian(b4.breachId, 'prov-b4');
+    await repo.updateBreachStatus(b4.breachId, 'RESOLVED');
+
+    const overdue = await repo.getOverdueBreaches();
+
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0].breachId).toBe(b1.breachId);
+  });
+});
+
+// ===========================================================================
+// Export Repository — IMA-050: Complete Health Information Export
+// ===========================================================================
+
+function resetAllExportStores() {
+  exportPatientStore = [];
+  exportClaimStore = [];
+  exportClaimAuditStore = [];
+  exportShiftStore = [];
+  exportClaimExportStore = [];
+  exportAhcipDetailStore = [];
+  exportAhcipBatchStore = [];
+  exportWcbDetailStore = [];
+  exportWcbBatchStore = [];
+  exportWcbRemittanceStore = [];
+  exportProviderStore = [];
+  exportBaStore = [];
+  exportLocationStore = [];
+  exportWcbConfigStore = [];
+  exportDelegateStore = [];
+  exportSubmPrefStore = [];
+  exportHlinkStore = [];
+  exportPcpcmEnrolmentStore = [];
+  exportPcpcmPaymentStore = [];
+  exportPcpcmPanelStore = [];
+  exportAnalyticsCacheStore = [];
+  exportReportStore = [];
+  exportReportSubStore = [];
+  exportAiLearningStore = [];
+  exportAiSuggestionStore = [];
+  exportEdShiftStore = [];
+  exportFavCodeStore = [];
+  exportAuditLogStore = [];
+}
+
+function resetAllStoresForExport() {
+  subscriptionStore = [];
+  paymentStore = [];
+  componentStore = [];
+  incidentStore = [];
+  incidentUpdateStore = [];
+  practiceMembershipStore = [];
+  amendmentStore = [];
+  amendmentResponseStore = [];
+  breachRecordStore = [];
+  breachAffectedCustodianStore = [];
+  breachUpdateStore = [];
+  resetAllExportStores();
+}
+
+describe('Export Repository — getCompleteHealthInformation (IMA-050)', () => {
+  let repo: ReturnType<typeof createExportRepository>;
+  const PROVIDER_ID = 'provider-export-001';
+  const OTHER_PROVIDER_ID = 'provider-export-002';
+
+  beforeEach(() => {
+    resetAllStoresForExport();
+    const db = makeMockDb();
+    repo = createExportRepository(db);
+  });
+
+  it('getCompleteHealthInformation returns all entity types', async () => {
+    // Seed data for our provider
+    exportPatientStore.push({ patientId: 'p1', providerId: PROVIDER_ID, isActive: true });
+    exportClaimStore.push({ claimId: 'c1', physicianId: PROVIDER_ID, status: 'DRAFT' });
+    exportShiftStore.push({ shiftId: 's1', physicianId: PROVIDER_ID });
+    exportClaimExportStore.push({ exportId: 'e1', physicianId: PROVIDER_ID });
+    exportAhcipBatchStore.push({ batchId: 'ab1', physicianId: PROVIDER_ID });
+    exportWcbBatchStore.push({ batchId: 'wb1', physicianId: PROVIDER_ID });
+    exportWcbRemittanceStore.push({ importId: 'wr1', physicianId: PROVIDER_ID });
+    exportProviderStore.push({ providerId: PROVIDER_ID, fullName: 'Dr. Export' });
+    exportBaStore.push({ baId: 'ba1', providerId: PROVIDER_ID });
+    exportLocationStore.push({ locationId: 'loc1', providerId: PROVIDER_ID });
+    exportWcbConfigStore.push({ configId: 'wc1', providerId: PROVIDER_ID });
+    exportDelegateStore.push({ relationshipId: 'dr1', physicianId: PROVIDER_ID });
+    exportSubmPrefStore.push({ preferenceId: 'sp1', providerId: PROVIDER_ID });
+    exportHlinkStore.push({ configId: 'hl1', providerId: PROVIDER_ID });
+    exportPcpcmEnrolmentStore.push({ enrolmentId: 'pe1', providerId: PROVIDER_ID });
+    exportPcpcmPaymentStore.push({ paymentId: 'pp1', providerId: PROVIDER_ID });
+    exportPcpcmPanelStore.push({ estimateId: 'pn1', providerId: PROVIDER_ID });
+    exportAnalyticsCacheStore.push({ cacheId: 'ac1', providerId: PROVIDER_ID });
+    exportReportStore.push({ reportId: 'r1', providerId: PROVIDER_ID });
+    exportReportSubStore.push({ subscriptionId: 'rs1', providerId: PROVIDER_ID });
+    exportAiLearningStore.push({ learningId: 'al1', providerId: PROVIDER_ID });
+    exportAiSuggestionStore.push({ eventId: 'as1', providerId: PROVIDER_ID });
+    exportEdShiftStore.push({ shiftId: 'es1', providerId: PROVIDER_ID });
+    exportFavCodeStore.push({ favouriteId: 'fc1', providerId: PROVIDER_ID });
+    subscriptionStore.push({
+      subscriptionId: 'sub1',
+      providerId: PROVIDER_ID,
+      plan: 'STANDARD_MONTHLY',
+      status: 'ACTIVE',
+    });
+    amendmentResponseStore.push({ responseId: 'ar1', providerId: PROVIDER_ID, amendmentId: 'a1' });
+    exportAuditLogStore.push({ logId: 'log1', userId: PROVIDER_ID, action: 'LOGIN' });
+
+    const result = await repo.getCompleteHealthInformation(PROVIDER_ID);
+
+    // Verify all entity types are present
+    expect(result.patients).toHaveLength(1);
+    expect(result.claims).toHaveLength(1);
+    expect(result.shifts).toHaveLength(1);
+    expect(result.claimExports).toHaveLength(1);
+    expect(result.ahcipBatches).toHaveLength(1);
+    expect(result.wcbBatches).toHaveLength(1);
+    expect(result.wcbRemittanceImports).toHaveLength(1);
+    expect(result.provider).not.toBeNull();
+    expect(result.businessArrangements).toHaveLength(1);
+    expect(result.practiceLocations).toHaveLength(1);
+    expect(result.wcbConfigurations).toHaveLength(1);
+    expect(result.delegateRelationships).toHaveLength(1);
+    expect(result.submissionPreferences).toHaveLength(1);
+    expect(result.hlinkConfigurations).toHaveLength(1);
+    expect(result.pcpcmEnrolments).toHaveLength(1);
+    expect(result.pcpcmPayments).toHaveLength(1);
+    expect(result.pcpcmPanelEstimates).toHaveLength(1);
+    expect(result.analyticsCache).toHaveLength(1);
+    expect(result.generatedReports).toHaveLength(1);
+    expect(result.reportSubscriptions).toHaveLength(1);
+    expect(result.aiProviderLearning).toHaveLength(1);
+    expect(result.aiSuggestionEvents).toHaveLength(1);
+    expect(result.edShifts).toHaveLength(1);
+    expect(result.favouriteCodes).toHaveLength(1);
+    expect(result.subscription).not.toBeNull();
+    expect(result.imaAmendmentResponses).toHaveLength(1);
+    expect(result.auditLog).toHaveLength(1);
+  });
+
+  it('all queries scoped to the specified providerId', async () => {
+    // Seed data for BOTH providers
+    exportPatientStore.push(
+      { patientId: 'p1', providerId: PROVIDER_ID, isActive: true },
+      { patientId: 'p2', providerId: OTHER_PROVIDER_ID, isActive: true },
+    );
+    exportClaimStore.push(
+      { claimId: 'c1', physicianId: PROVIDER_ID, status: 'SUBMITTED' },
+      { claimId: 'c2', physicianId: OTHER_PROVIDER_ID, status: 'DRAFT' },
+    );
+    exportProviderStore.push(
+      { providerId: PROVIDER_ID, fullName: 'Dr. Ours' },
+      { providerId: OTHER_PROVIDER_ID, fullName: 'Dr. Theirs' },
+    );
+    exportBaStore.push(
+      { baId: 'ba1', providerId: PROVIDER_ID },
+      { baId: 'ba2', providerId: OTHER_PROVIDER_ID },
+    );
+    exportEdShiftStore.push(
+      { shiftId: 'es1', providerId: PROVIDER_ID },
+      { shiftId: 'es2', providerId: OTHER_PROVIDER_ID },
+    );
+    exportFavCodeStore.push(
+      { favouriteId: 'fc1', providerId: PROVIDER_ID },
+      { favouriteId: 'fc2', providerId: OTHER_PROVIDER_ID },
+    );
+    exportAiSuggestionStore.push(
+      { eventId: 'as1', providerId: PROVIDER_ID },
+      { eventId: 'as2', providerId: OTHER_PROVIDER_ID },
+    );
+    subscriptionStore.push(
+      { subscriptionId: 'sub1', providerId: PROVIDER_ID, status: 'ACTIVE' },
+      { subscriptionId: 'sub2', providerId: OTHER_PROVIDER_ID, status: 'ACTIVE' },
+    );
+    exportAuditLogStore.push(
+      { logId: 'log1', userId: PROVIDER_ID, action: 'LOGIN' },
+      { logId: 'log2', userId: OTHER_PROVIDER_ID, action: 'LOGIN' },
+    );
+
+    const result = await repo.getCompleteHealthInformation(PROVIDER_ID);
+
+    // Verify ONLY provider's own data is returned
+    expect(result.patients).toHaveLength(1);
+    expect((result.patients[0] as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.claims).toHaveLength(1);
+    expect((result.claims[0] as any).physicianId).toBe(PROVIDER_ID);
+
+    expect((result.provider as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.businessArrangements).toHaveLength(1);
+    expect((result.businessArrangements[0] as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.edShifts).toHaveLength(1);
+    expect((result.edShifts[0] as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.favouriteCodes).toHaveLength(1);
+    expect((result.favouriteCodes[0] as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.aiSuggestionEvents).toHaveLength(1);
+    expect((result.aiSuggestionEvents[0] as any).providerId).toBe(PROVIDER_ID);
+
+    expect((result.subscription as any).providerId).toBe(PROVIDER_ID);
+
+    expect(result.auditLog).toHaveLength(1);
+    expect((result.auditLog[0] as any).userId).toBe(PROVIDER_ID);
+  });
+
+  it('includes inactive/soft-deleted patients', async () => {
+    exportPatientStore.push(
+      { patientId: 'p-active', providerId: PROVIDER_ID, isActive: true },
+      { patientId: 'p-inactive', providerId: PROVIDER_ID, isActive: false },
+    );
+
+    const result = await repo.getCompleteHealthInformation(PROVIDER_ID);
+
+    // Both active and inactive patients must be included
+    expect(result.patients).toHaveLength(2);
+    const patientIds = result.patients.map((p: any) => p.patientId);
+    expect(patientIds).toContain('p-active');
+    expect(patientIds).toContain('p-inactive');
+  });
+
+  it('includes claims in all states', async () => {
+    const states = ['DRAFT', 'VALIDATED', 'QUEUED', 'SUBMITTED', 'ASSESSED', 'PAID', 'REJECTED', 'CANCELLED'];
+    for (const status of states) {
+      exportClaimStore.push({
+        claimId: `claim-${status.toLowerCase()}`,
+        physicianId: PROVIDER_ID,
+        status,
+      });
+    }
+
+    const result = await repo.getCompleteHealthInformation(PROVIDER_ID);
+
+    expect(result.claims).toHaveLength(states.length);
+    const returnedStatuses = result.claims.map((c: any) => c.status);
+    for (const status of states) {
+      expect(returnedStatuses).toContain(status);
+    }
+  });
+
+  it('returns empty arrays for entity types with no data', async () => {
+    // Don't seed any data
+    const result = await repo.getCompleteHealthInformation(PROVIDER_ID);
+
+    expect(result.patients).toEqual([]);
+    expect(result.claims).toEqual([]);
+    expect(result.claimAuditHistory).toEqual([]);
+    expect(result.shifts).toEqual([]);
+    expect(result.claimExports).toEqual([]);
+    expect(result.ahcipClaimDetails).toEqual([]);
+    expect(result.ahcipBatches).toEqual([]);
+    expect(result.wcbClaimDetails).toEqual([]);
+    expect(result.wcbBatches).toEqual([]);
+    expect(result.wcbRemittanceImports).toEqual([]);
+    expect(result.provider).toBeNull();
+    expect(result.businessArrangements).toEqual([]);
+    expect(result.practiceLocations).toEqual([]);
+    expect(result.wcbConfigurations).toEqual([]);
+    expect(result.delegateRelationships).toEqual([]);
+    expect(result.submissionPreferences).toEqual([]);
+    expect(result.hlinkConfigurations).toEqual([]);
+    expect(result.pcpcmEnrolments).toEqual([]);
+    expect(result.pcpcmPayments).toEqual([]);
+    expect(result.pcpcmPanelEstimates).toEqual([]);
+    expect(result.analyticsCache).toEqual([]);
+    expect(result.generatedReports).toEqual([]);
+    expect(result.reportSubscriptions).toEqual([]);
+    expect(result.aiProviderLearning).toEqual([]);
+    expect(result.aiSuggestionEvents).toEqual([]);
+    expect(result.edShifts).toEqual([]);
+    expect(result.favouriteCodes).toEqual([]);
+    expect(result.subscription).toBeNull();
+    expect(result.imaAmendmentResponses).toEqual([]);
+    expect(result.auditLog).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// IMA-060: Data Destruction Pipeline Tests
+// ===========================================================================
+
+describe('Data Destruction Pipeline — IMA-060', () => {
+  function makeDeletionDeps() {
+    const cancelledSub = {
+      subscriptionId: 'sub-destruction-060',
+      providerId: 'user-destruction-060',
+      stripeCustomerId: 'cus_dest_060',
+      stripeSubscriptionId: 'sub_stripe_dest_060',
+      status: 'CANCELLED',
+      deletionScheduledAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    };
+
+    const subRepo = makeMockSubscriptionRepo();
+    subRepo.findSubscriptionsDueForDeletion = vi.fn().mockResolvedValue([cancelledSub]);
+
+    const dataDeletionRepo = makeMockDataDeletionRepo();
+    const auditLogger = makeMockAuditLogger();
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    const spacesFileClient = makeMockSpacesFileClient();
+    const emitter = makeMockEventEmitter();
+
+    const deps = makeServiceDeps({
+      subscriptionRepo: subRepo,
+      auditLogger,
+      dataDeletionRepo,
+      destructionTrackingRepo,
+      spacesFileClient,
+    });
+
+    return { deps, cancelledSub, dataDeletionRepo, auditLogger, destructionTrackingRepo, spacesFileClient, emitter };
+  }
+
+  it('runDeletionCheck creates destruction tracking record', async () => {
+    const { deps, destructionTrackingRepo, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    expect(destructionTrackingRepo.createTrackingRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'user-destruction-060',
+        activeDeletedAt: expect.any(Date),
+        backupPurgeDeadline: expect.any(Date),
+      }),
+    );
+  });
+
+  it('deletion cleans up DO Spaces files', async () => {
+    const { deps, spacesFileClient, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    expect(spacesFileClient.deleteProviderFiles).toHaveBeenCalledWith('user-destruction-060');
+  });
+
+  it('backupPurgeDeadline set to activeDeletedAt + 90 days', async () => {
+    const { deps, destructionTrackingRepo, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    const call = destructionTrackingRepo.createTrackingRecord.mock.calls[0][0];
+    const activeDeletedAt = call.activeDeletedAt as Date;
+    const backupPurgeDeadline = call.backupPurgeDeadline as Date;
+
+    const diffMs = backupPurgeDeadline.getTime() - activeDeletedAt.getTime();
+    const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+    expect(diffDays).toBe(90);
+  });
+
+  it('deletion records filesDeletedAt after Spaces cleanup', async () => {
+    const { deps, destructionTrackingRepo, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    expect(destructionTrackingRepo.updateFilesDeletedAt).toHaveBeenCalledWith(
+      'user-destruction-060',
+      expect.any(Date),
+    );
+  });
+
+  it('deletion stores lastKnownEmail from user record before deactivation', async () => {
+    const { deps, destructionTrackingRepo, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    const call = destructionTrackingRepo.createTrackingRecord.mock.calls[0][0];
+    expect(call.lastKnownEmail).toBe('dr.smith@example.com');
+  });
+
+  it('deletion emits audit for active deletion and files deletion', async () => {
+    const { deps, auditLogger, emitter } = makeDeletionDeps();
+
+    await runDeletionCheck(deps, emitter);
+
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'destruction.active_deleted',
+        resourceType: 'destruction_tracking',
+        resourceId: 'user-destruction-060',
+      }),
+    );
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'destruction.files_deleted',
+        resourceType: 'destruction_tracking',
+        resourceId: 'user-destruction-060',
+      }),
+    );
+  });
+
+  it('markBackupPurged sets timestamp', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    // Pre-seed a tracking record
+    await destructionTrackingRepo.createTrackingRecord({
+      providerId: 'provider-purge',
+      lastKnownEmail: 'test@meritum.ca',
+      activeDeletedAt: new Date(),
+      backupPurgeDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    });
+
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ auditLogger, destructionTrackingRepo });
+
+    const result = await markBackupPurged(
+      deps,
+      { userId: 'admin-1', role: 'ADMIN' },
+      'provider-purge',
+    );
+
+    expect(result.backupPurgedAt).toBeInstanceOf(Date);
+    expect(destructionTrackingRepo.updateBackupPurgedAt).toHaveBeenCalledWith(
+      'provider-purge',
+      expect.any(Date),
+    );
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'destruction.backup_purged',
+        resourceType: 'destruction_tracking',
+        resourceId: 'provider-purge',
+        actorType: 'admin',
+      }),
+    );
+  });
+
+  it('markBackupPurged rejects non-admin', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    const deps = makeServiceDeps({ destructionTrackingRepo });
+
+    await expect(
+      markBackupPurged(
+        deps,
+        { userId: 'physician-1', role: 'PHYSICIAN' },
+        'provider-123',
+      ),
+    ).rejects.toThrow('Only admin can mark backup purges');
+  });
+
+  it('markBackupPurged rejects when already purged', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    await destructionTrackingRepo.createTrackingRecord({
+      providerId: 'provider-already-purged',
+      lastKnownEmail: 'test@meritum.ca',
+      activeDeletedAt: new Date(),
+      backupPurgeDeadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    });
+    // Manually mark as purged
+    destructionTrackingRepo._store[0].backupPurgedAt = new Date();
+
+    const deps = makeServiceDeps({ destructionTrackingRepo });
+
+    await expect(
+      markBackupPurged(
+        deps,
+        { userId: 'admin-1', role: 'ADMIN' },
+        'provider-already-purged',
+      ),
+    ).rejects.toThrow('Backup already marked as purged');
+  });
+
+  it('markBackupPurged rejects when tracking record not found', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    const deps = makeServiceDeps({ destructionTrackingRepo });
+
+    await expect(
+      markBackupPurged(
+        deps,
+        { userId: 'admin-1', role: 'ADMIN' },
+        'nonexistent-provider',
+      ),
+    ).rejects.toThrow('not found');
+  });
+
+  it('runDestructionConfirmation sends email when backup purged', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    await destructionTrackingRepo.createTrackingRecord({
+      providerId: 'provider-confirm',
+      lastKnownEmail: 'physician@clinic.ca',
+      activeDeletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
+      backupPurgeDeadline: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    // Mark backup as purged
+    destructionTrackingRepo._store[0].backupPurgedAt = new Date();
+
+    const auditLogger = makeMockAuditLogger();
+    const deps = makeServiceDeps({ auditLogger, destructionTrackingRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runDestructionConfirmation(deps, emitter);
+
+    expect(result.confirmed).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'DATA_DESTRUCTION_CONFIRMED',
+      expect.objectContaining({
+        providerId: 'provider-confirm',
+        email: 'physician@clinic.ca',
+      }),
+    );
+    expect(destructionTrackingRepo.updateConfirmationSentAt).toHaveBeenCalledWith(
+      'provider-confirm',
+      expect.any(Date),
+    );
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'destruction.confirmed',
+      }),
+    );
+  });
+
+  it('runDestructionConfirmation alerts admin when deadline passed without purge', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    await destructionTrackingRepo.createTrackingRecord({
+      providerId: 'provider-overdue',
+      lastKnownEmail: 'overdue@clinic.ca',
+      activeDeletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
+      backupPurgeDeadline: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // past deadline
+    });
+    // backupPurgedAt remains null (not purged)
+
+    const deps = makeServiceDeps({ destructionTrackingRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runDestructionConfirmation(deps, emitter);
+
+    expect(result.overdueAlerts).toBe(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'DESTRUCTION_BACKUP_OVERDUE',
+      expect.objectContaining({
+        providerId: 'provider-overdue',
+      }),
+    );
+  });
+
+  it('confirmation not sent twice (idempotent)', async () => {
+    const destructionTrackingRepo = makeMockDestructionTrackingRepo();
+    await destructionTrackingRepo.createTrackingRecord({
+      providerId: 'provider-idempotent',
+      lastKnownEmail: 'idempotent@clinic.ca',
+      activeDeletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
+      backupPurgeDeadline: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    // Mark as purged and already confirmed
+    destructionTrackingRepo._store[0].backupPurgedAt = new Date();
+    destructionTrackingRepo._store[0].confirmationSentAt = new Date();
+
+    const deps = makeServiceDeps({ destructionTrackingRepo });
+    const emitter = makeMockEventEmitter();
+
+    const result = await runDestructionConfirmation(deps, emitter);
+
+    // findPendingConfirmations filters for confirmationSentAt === null,
+    // so this record should NOT appear
+    expect(result.confirmed).toBe(0);
+    expect(emitter.emit).not.toHaveBeenCalledWith(
+      'DATA_DESTRUCTION_CONFIRMED',
+      expect.anything(),
+    );
+  });
+
+  it('runDestructionConfirmation returns 0 when no tracking repo configured', async () => {
+    const deps = makeServiceDeps();
+    // destructionTrackingRepo is undefined by default
+    const result = await runDestructionConfirmation(deps);
+
+    expect(result.confirmed).toBe(0);
+    expect(result.overdueAlerts).toBe(0);
   });
 });

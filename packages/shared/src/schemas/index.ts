@@ -48,6 +48,18 @@ export {
   updateIncidentSchema,
   updateComponentStatusSchema,
   adminSubscriptionQuerySchema,
+  createPracticeSchema,
+  updatePracticeSchema,
+  invitePhysicianSchema,
+  acceptInvitationParamsSchema,
+  practiceIdParamsSchema,
+  removeSeatParamsSchema,
+  practiceSeatsQuerySchema,
+  practiceInvoicesQuerySchema,
+  validateReferralCodeSchema,
+  applyReferralCreditParamsSchema,
+  applyReferralCreditBodySchema,
+  referralCreditsQuerySchema,
 } from './platform.schema.js';
 export type {
   CreateCheckoutSession,
@@ -59,6 +71,18 @@ export type {
   UpdateIncident,
   UpdateComponentStatus,
   AdminSubscriptionQuery,
+  CreatePractice,
+  UpdatePractice,
+  InvitePhysician,
+  AcceptInvitationParams,
+  PracticeIdParams,
+  RemoveSeatParams,
+  PracticeSeatsQuery,
+  PracticeInvoicesQuery,
+  ValidateReferralCode,
+  ApplyReferralCreditParams,
+  ApplyReferralCreditBody,
+  ReferralCreditsQuery,
 } from './platform.schema.js';
 
 export {
@@ -108,6 +132,9 @@ export {
   providerIdParamSchema,
   baForClaimQuerySchema,
   wcbConfigForFormQuerySchema,
+  createPcpcmPaymentSchema,
+  listPcpcmPaymentsQuerySchema,
+  updatePanelSizeSchema,
 } from './provider.schema.js';
 export type {
   UpdateProvider,
@@ -132,6 +159,9 @@ export type {
   BaForClaimQuery,
   WcbConfigForFormQuery,
   ProviderContext,
+  CreatePcpcmPayment,
+  ListPcpcmPaymentsQuery,
+  UpdatePanelSize,
 } from './provider.schema.js';
 
 export {
@@ -214,6 +244,7 @@ export {
   mergePreviewSchema,
   mergeExecuteSchema,
   exportIdParamSchema,
+  patientAccessExportDownloadParamSchema,
   internalPatientIdParamSchema,
   validatePhnParamSchema,
 } from './patient.schema.js';
@@ -228,6 +259,7 @@ export type {
   MergePreview,
   MergeExecute,
   ExportIdParam,
+  PatientAccessExportDownloadParam,
   InternalPatientIdParam,
   ValidatePhnParam,
 } from './patient.schema.js';
@@ -468,6 +500,35 @@ export type {
   ImaAcknowledge,
   OnboardingProgressResponse,
 } from './onboarding.schema.js';
+
+export {
+  createAmendmentSchema,
+  amendmentResponseSchema,
+  amendmentIdParamSchema,
+  listAmendmentsQuerySchema,
+  createBreachSchema,
+  breachUpdateSchema,
+  breachIdParamSchema,
+  listBreachesQuerySchema,
+  patientExportParamSchema,
+  patientCorrectionSchema,
+  updateSecondaryEmailSchema,
+  fullHiExportSchema,
+} from './compliance.schema.js';
+export type {
+  CreateAmendment,
+  AmendmentResponse,
+  AmendmentIdParam,
+  ListAmendmentsQuery,
+  CreateBreach,
+  BreachUpdate,
+  BreachIdParam,
+  ListBreachesQuery,
+  PatientExportParam,
+  PatientCorrection,
+  UpdateSecondaryEmail,
+  FullHiExport,
+} from './compliance.schema.js';
 
 export {
   articleListQuerySchema,

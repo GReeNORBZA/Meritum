@@ -88,6 +88,20 @@ export const NotificationEventType = {
   // Analytics (Domain 8) — 2 events
   REPORT_READY: 'REPORT_READY',
   DATA_EXPORT_READY: 'DATA_EXPORT_READY',
+
+  // IMA Compliance — 12 events
+  EXPORT_WINDOW_STARTED: 'EXPORT_WINDOW_STARTED',
+  EXPORT_WINDOW_REMINDER: 'EXPORT_WINDOW_REMINDER',
+  EXPORT_WINDOW_CLOSING: 'EXPORT_WINDOW_CLOSING',
+  EXPORT_WINDOW_CLOSED: 'EXPORT_WINDOW_CLOSED',
+  IMA_AMENDMENT_NOTICE: 'IMA_AMENDMENT_NOTICE',
+  IMA_AMENDMENT_REMINDER: 'IMA_AMENDMENT_REMINDER',
+  IMA_AMENDMENT_DEADLINE: 'IMA_AMENDMENT_DEADLINE',
+  BREACH_INITIAL_NOTIFICATION: 'BREACH_INITIAL_NOTIFICATION',
+  BREACH_UPDATE: 'BREACH_UPDATE',
+  DATA_DESTRUCTION_CONFIRMED: 'DATA_DESTRUCTION_CONFIRMED',
+  PATIENT_ACCESS_EXPORT_READY: 'PATIENT_ACCESS_EXPORT_READY',
+  FULL_HI_EXPORT_READY: 'FULL_HI_EXPORT_READY',
 } as const;
 
 export type NotificationEventType =
@@ -101,6 +115,7 @@ export const EventCategory = {
   PROVIDER_MANAGEMENT: 'PROVIDER_MANAGEMENT',
   PLATFORM_OPERATIONS: 'PLATFORM_OPERATIONS',
   ANALYTICS: 'ANALYTICS',
+  IMA_COMPLIANCE: 'IMA_COMPLIANCE',
 } as const;
 
 export type EventCategory = (typeof EventCategory)[keyof typeof EventCategory];
@@ -293,6 +308,80 @@ export const EVENT_CATALOGUE: Readonly<
     defaultInApp: true,
     defaultEmail: true,
     category: EventCategory.ANALYTICS,
+  },
+
+  // IMA Compliance — 12 events
+  [NotificationEventType.EXPORT_WINDOW_STARTED]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.EXPORT_WINDOW_REMINDER]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.EXPORT_WINDOW_CLOSING]: {
+    priority: NotificationPriority.URGENT,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.EXPORT_WINDOW_CLOSED]: {
+    priority: NotificationPriority.URGENT,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.IMA_AMENDMENT_NOTICE]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.IMA_AMENDMENT_REMINDER]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.IMA_AMENDMENT_DEADLINE]: {
+    priority: NotificationPriority.URGENT,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.BREACH_INITIAL_NOTIFICATION]: {
+    priority: NotificationPriority.URGENT,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.BREACH_UPDATE]: {
+    priority: NotificationPriority.URGENT,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.DATA_DESTRUCTION_CONFIRMED]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.PATIENT_ACCESS_EXPORT_READY]: {
+    priority: NotificationPriority.MEDIUM,
+    defaultInApp: true,
+    defaultEmail: false,
+    category: EventCategory.IMA_COMPLIANCE,
+  },
+  [NotificationEventType.FULL_HI_EXPORT_READY]: {
+    priority: NotificationPriority.HIGH,
+    defaultInApp: true,
+    defaultEmail: true,
+    category: EventCategory.IMA_COMPLIANCE,
   },
 });
 

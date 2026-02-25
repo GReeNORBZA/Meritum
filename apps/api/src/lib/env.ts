@@ -16,6 +16,8 @@ const envSchema = z.object({
   API_HOST: z.string().default('0.0.0.0'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  STRIPE_PRICE_CLINIC_MONTHLY: z.string().optional().default('price_clinic_monthly_default'),
+  STRIPE_PRICE_CLINIC_ANNUAL: z.string().optional().default('price_clinic_annual_default'),
 });
 
 export type Env = z.infer<typeof envSchema>;

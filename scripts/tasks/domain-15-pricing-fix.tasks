@@ -1,0 +1,20 @@
+# ============================================================================
+# Domain 15: Pricing Gap Closure — Batch 0 Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-15-pricing-fix.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-19
+# ============================================================================
+
+## Batch 0: Pricing Constant Corrections — Shared Types & Constants
+
+D15-001 | Fix annual pricing constant and add early bird annual plan constant | scripts/tasks/prompts/d15/D15-001.md | pnpm --filter shared build
+D15-002 | Add EARLY_BIRD_ANNUAL to Zod checkout schema | scripts/tasks/prompts/d15/D15-002.md | pnpm --filter shared build
+
+## Batch 0: Pricing Constant Corrections — Service Layer
+
+D15-003 | Update service layer for early bird annual plan | scripts/tasks/prompts/d15/D15-003.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Batch 0: Pricing Constant Corrections — Final Validation
+
+D15-004 | Full validation — tsc + all existing tests still pass | scripts/tasks/prompts/d15/D15-004.md | pnpm --filter api exec tsc --noEmit && pnpm --filter api vitest run src/domains/platform/platform.test.ts

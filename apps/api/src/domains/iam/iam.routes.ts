@@ -18,6 +18,7 @@ import {
   mfaReconfigureSchema,
   auditLogQuerySchema,
 } from '@meritum/shared/schemas/iam.schema.js';
+import { updateSecondaryEmailSchema } from '@meritum/shared/schemas/compliance.schema.js';
 import { authRateLimit } from '../../plugins/rate-limit.plugin.js';
 import { createAuthHandlers, type AuthHandlerDeps } from './iam.handlers.js';
 import { Role } from '@meritum/shared/constants/iam.constants.js';
@@ -176,6 +177,7 @@ export async function iamAuthRoutes(app: FastifyInstance, opts: { deps: AuthHand
   // ===== Account routes (auth required) =====
 
   app.get('/api/v1/account', {
+    config: { auditLog: true },
     preHandler: [app.authenticate],
     handler: handlers.getAccountHandler,
   });
@@ -208,5 +210,13 @@ export async function iamAuthRoutes(app: FastifyInstance, opts: { deps: AuthHand
     schema: { querystring: auditLogQuerySchema },
     preHandler: [app.authenticate, requireRole(Role.PHYSICIAN, Role.ADMIN)],
     handler: handlers.auditLogHandler,
+  });
+
+  // ===== Secondary Email =====
+
+  app.put('/api/v1/account/secondary-email', {
+    schema: { body: updateSecondaryEmailSchema },
+    preHandler: [app.authenticate],
+    handler: handlers.updateSecondaryEmailHandler,
   });
 }

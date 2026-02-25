@@ -34,7 +34,7 @@ import {
   validatorCompiler,
 } from 'fastify-type-provider-zod';
 import { iamAuthRoutes } from '../../../src/domains/iam/iam.routes.js';
-import { authPluginFp } from '../../../src/plugins/auth.plugin.js';
+import { authPluginFp, auditLogPluginFp } from '../../../src/plugins/auth.plugin.js';
 import {
   type ServiceDeps,
   type MfaServiceDeps,
@@ -485,6 +485,7 @@ async function buildTestApp(): Promise<FastifyInstance> {
   testApp.setSerializerCompiler(serializerCompiler);
 
   await testApp.register(authPluginFp, { sessionDeps });
+  await testApp.register(auditLogPluginFp, { auditRepo: sharedAuditRepo });
 
   testApp.setErrorHandler((error, request, reply) => {
     if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
@@ -1283,5 +1284,232 @@ describe('IAM Audit Trail Completeness (Security)', () => {
       expect(findAuditEntry(AuditAction.AUTH_REGISTERED)).toBeDefined();
       expect(findAuditEntry(AuditAction.AUTH_LOGOUT)).toBeDefined();
     });
+  });
+
+  // =========================================================================
+  // IMA S4.3(d): PHI Read-Access Audit Logging
+  // =========================================================================
+
+  describe('PHI read-access audit logging (IMA S4.3(d))', () => {
+    function findHttpAuditEntry(method: string, url: string): Record<string, unknown> | undefined {
+      return auditEntries.find(
+        (e) => typeof e.action === 'string' && e.action.startsWith(`${method} `) && (e.action as string).includes(url),
+      );
+    }
+
+    it('GET /api/v1/account produces an audit log entry', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/account',
+        headers: { cookie: physicianCookie() },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const entry = findHttpAuditEntry('GET', '/api/v1/account');
+      expect(entry).toBeDefined();
+      expect(entry!.userId).toBe(PHYSICIAN_USER_ID);
+      expect(entry!.category).toBe('http');
+    });
+
+    it('GET /api/v1/account/audit-log produces an audit log entry via route config', async () => {
+      // The audit-log endpoint already has auditLog behavior via service layer,
+      // but the HTTP-level onResponse hook should also fire since it's a GET with
+      // the AuditAction.AUDIT_QUERIED logic. Verify the service-layer entry exists.
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/account/audit-log',
+        headers: { cookie: physicianCookie() },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const entry = findAuditEntry(AuditAction.AUDIT_QUERIED);
+      expect(entry).toBeDefined();
+    });
+
+    it('GET /api/v1/sessions does NOT produce an HTTP audit log entry (not PHI)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/sessions',
+        headers: { cookie: physicianCookie() },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // Sessions list is not PHI — no auditLog: true config, so no HTTP audit entry
+      const entry = findHttpAuditEntry('GET', '/api/v1/sessions');
+      expect(entry).toBeUndefined();
+    });
+  });
+});
+
+// =============================================================================
+// Separate test suite: PHI read-access audit for patient/provider/reference
+// routes using stub handlers to verify the auditLog plugin mechanism
+// =============================================================================
+
+describe('PHI Read-Access Audit — Cross-Domain Route Config (IMA S4.3(d))', () => {
+  let stubApp: FastifyInstance;
+  let stubAuditEntries: Array<Record<string, unknown>> = [];
+  let stubAuditRepo: ReturnType<typeof createSharedAuditRepo>;
+  let stubSessionRepo: ReturnType<typeof createMockSessionRepo>;
+
+  function stubFindHttpAuditEntry(method: string, url: string): Record<string, unknown> | undefined {
+    return stubAuditEntries.find(
+      (e) => typeof e.action === 'string' && e.action.startsWith(`${method} `) && (e.action as string).includes(url),
+    );
+  }
+
+  beforeAll(async () => {
+    physicianPasswordHash = physicianPasswordHash || await argon2Hash('SecurePass123!@#', ARGON2_OPTIONS);
+
+    stubAuditRepo = {
+      appendAuditLog: vi.fn(async (entry: Record<string, unknown>) => {
+        stubAuditEntries.push(entry);
+      }),
+    };
+    stubSessionRepo = createMockSessionRepo();
+
+    // Seed session data for stub app authentication
+    users.push({
+      userId: PHYSICIAN_USER_ID,
+      email: 'physician@example.com',
+      passwordHash: physicianPasswordHash,
+      fullName: 'Dr. Test Physician',
+      phone: '+14035551234',
+      mfaConfigured: true,
+      totpSecretEncrypted: encryptTotpSecret('JBSWY3DPEHPK3PXP'),
+      failedLoginCount: 0,
+      lockedUntil: null,
+      isActive: true,
+      role: 'PHYSICIAN',
+      subscriptionStatus: 'TRIAL',
+    });
+    sessions.push({
+      sessionId: PHYSICIAN_SESSION_ID,
+      userId: PHYSICIAN_USER_ID,
+      tokenHash: PHYSICIAN_SESSION_TOKEN_HASH,
+      ipAddress: '10.0.0.1',
+      userAgent: 'test-browser',
+      createdAt: new Date(),
+      lastActiveAt: new Date(),
+      revoked: false,
+      revokedReason: null,
+    });
+
+    const sessionDeps: SessionManagementDeps = {
+      sessionRepo: stubSessionRepo,
+      auditRepo: stubAuditRepo,
+      events: createMockEvents(),
+    };
+
+    stubApp = Fastify({ logger: false });
+    stubApp.setValidatorCompiler(validatorCompiler);
+    stubApp.setSerializerCompiler(serializerCompiler);
+
+    await stubApp.register(authPluginFp, { sessionDeps });
+    await stubApp.register(auditLogPluginFp, { auditRepo: stubAuditRepo });
+
+    // Stub routes simulating patient, provider, and reference GET endpoints
+    stubApp.get('/api/v1/patients', {
+      config: { auditLog: true },
+      preHandler: [stubApp.authenticate],
+      handler: async (_req, reply) => reply.send({ data: [] }),
+    });
+
+    stubApp.get('/api/v1/patients/:id', {
+      config: { auditLog: true },
+      preHandler: [stubApp.authenticate],
+      handler: async (_req, reply) => reply.send({ data: { patientId: 'stub' } }),
+    });
+
+    stubApp.get('/api/v1/providers/me', {
+      config: { auditLog: true },
+      preHandler: [stubApp.authenticate],
+      handler: async (_req, reply) => reply.send({ data: { providerId: 'stub' } }),
+    });
+
+    // Reference data route — NO auditLog config (public data, not PHI)
+    stubApp.get('/api/v1/reference/hsc-codes', {
+      handler: async (_req, reply) => reply.send({ data: [] }),
+    });
+
+    stubApp.setErrorHandler((error, _request, reply) => {
+      if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+        return reply.code(error.statusCode).send({
+          error: { code: (error as any).code ?? 'ERROR', message: error.message },
+        });
+      }
+      return reply.code(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      });
+    });
+
+    await stubApp.ready();
+  });
+
+  afterAll(async () => {
+    await stubApp.close();
+  });
+
+  beforeEach(() => {
+    stubAuditEntries = [];
+  });
+
+  it('GET /api/v1/patients produces an audit log entry', async () => {
+    const res = await stubApp.inject({
+      method: 'GET',
+      url: '/api/v1/patients',
+      headers: { cookie: `session=${PHYSICIAN_SESSION_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const entry = stubFindHttpAuditEntry('GET', '/api/v1/patients');
+    expect(entry).toBeDefined();
+    expect(entry!.userId).toBe(PHYSICIAN_USER_ID);
+    expect(entry!.category).toBe('http');
+  });
+
+  it('GET /api/v1/patients/:id produces an audit log entry', async () => {
+    const res = await stubApp.inject({
+      method: 'GET',
+      url: '/api/v1/patients/11111111-0000-0000-0000-000000000099',
+      headers: { cookie: `session=${PHYSICIAN_SESSION_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const entry = stubFindHttpAuditEntry('GET', '/api/v1/patients/:id');
+    expect(entry).toBeDefined();
+    expect(entry!.userId).toBe(PHYSICIAN_USER_ID);
+    expect(entry!.category).toBe('http');
+  });
+
+  it('GET /api/v1/providers/me produces an audit log entry', async () => {
+    const res = await stubApp.inject({
+      method: 'GET',
+      url: '/api/v1/providers/me',
+      headers: { cookie: `session=${PHYSICIAN_SESSION_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const entry = stubFindHttpAuditEntry('GET', '/api/v1/providers/me');
+    expect(entry).toBeDefined();
+    expect(entry!.userId).toBe(PHYSICIAN_USER_ID);
+    expect(entry!.category).toBe('http');
+  });
+
+  it('GET /api/v1/reference/hsc-codes does NOT produce an audit log entry', async () => {
+    const res = await stubApp.inject({
+      method: 'GET',
+      url: '/api/v1/reference/hsc-codes',
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    const entry = stubFindHttpAuditEntry('GET', '/api/v1/reference/hsc-codes');
+    expect(entry).toBeUndefined();
   });
 });

@@ -11,9 +11,11 @@ import {
   mergePreviewSchema,
   mergeExecuteSchema,
   exportIdParamSchema,
+  patientAccessExportDownloadParamSchema,
   internalPatientIdParamSchema,
   validatePhnParamSchema,
 } from '@meritum/shared/schemas/patient.schema.js';
+import { patientCorrectionSchema } from '@meritum/shared/schemas/compliance.schema.js';
 import {
   createPatientHandlers,
   createInternalPatientHandlers,
@@ -36,12 +38,14 @@ export async function patientRoutes(
   // =========================================================================
 
   app.get('/api/v1/patients/search', {
+    config: { auditLog: true },
     schema: { querystring: patientSearchQuerySchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
     handler: handlers.searchHandler,
   });
 
   app.get('/api/v1/patients/recent', {
+    config: { auditLog: true },
     schema: { querystring: recentPatientsQuerySchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
     handler: handlers.recentHandler,
@@ -58,6 +62,7 @@ export async function patientRoutes(
   });
 
   app.get('/api/v1/patients/:id', {
+    config: { auditLog: true },
     schema: { params: patientIdParamSchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
     handler: handlers.getPatientHandler,
@@ -67,6 +72,12 @@ export async function patientRoutes(
     schema: { body: updatePatientSchema, params: patientIdParamSchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_EDIT')],
     handler: handlers.updatePatientHandler,
+  });
+
+  app.patch('/api/v1/patients/:id/correct', {
+    schema: { body: patientCorrectionSchema, params: patientIdParamSchema },
+    preHandler: [app.authenticate, app.authorize('PATIENT_EDIT')],
+    handler: handlers.correctPatientHandler,
   });
 
   app.post('/api/v1/patients/:id/deactivate', {
@@ -107,9 +118,27 @@ export async function patientRoutes(
   });
 
   app.get('/api/v1/patients/exports/:id', {
+    config: { auditLog: true },
     schema: { params: exportIdParamSchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_VIEW', 'REPORT_EXPORT')],
     handler: handlers.exportStatusHandler,
+  });
+
+  // =========================================================================
+  // Patient Access Request Export (IMA S74)
+  // =========================================================================
+
+  app.post('/api/v1/patients/:id/export', {
+    config: { auditLog: true },
+    schema: { params: patientIdParamSchema },
+    preHandler: [app.authenticate, app.authorize('DATA_EXPORT')],
+    handler: handlers.exportPatientHiHandler,
+  });
+
+  app.get('/api/v1/patients/:id/export/:exportId/download', {
+    schema: { params: patientAccessExportDownloadParamSchema },
+    preHandler: [app.authenticate, app.authorize('DATA_EXPORT')],
+    handler: handlers.downloadPatientHiHandler,
   });
 
   // =========================================================================
@@ -129,6 +158,7 @@ export async function patientRoutes(
   });
 
   app.get('/api/v1/patients/imports/:id/preview', {
+    config: { auditLog: true },
     schema: { params: importIdParamSchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_IMPORT')],
     handler: handlers.previewHandler,
@@ -147,6 +177,7 @@ export async function patientRoutes(
   });
 
   app.get('/api/v1/patients/imports/:id', {
+    config: { auditLog: true },
     schema: { params: importIdParamSchema },
     preHandler: [app.authenticate, app.authorize('PATIENT_IMPORT')],
     handler: handlers.statusHandler,

@@ -8,11 +8,12 @@ export const Role = {
   PHYSICIAN: 'PHYSICIAN',
   DELEGATE: 'DELEGATE',
   ADMIN: 'ADMIN',
+  PRACTICE_ADMIN: 'PRACTICE_ADMIN',
 } as const;
 
 export type Role = (typeof Role)[keyof typeof Role];
 
-// --- Permission Keys (24 total) ---
+// --- Permission Keys (28 total) ---
 
 export const Permission = {
   CLAIM_CREATE: 'CLAIM_CREATE',
@@ -50,6 +51,12 @@ export const Permission = {
 
   AI_COACH_VIEW: 'AI_COACH_VIEW',
   AI_COACH_MANAGE: 'AI_COACH_MANAGE',
+
+  // Practice management
+  PRACTICE_SEAT_VIEW: 'PRACTICE_SEAT_VIEW',
+  PRACTICE_SEAT_MANAGE: 'PRACTICE_SEAT_MANAGE',
+  PRACTICE_INVOICE_VIEW: 'PRACTICE_INVOICE_VIEW',
+  PRACTICE_SETTINGS_EDIT: 'PRACTICE_SETTINGS_EDIT',
 
   // Admin-only
   ADMIN_PHI_ACCESS: 'ADMIN_PHI_ACCESS',
@@ -118,6 +125,13 @@ export const DefaultPermissions = {
     ...STANDARD_PERMISSIONS,
     Permission.ADMIN_PHI_ACCESS,
   ] as readonly Permission[],
+
+  [Role.PRACTICE_ADMIN]: [
+    Permission.PRACTICE_SEAT_VIEW,
+    Permission.PRACTICE_SEAT_MANAGE,
+    Permission.PRACTICE_INVOICE_VIEW,
+    Permission.PRACTICE_SETTINGS_EDIT,
+  ] as readonly Permission[],
 } as const satisfies Record<Role, readonly Permission[]>;
 
 // --- Audit Action Identifiers (28 categories) ---
@@ -153,6 +167,7 @@ export const AuditAction = {
   ACCOUNT_DELETION_EXECUTED: 'account.deletion_executed',
   ACCOUNT_SUSPENDED: 'account.suspended',
   ACCOUNT_REACTIVATED: 'account.reactivated',
+  ACCOUNT_SECONDARY_EMAIL_UPDATED: 'account.secondary_email_updated',
 
   // Audit events (2)
   AUDIT_QUERIED: 'audit.queried',

@@ -17,6 +17,9 @@ export const createCheckoutSessionSchema = z.object({
     SubscriptionPlan.STANDARD_MONTHLY,
     SubscriptionPlan.STANDARD_ANNUAL,
     SubscriptionPlan.EARLY_BIRD_MONTHLY,
+    SubscriptionPlan.EARLY_BIRD_ANNUAL,
+    SubscriptionPlan.CLINIC_MONTHLY,
+    SubscriptionPlan.CLINIC_ANNUAL,
   ]),
   success_url: z.string().url(),
   cancel_url: z.string().url(),
@@ -117,3 +120,103 @@ export const adminSubscriptionQuerySchema = z.object({
 });
 
 export type AdminSubscriptionQuery = z.infer<typeof adminSubscriptionQuerySchema>;
+
+// --- Practice Management: Create Practice ---
+
+export const createPracticeSchema = z.object({
+  name: z.string().min(1).max(200).trim(),
+  billing_frequency: z.enum(['MONTHLY', 'ANNUAL']),
+});
+
+export type CreatePractice = z.infer<typeof createPracticeSchema>;
+
+// --- Practice Management: Update Practice ---
+
+export const updatePracticeSchema = z.object({
+  name: z.string().min(1).max(200).trim().optional(),
+  billing_frequency: z.enum(['MONTHLY', 'ANNUAL']).optional(),
+});
+
+export type UpdatePractice = z.infer<typeof updatePracticeSchema>;
+
+// --- Practice Management: Invite Physician ---
+
+export const invitePhysicianSchema = z.object({
+  email: z.string().email().max(255).toLowerCase().trim(),
+});
+
+export type InvitePhysician = z.infer<typeof invitePhysicianSchema>;
+
+// --- Practice Management: Accept Invitation (token param) ---
+
+export const acceptInvitationParamsSchema = z.object({
+  token: z.string().min(1).max(256),
+});
+
+export type AcceptInvitationParams = z.infer<typeof acceptInvitationParamsSchema>;
+
+// --- Practice Management: Practice ID param ---
+
+export const practiceIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type PracticeIdParams = z.infer<typeof practiceIdParamsSchema>;
+
+// --- Practice Management: Seat Removal params ---
+
+export const removeSeatParamsSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+
+export type RemoveSeatParams = z.infer<typeof removeSeatParamsSchema>;
+
+// --- Practice Management: Seats Query ---
+
+export const practiceSeatsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type PracticeSeatsQuery = z.infer<typeof practiceSeatsQuerySchema>;
+
+// --- Practice Management: Invoices Query ---
+
+export const practiceInvoicesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export type PracticeInvoicesQuery = z.infer<typeof practiceInvoicesQuerySchema>;
+
+// --- Referral Program: Validate Code (public endpoint) ---
+
+export const validateReferralCodeSchema = z.object({
+  code: z.string().length(8).regex(/^[A-Z0-9]{8}$/, 'Invalid referral code format'),
+});
+
+export type ValidateReferralCode = z.infer<typeof validateReferralCodeSchema>;
+
+// --- Referral Program: Apply Credit ---
+
+export const applyReferralCreditParamsSchema = z.object({
+  redemptionId: z.string().uuid(),
+});
+
+export type ApplyReferralCreditParams = z.infer<typeof applyReferralCreditParamsSchema>;
+
+export const applyReferralCreditBodySchema = z.object({
+  target: z.enum(['PRACTICE_INVOICE', 'INDIVIDUAL_BANK']),
+});
+
+export type ApplyReferralCreditBody = z.infer<typeof applyReferralCreditBodySchema>;
+
+// --- Referral Program: My Credits Query ---
+
+export const referralCreditsQuerySchema = z.object({
+  status: z.enum(['PENDING', 'QUALIFIED', 'CREDITED', 'EXPIRED']).optional(),
+  anniversary_year: z.coerce.number().int().min(1).optional(),
+});
+
+export type ReferralCreditsQuery = z.infer<typeof referralCreditsQuerySchema>;

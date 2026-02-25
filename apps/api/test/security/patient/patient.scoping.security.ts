@@ -35,7 +35,10 @@ import {
 } from 'fastify-type-provider-zod';
 import { patientRoutes } from '../../../src/domains/patient/patient.routes.js';
 import { authPluginFp } from '../../../src/plugins/auth.plugin.js';
-import { type PatientServiceDeps } from '../../../src/domains/patient/patient.service.js';
+import {
+  type PatientServiceDeps,
+  _accessExportStore,
+} from '../../../src/domains/patient/patient.service.js';
 import { type PatientHandlerDeps } from '../../../src/domains/patient/patient.handlers.js';
 import {
   type SessionManagementDeps,
@@ -654,6 +657,32 @@ function createScopedPatientRepo() {
         patientId: patient?.patientId,
       };
     }),
+
+    // Patient Access Export (IMA S74)
+    getPatientHealthInformation: vi.fn(async (physicianId: string, patientId: string) => {
+      const patient = patientsStore[patientId];
+      if (!patient || patient.providerId !== physicianId) return null;
+      return {
+        demographics: {
+          patientId: patient.patientId,
+          phn: patient.phn,
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          dateOfBirth: patient.dateOfBirth,
+          gender: patient.gender,
+          phone: patient.phone,
+          email: patient.email,
+          addressLine1: patient.addressLine1,
+          city: patient.city,
+          province: patient.province,
+          postalCode: patient.postalCode,
+        },
+        claims: [],
+        ahcipDetails: [],
+        wcbDetails: [],
+        auditEntries: [],
+      };
+    }),
   };
 }
 
@@ -889,6 +918,7 @@ describe('Patient Physician Tenant Isolation — MOST CRITICAL (Security)', () =
   beforeEach(() => {
     seedUsersAndSessions();
     seedTestData();
+    _accessExportStore.clear();
   });
 
   // =========================================================================
@@ -1604,6 +1634,55 @@ describe('Patient Physician Tenant Isolation — MOST CRITICAL (Security)', () =
   // =========================================================================
   // 18. Response isolation — physician1 responses never contain P2 identifiers
   // =========================================================================
+
+  // =========================================================================
+  // 19. Patient Access Export (IMA S74) — Cross-tenant isolation
+  // =========================================================================
+
+  describe('Patient Access Export (IMA S74) — Cross-tenant isolation', () => {
+    it('physician cannot export another physician\'s patient health information', async () => {
+      // P1 tries to export P2's patient
+      const res = await asPhysician1('POST', `/api/v1/patients/${P2_PATIENT_ID_A}/export`);
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('cross-tenant access export returns 404 indistinguishable from non-existent patient', async () => {
+      const MISSING_UUID = '99999999-9999-9999-9999-999999999999';
+      const crossRes = await asPhysician1('POST', `/api/v1/patients/${P2_PATIENT_ID_A}/export`);
+      const missingRes = await asPhysician1('POST', `/api/v1/patients/${MISSING_UUID}/export`);
+
+      expect(crossRes.statusCode).toBe(404);
+      expect(missingRes.statusCode).toBe(404);
+
+      const crossBody = JSON.parse(crossRes.body);
+      const missingBody = JSON.parse(missingRes.body);
+      expect(crossBody.error.code).toBe(missingBody.error.code);
+      expect(crossBody.error.message).toBe(missingBody.error.message);
+    });
+
+    it('physician can export own patient health information', async () => {
+      const res = await asPhysician1('POST', `/api/v1/patients/${P1_PATIENT_ID_A}/export`);
+      expect(res.statusCode).toBe(201);
+
+      const body = JSON.parse(res.body);
+      expect(body.data).toHaveProperty('exportId');
+      expect(body.data).toHaveProperty('downloadUrl');
+    });
+
+    it('physician cannot download another physician\'s patient access export', async () => {
+      // P2 creates an export for their own patient
+      const createRes = await asPhysician2('POST', `/api/v1/patients/${P2_PATIENT_ID_A}/export`);
+      expect(createRes.statusCode).toBe(201);
+      const { exportId } = JSON.parse(createRes.body).data;
+
+      // P1 tries to download P2's export
+      const downloadRes = await asPhysician1(
+        'GET',
+        `/api/v1/patients/${P2_PATIENT_ID_A}/export/${exportId}/download`,
+      );
+      expect(downloadRes.statusCode).toBe(404);
+    });
+  });
 
   describe('Response body never leaks cross-tenant identifiers', () => {
     it('physician1 patient GET response contains no P2 identifiers', async () => {

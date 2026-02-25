@@ -1,0 +1,37 @@
+# ============================================================================
+# Domain 19: Policy Alignment (Batch 4) — Build Tasks
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-19-policy-alignment.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-19
+#
+# Depends on: Batch 1 (domain-16-clinic-tier.tasks) — practice dissolution
+#             in annual cancellation flow
+# ============================================================================
+
+## Domain 19: Annual Cancellation & Refund (B4-1)
+
+D19-001 | Cancellation constants — ANNUAL_MINIMUM_COMMITMENT_MONTHS, refund helpers, cancellation message templates | scripts/tasks/prompts/d19/D19-001.md | pnpm --filter shared build
+D19-002 | Service: handleAnnualCancellation() — 6-month forfeit rule, prorated refund calculation | scripts/tasks/prompts/d19/D19-002.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-003 | Service: Stripe refund integration — refundAnnualSubscription(), payment_history REFUNDED recording, REFUND_PROCESSED event | scripts/tasks/prompts/d19/D19-003.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-004 | Routes: cancellation endpoint with monthly vs annual differentiation | scripts/tasks/prompts/d19/D19-004.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-005 | Tests: annual cancellation — 6-month forfeit, prorated refund, monthly cancellation passthrough | scripts/tasks/prompts/d19/D19-005.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 19: Data Export Portability Bundle (B4-3)
+
+D19-010 | Service: generateFullPortabilityExport(physicianId) — ZIP bundle with 6 CSV data types | scripts/tasks/prompts/d19/D19-010.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-011 | WCB claim export function — full WCB claim details + child records CSV generator | scripts/tasks/prompts/d19/D19-011.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-012 | Assessment + analytics + intelligence export CSV generators for portability bundle | scripts/tasks/prompts/d19/D19-012.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D19-013 | Integration tests: full portability export — ZIP contents, physician scoping, cancelled-status access | scripts/tasks/prompts/d19/D19-013.md | pnpm --filter api vitest run test/integration/platform/
+
+## Domain 19: PCPCM Payment Reconciliation (B4-4, B4-5)
+
+D19-020 | Drizzle schema: pcpcm_payments table + pcpcm_panel_estimates table (schema only, post-MVP) | scripts/tasks/prompts/d19/D19-020.md | pnpm --filter shared build
+D19-021 | Repository: PCPCM payment CRUD, physician-scoped queries, reconciliation status queries | scripts/tasks/prompts/d19/D19-021.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D19-022 | Service: recordPcpcmPayment(), reconcilePcpcmPayments(), getPcpcmPaymentHistory(), updatePanelSize() | scripts/tasks/prompts/d19/D19-022.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D19-023 | Routes: PCPCM payment endpoints — GET/POST payments, POST reconcile, PATCH panel-size | scripts/tasks/prompts/d19/D19-023.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+D19-024 | Tests: PCPCM payment recording, reconciliation logic, panel size update, physician scoping | scripts/tasks/prompts/d19/D19-024.md | pnpm --filter api vitest run src/domains/provider/provider.test.ts
+
+## Domain 19: Final Validation
+
+D19-099 | Full validation — tsc --noEmit + all modified domain tests + full regression | scripts/tasks/prompts/d19/D19-099.md | pnpm --filter api vitest run src/domains/platform/ src/domains/provider/ test/integration/platform/

@@ -236,3 +236,15 @@ export const DEFAULT_SUBMISSION_PREFERENCES = Object.freeze({
   batchReviewReminder: true,
   deadlineReminderDays: 7,
 } as const);
+
+// --- PCPCM Payment Status ---
+
+export const PcpcmPaymentStatus = {
+  EXPECTED: 'EXPECTED',
+  RECEIVED: 'RECEIVED',
+  RECONCILED: 'RECONCILED',
+  DISCREPANCY: 'DISCREPANCY',
+} as const;
+
+export type PcpcmPaymentStatus =
+  (typeof PcpcmPaymentStatus)[keyof typeof PcpcmPaymentStatus];

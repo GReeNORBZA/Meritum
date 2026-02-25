@@ -40,6 +40,7 @@ import {
   type PatientServiceDeps,
   _parsedRowsCache,
   _exportStore,
+  _accessExportStore,
 } from '../../../src/domains/patient/patient.service.js';
 import { type PatientHandlerDeps } from '../../../src/domains/patient/patient.handlers.js';
 import {
@@ -411,6 +412,32 @@ function createMockPatientRepo() {
     }),
     getPatientClaimContext: vi.fn(async () => null),
     validatePhnExists: vi.fn(async () => ({ valid: false, exists: false })),
+
+    // Patient Access Export (IMA S74)
+    getPatientHealthInformation: vi.fn(async (physicianId: string, patientId: string) => {
+      const p = patientStore[patientId];
+      if (!p || (p as any).providerId !== physicianId) return null;
+      return {
+        demographics: {
+          patientId: (p as any).patientId,
+          phn: (p as any).phn,
+          firstName: (p as any).firstName,
+          lastName: (p as any).lastName,
+          dateOfBirth: (p as any).dateOfBirth,
+          gender: (p as any).gender,
+          phone: (p as any).phone,
+          email: (p as any).email,
+          addressLine1: (p as any).addressLine1,
+          city: (p as any).city,
+          province: (p as any).province,
+          postalCode: (p as any).postalCode,
+        },
+        claims: [],
+        ahcipDetails: [],
+        wcbDetails: [],
+        auditEntries: [],
+      };
+    }),
   };
 }
 
@@ -520,6 +547,7 @@ beforeEach(() => {
   auditEntries.length = 0;
   _parsedRowsCache.clear();
   _exportStore.clear();
+  _accessExportStore.clear();
   seedUsersAndSessions();
   seedPatientData();
   vi.mocked(serviceDeps.auditRepo.appendAuditLog).mockClear();
@@ -1287,5 +1315,56 @@ describe('Audit Trail — Sensitive Data Exclusion', () => {
     const detail = entry!.detail as Record<string, unknown>;
     const keys = Object.keys(detail);
     expect(keys).toEqual(['rowCount']);
+  });
+});
+
+// ===========================================================================
+// AUDIT TRAIL — Patient Access Export (IMA S74) Events
+// ===========================================================================
+
+describe('Audit Trail — Patient Access Export (IMA S74)', () => {
+  it('patient access export produces patient.access_export_requested audit entry', async () => {
+    const res = await physicianRequest('POST', `/api/v1/patients/${PATIENT_ID}/export`);
+
+    expect(res.statusCode).toBe(201);
+
+    const entry = findAuditEntry(PatientAuditAction.ACCESS_EXPORT_REQUESTED);
+    expect(entry).toBeDefined();
+    expect(entry!.userId).toBe(PHYSICIAN_USER_ID);
+    expect(entry!.action).toBe(PatientAuditAction.ACCESS_EXPORT_REQUESTED);
+    expect(entry!.category).toBe('patient');
+    expect(entry!.resourceType).toBe('patient');
+    expect(entry!.resourceId).toBe(PATIENT_ID);
+  });
+
+  it('patient access export audit entry does not contain PHI', async () => {
+    const res = await physicianRequest('POST', `/api/v1/patients/${PATIENT_ID}/export`);
+
+    expect(res.statusCode).toBe(201);
+
+    const entry = findAuditEntry(PatientAuditAction.ACCESS_EXPORT_REQUESTED);
+    expect(entry).toBeDefined();
+
+    const entryStr = JSON.stringify(entry);
+    // Should not contain any patient names, PHNs, or addresses
+    expect(entryStr).not.toContain('John');
+    expect(entryStr).not.toContain('Smith');
+    expect(entryStr).not.toContain(VALID_PHN);
+    expect(entryStr).not.toContain('Edmonton');
+    expect(entryStr).not.toContain('Private clinical notes');
+  });
+
+  it('patient access export audit entry masks PHN if present', async () => {
+    const res = await physicianRequest('POST', `/api/v1/patients/${PATIENT_ID}/export`);
+
+    expect(res.statusCode).toBe(201);
+
+    const entry = findAuditEntry(PatientAuditAction.ACCESS_EXPORT_REQUESTED);
+    expect(entry).toBeDefined();
+
+    // Full 9-digit PHN must not appear anywhere in the audit entry
+    const entryStr = JSON.stringify(entry);
+    expect(entryStr).not.toContain(VALID_PHN);
+    expect(entryStr).not.toContain(VALID_PHN_2);
   });
 });

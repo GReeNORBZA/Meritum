@@ -118,6 +118,14 @@ export interface UserEmailLookup {
 }
 
 // ---------------------------------------------------------------------------
+// Secondary Email Lookup interface
+// ---------------------------------------------------------------------------
+
+export interface SecondaryEmailLookup {
+  getSecondaryEmail(userId: string): Promise<string | null>;
+}
+
+// ---------------------------------------------------------------------------
 // Digest Summary Item
 // ---------------------------------------------------------------------------
 
@@ -139,6 +147,7 @@ export interface NotificationServiceDeps {
   senderEmail?: string;
   claimRepo?: ClaimRepo;
   userEmailLookup?: UserEmailLookup;
+  secondaryEmailLookup?: SecondaryEmailLookup;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +190,18 @@ export const PERMISSION_EVENT_MAP: Readonly<Record<string, readonly string[]>> =
       'DATA_EXPORT_READY',
     ]),
   });
+
+// ---------------------------------------------------------------------------
+// Dual-delivery event types — also sent to secondary email if configured
+// ---------------------------------------------------------------------------
+
+const DUAL_DELIVERY_EVENT_TYPES = new Set<string>([
+  'BREACH_INITIAL_NOTIFICATION',
+  'BREACH_UPDATE',
+  'IMA_AMENDMENT_NOTICE',
+  'IMA_AMENDMENT_REMINDER',
+  'IMA_AMENDMENT_DEADLINE',
+]);
 
 // Reverse map: eventType -> required permission
 const EVENT_PERMISSION_MAP = new Map<string, string>();
@@ -451,6 +472,25 @@ export async function processEvent(
           notificationId: notification.notificationId,
           digestType: prefs.digestMode,
         });
+      }
+
+      // Step 4b: Dual-delivery to secondary email for breach/IMA events
+      if (
+        DUAL_DELIVERY_EVENT_TYPES.has(eventType) &&
+        !recipient.isDelegate &&
+        deps.secondaryEmailLookup
+      ) {
+        const secondaryEmail = await deps.secondaryEmailLookup.getSecondaryEmail(
+          recipient.userId,
+        );
+        if (secondaryEmail) {
+          await deps.notificationRepo.createDeliveryLog({
+            notificationId: notification.notificationId,
+            recipientEmail: secondaryEmail,
+            templateId: eventType,
+            status: 'QUEUED',
+          });
+        }
       }
     }
   }

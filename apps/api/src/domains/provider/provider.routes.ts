@@ -67,6 +67,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.getProfileHandler,
   });
@@ -78,6 +79,7 @@ export async function providerRoutes(
   });
 
   app.get('/api/v1/providers/me/onboarding-status', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.onboardingStatusHandler,
   });
@@ -93,6 +95,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/bas', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.listBasHandler,
   });
@@ -120,6 +123,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/locations', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.listLocationsHandler,
   });
@@ -153,6 +157,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/wcb', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.listWcbConfigsHandler,
   });
@@ -176,6 +181,7 @@ export async function providerRoutes(
   });
 
   app.get('/api/v1/providers/me/wcb/form-permissions', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
     handler: handlers.formPermissionsHandler,
   });
@@ -185,6 +191,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/submission-preferences', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, app.authorize('PREFERENCE_VIEW')],
     handler: handlers.getPreferencesHandler,
   });
@@ -200,6 +207,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/hlink', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, requireRole('PHYSICIAN')],
     handler: handlers.getHlinkConfigHandler,
   });
@@ -215,6 +223,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/providers/me/delegates', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, requireRole('PHYSICIAN')],
     handler: handlers.listDelegatesHandler,
   });
@@ -242,6 +251,7 @@ export async function providerRoutes(
   // =========================================================================
 
   app.get('/api/v1/delegates/me/physicians', {
+    config: { auditLog: true },
     preHandler: [app.authenticate, requireRole('DELEGATE')],
     handler: handlers.listPhysiciansHandler,
   });

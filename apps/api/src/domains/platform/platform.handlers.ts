@@ -9,6 +9,16 @@ import {
   type IncidentHistoryQuery,
 } from '@meritum/shared/schemas/platform.schema.js';
 import {
+  type CreateAmendment,
+  type AmendmentResponse,
+  type AmendmentIdParam,
+  type ListAmendmentsQuery,
+  type CreateBreach,
+  type BreachIdParam,
+  type BreachUpdate,
+  type ListBreachesQuery,
+} from '@meritum/shared/schemas/compliance.schema.js';
+import {
   createCheckoutSession,
   createPortalSession,
   processWebhookEvent,
@@ -18,9 +28,27 @@ import {
   createIncident,
   updateIncident,
   updateComponentStatus,
+  createAmendment,
+  acknowledgeAmendment,
+  respondToAmendment,
+  getBlockingAmendments,
+  createBreach,
+  sendBreachNotifications,
+  addBreachUpdate,
+  resolveBreach,
+  markBackupPurged,
   type PlatformServiceDeps,
   type PlatformEventEmitter,
 } from './platform.service.js';
+import {
+  handleCancellation,
+  type CancellationServiceDeps,
+} from './cancellation.service.js';
+import {
+  generateFullHiExport,
+  type FullHiExportDeps,
+} from './export.service.js';
+import { type FullHiExport } from '@meritum/shared/schemas/compliance.schema.js';
 
 // ---------------------------------------------------------------------------
 // Handler dependencies
@@ -29,6 +57,7 @@ import {
 export interface PlatformHandlerDeps {
   serviceDeps: PlatformServiceDeps;
   eventEmitter?: PlatformEventEmitter;
+  exportDeps?: FullHiExportDeps;
 }
 
 // ---------------------------------------------------------------------------
@@ -359,6 +388,413 @@ export function createPlatformHandlers(deps: PlatformHandlerDeps) {
     return reply.code(200).send({ data: result });
   }
 
+  // -------------------------------------------------------------------------
+  // POST /api/v1/subscriptions/cancel — Cancel subscription (physician)
+  // -------------------------------------------------------------------------
+
+  async function cancelSubscriptionHandler(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const cancellationDeps: CancellationServiceDeps = {
+      subscriptionRepo: deps.serviceDeps.subscriptionRepo,
+      paymentRepo: deps.serviceDeps.paymentRepo,
+      stripe: deps.serviceDeps.stripe as any,
+    };
+
+    const result = await handleCancellation(
+      cancellationDeps,
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/amendments — Create amendment (admin only)
+  // -------------------------------------------------------------------------
+
+  async function createAmendmentHandler(
+    request: FastifyRequest<{ Body: CreateAmendment }>,
+    reply: FastifyReply,
+  ) {
+    const result = await createAmendment(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      {
+        amendmentType: request.body.amendment_type,
+        title: request.body.title,
+        description: request.body.description,
+        documentText: request.body.document_text,
+        effectiveDate: new Date(request.body.effective_date),
+      },
+      deps.eventEmitter,
+    );
+
+    return reply.code(201).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/platform/amendments — List amendments (admin only)
+  // -------------------------------------------------------------------------
+
+  async function listAmendmentsHandler(
+    request: FastifyRequest<{ Querystring: ListAmendmentsQuery }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.serviceDeps.amendmentRepo) {
+      return reply.code(200).send({
+        data: [],
+        pagination: { total: 0, page: 1, pageSize: 50, hasMore: false },
+      });
+    }
+
+    const page = request.query.page ?? 1;
+    const pageSize = request.query.page_size ?? 50;
+
+    const result = await deps.serviceDeps.amendmentRepo.listAmendments({
+      status: request.query.status,
+      page,
+      pageSize,
+    });
+
+    return reply.code(200).send({
+      data: result.data,
+      pagination: {
+        total: result.total,
+        page,
+        pageSize,
+        hasMore: page * pageSize < result.total,
+      },
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/platform/amendments/:id — Get amendment (admin only)
+  // -------------------------------------------------------------------------
+
+  async function getAmendmentHandler(
+    request: FastifyRequest<{ Params: AmendmentIdParam }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.serviceDeps.amendmentRepo) {
+      return reply.code(404).send({
+        error: { code: 'NOT_FOUND', message: 'Resource not found' },
+      });
+    }
+
+    const amendment = await deps.serviceDeps.amendmentRepo.findAmendmentById(
+      request.params.id,
+    );
+
+    if (!amendment) {
+      return reply.code(404).send({
+        error: { code: 'NOT_FOUND', message: 'Resource not found' },
+      });
+    }
+
+    return reply.code(200).send({ data: amendment });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/amendments/:id/acknowledge — Acknowledge (physician)
+  // -------------------------------------------------------------------------
+
+  async function acknowledgeAmendmentHandler(
+    request: FastifyRequest<{ Params: AmendmentIdParam }>,
+    reply: FastifyReply,
+  ) {
+    await acknowledgeAmendment(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        providerId: request.authContext.userId,
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'] ?? '',
+      },
+      request.params.id,
+      deps.eventEmitter,
+    );
+
+    return reply.code(200).send({ data: { acknowledged: true } });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/amendments/:id/respond — Respond (physician)
+  // -------------------------------------------------------------------------
+
+  async function respondToAmendmentHandler(
+    request: FastifyRequest<{
+      Params: AmendmentIdParam;
+      Body: AmendmentResponse;
+    }>,
+    reply: FastifyReply,
+  ) {
+    const responseType = request.body.response_type as 'ACCEPTED' | 'REJECTED';
+
+    await respondToAmendment(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        providerId: request.authContext.userId,
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'] ?? '',
+      },
+      request.params.id,
+      responseType,
+      deps.eventEmitter,
+    );
+
+    return reply.code(200).send({ data: { responded: true, responseType } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/account/pending-amendments — Physician pending amendments
+  // -------------------------------------------------------------------------
+
+  async function getMyPendingAmendmentsHandler(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const blocking = await getBlockingAmendments(
+      deps.serviceDeps,
+      request.authContext.userId,
+    );
+
+    // Also include MATERIAL pending amendments (not just blocking NON_MATERIAL)
+    let allPending: Array<{
+      amendmentId: string;
+      title: string;
+      effectiveDate: Date;
+      amendmentType?: string;
+    }> = [];
+
+    if (deps.serviceDeps.amendmentRepo) {
+      const pending =
+        await deps.serviceDeps.amendmentRepo.findPendingAmendmentsForProvider(
+          request.authContext.userId,
+        );
+      allPending = pending.map((a) => ({
+        amendmentId: a.amendmentId,
+        title: a.title,
+        effectiveDate: a.effectiveDate,
+        amendmentType: a.amendmentType,
+      }));
+    }
+
+    return reply.code(200).send({ data: allPending });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/breaches — Create breach (admin only)
+  // -------------------------------------------------------------------------
+
+  async function createBreachHandler(
+    request: FastifyRequest<{ Body: CreateBreach }>,
+    reply: FastifyReply,
+  ) {
+    const result = await createBreach(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      {
+        breachDescription: request.body.breach_description,
+        breachDate: new Date(request.body.breach_date),
+        awarenessDate: new Date(request.body.awareness_date),
+        hiDescription: request.body.hi_description,
+        includesIihi: request.body.includes_iihi,
+        affectedCount: request.body.affected_count,
+        riskAssessment: request.body.risk_assessment,
+        mitigationSteps: request.body.mitigation_steps,
+        contactName: request.body.contact_name,
+        contactEmail: request.body.contact_email,
+        affectedProviderIds: request.body.affected_provider_ids,
+      },
+      deps.eventEmitter,
+    );
+
+    return reply.code(201).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/platform/breaches — List breaches (admin only)
+  // -------------------------------------------------------------------------
+
+  async function listBreachesHandler(
+    request: FastifyRequest<{ Querystring: ListBreachesQuery }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.serviceDeps.breachRepo) {
+      return reply.code(200).send({
+        data: [],
+        pagination: { total: 0, page: 1, pageSize: 50, hasMore: false },
+      });
+    }
+
+    const page = request.query.page ?? 1;
+    const pageSize = request.query.page_size ?? 50;
+
+    const result = await deps.serviceDeps.breachRepo.listBreaches({
+      status: request.query.status,
+      page,
+      pageSize,
+    });
+
+    return reply.code(200).send({
+      data: result.data,
+      pagination: {
+        total: result.total,
+        page,
+        pageSize,
+        hasMore: page * pageSize < result.total,
+      },
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/platform/breaches/:id — Get breach (admin only)
+  // -------------------------------------------------------------------------
+
+  async function getBreachHandler(
+    request: FastifyRequest<{ Params: BreachIdParam }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.serviceDeps.breachRepo) {
+      return reply.code(404).send({
+        error: { code: 'NOT_FOUND', message: 'Resource not found' },
+      });
+    }
+
+    const breach = await deps.serviceDeps.breachRepo.findBreachById(
+      request.params.id,
+    );
+
+    if (!breach) {
+      return reply.code(404).send({
+        error: { code: 'NOT_FOUND', message: 'Resource not found' },
+      });
+    }
+
+    return reply.code(200).send({ data: breach });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/breaches/:id/notify — Send notifications (admin)
+  // -------------------------------------------------------------------------
+
+  async function sendBreachNotificationsHandler(
+    request: FastifyRequest<{ Params: BreachIdParam }>,
+    reply: FastifyReply,
+  ) {
+    const result = await sendBreachNotifications(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      request.params.id,
+      deps.eventEmitter,
+    );
+
+    return reply.code(200).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/breaches/:id/updates — Add update (admin only)
+  // -------------------------------------------------------------------------
+
+  async function addBreachUpdateHandler(
+    request: FastifyRequest<{
+      Params: BreachIdParam;
+      Body: BreachUpdate;
+    }>,
+    reply: FastifyReply,
+  ) {
+    const result = await addBreachUpdate(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      request.params.id,
+      request.body.content,
+      deps.eventEmitter,
+    );
+
+    return reply.code(201).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/breaches/:id/resolve — Resolve breach (admin)
+  // -------------------------------------------------------------------------
+
+  async function resolveBreachHandler(
+    request: FastifyRequest<{ Params: BreachIdParam }>,
+    reply: FastifyReply,
+  ) {
+    const result = await resolveBreach(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      request.params.id,
+      deps.eventEmitter,
+    );
+
+    return reply.code(200).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/platform/export/full — Full HI export (physician)
+  // -------------------------------------------------------------------------
+
+  async function generateFullExportHandler(
+    request: FastifyRequest<{ Body: FullHiExport }>,
+    reply: FastifyReply,
+  ) {
+    if (!deps.exportDeps) {
+      return reply.code(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+      });
+    }
+
+    const format = request.body.format ?? 'csv';
+    const ctx = {
+      userId: request.authContext.userId,
+      providerId: request.authContext.userId,
+    };
+
+    const result = await generateFullHiExport(deps.exportDeps, ctx, format);
+
+    return reply.code(202).send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/admin/destruction/:providerId/backup-purged — IMA-060
+  // -------------------------------------------------------------------------
+
+  async function markBackupPurgedHandler(
+    request: FastifyRequest<{ Params: { providerId: string } }>,
+    reply: FastifyReply,
+  ) {
+    const result = await markBackupPurged(
+      deps.serviceDeps,
+      {
+        userId: request.authContext.userId,
+        role: request.authContext.role,
+      },
+      request.params.providerId,
+    );
+
+    return reply.code(200).send({ data: result });
+  }
+
   return {
     stripeWebhookHandler,
     createCheckoutHandler,
@@ -373,5 +809,20 @@ export function createPlatformHandlers(deps: PlatformHandlerDeps) {
     createIncidentHandler,
     updateIncidentHandler,
     updateComponentStatusHandler,
+    cancelSubscriptionHandler,
+    createAmendmentHandler,
+    listAmendmentsHandler,
+    getAmendmentHandler,
+    acknowledgeAmendmentHandler,
+    respondToAmendmentHandler,
+    getMyPendingAmendmentsHandler,
+    createBreachHandler,
+    listBreachesHandler,
+    getBreachHandler,
+    sendBreachNotificationsHandler,
+    addBreachUpdateHandler,
+    resolveBreachHandler,
+    generateFullExportHandler,
+    markBackupPurgedHandler,
   };
 }

@@ -103,10 +103,10 @@ while IFS= read -r line; do
 
   # Parse task line
   IFS='|' read -r id desc prompt verify <<< "$line"
-  TASK_IDS+=("$(echo "$id" | xargs)")
-  TASK_DESCS+=("$(echo "$desc" | xargs)")
-  TASK_PROMPTS+=("$(echo "$prompt" | xargs)")
-  TASK_VERIFY+=("$(echo "$verify" | xargs)")
+  TASK_IDS+=("$(echo "$id" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')")
+  TASK_DESCS+=("$(echo "$desc" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')")
+  TASK_PROMPTS+=("$(echo "$prompt" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')")
+  TASK_VERIFY+=("$(echo "$verify" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')")
   TASK_COUNT=$((TASK_COUNT + 1))
 done < "$MANIFEST"
 

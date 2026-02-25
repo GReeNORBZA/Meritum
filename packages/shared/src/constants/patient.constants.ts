@@ -79,6 +79,9 @@ export const PatientAuditAction = {
   EXPORT_REQUESTED: 'patient.export_requested',
   EXPORT_DOWNLOADED: 'patient.export_downloaded',
   SEARCHED: 'patient.searched',
+  CORRECTION_APPLIED: 'patient.correction_applied',
+  ACCESS_EXPORT_REQUESTED: 'export.patient_access_requested',
+  ACCESS_EXPORT_READY: 'export.patient_access_ready',
 } as const;
 
 export type PatientAuditAction =

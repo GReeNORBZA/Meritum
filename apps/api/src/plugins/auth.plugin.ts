@@ -16,6 +16,7 @@ declare module 'fastify' {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     authorize: (...permissions: string[]) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     checkSubscription: (...statuses: string[]) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    checkAmendmentGate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -36,6 +37,7 @@ const SENSITIVE_BODY_FIELDS = new Set([
   'current_totp_code',
   'recovery_code',
   'mfa_session_token',
+  'token',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -67,8 +69,19 @@ function sanitizeBody(body: unknown): Record<string, unknown> | undefined {
 // Plugin: authenticate
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Amendment gate deps (optional — provided when amendment repo is available)
+// ---------------------------------------------------------------------------
+
+export interface AmendmentGateDeps {
+  getBlockingAmendments(
+    providerId: string,
+  ): Promise<Array<{ amendmentId: string; title: string; effectiveDate: Date }>>;
+}
+
 export interface AuthPluginOptions {
   sessionDeps: SessionManagementDeps;
+  amendmentGateDeps?: AmendmentGateDeps;
 }
 
 async function authPlugin(app: FastifyInstance, opts: AuthPluginOptions) {
@@ -221,6 +234,100 @@ async function authPlugin(app: FastifyInstance, opts: AuthPluginOptions) {
       });
     };
   });
+
+  /**
+   * checkAmendmentGate — pre-handler that blocks PHI access when a physician
+   * has unacknowledged NON_MATERIAL IMA amendments past their effective date.
+   *
+   * Exempt routes (must NOT be gated):
+   *   - /api/v1/platform/amendments/:id/acknowledge
+   *   - /api/v1/platform/amendments/:id/respond
+   *   - /api/v1/account/*
+   *   - /api/v1/auth/logout
+   *   - Data export endpoints (/export)
+   *
+   * Returns 403 with error code IMA_AMENDMENT_REQUIRED if blocking amendments
+   * exist, along with a list of amendment IDs requiring acknowledgement.
+   */
+  app.decorate(
+    'checkAmendmentGate',
+    async function checkAmendmentGate(
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ) {
+      // If no amendment gate deps configured, skip the gate
+      if (!opts.amendmentGateDeps) {
+        return;
+      }
+
+      const ctx = request.authContext;
+      if (!ctx) {
+        return; // Not authenticated — authenticate middleware will handle
+      }
+
+      // Only applies to physicians (admins and delegates are not gated)
+      const role = ctx.role?.toUpperCase();
+      if (role !== 'PHYSICIAN') {
+        return;
+      }
+
+      // Check if this route is exempt from the amendment gate
+      const url = request.url.split('?')[0]; // Strip query string
+      if (isAmendmentGateExempt(url)) {
+        return;
+      }
+
+      const providerId = ctx.userId;
+      if (!providerId) {
+        return;
+      }
+
+      const blocking = await opts.amendmentGateDeps.getBlockingAmendments(providerId);
+
+      if (blocking.length > 0) {
+        reply.code(403).send({
+          error: {
+            code: 'IMA_AMENDMENT_REQUIRED',
+            message: 'You must acknowledge pending IMA amendments before accessing this resource.',
+            details: {
+              amendmentIds: blocking.map((a) => a.amendmentId),
+            },
+          },
+        });
+      }
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Amendment gate exemption check
+// ---------------------------------------------------------------------------
+
+const AMENDMENT_GATE_EXEMPT_PREFIXES = [
+  '/api/v1/account/',
+  '/api/v1/auth/logout',
+];
+
+const AMENDMENT_GATE_EXEMPT_PATTERNS = [
+  // Amendment acknowledge/respond endpoints (prevents circular dependency)
+  /^\/api\/v1\/platform\/amendments\/[^/]+\/acknowledge$/,
+  /^\/api\/v1\/platform\/amendments\/[^/]+\/respond$/,
+  // Data export endpoints (always available per IMA)
+  /\/export/,
+];
+
+function isAmendmentGateExempt(url: string): boolean {
+  for (const prefix of AMENDMENT_GATE_EXEMPT_PREFIXES) {
+    if (url.startsWith(prefix)) return true;
+  }
+  // Exact match for /api/v1/account (no trailing slash)
+  if (url === '/api/v1/account') return true;
+
+  for (const pattern of AMENDMENT_GATE_EXEMPT_PATTERNS) {
+    if (pattern.test(url)) return true;
+  }
+
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -301,4 +408,4 @@ export const auditLogPluginFp = fp(auditLogPlugin, {
 });
 
 // Named exports for direct use in tests
-export { authPlugin, auditLogPlugin, parseCookie, sanitizeBody };
+export { authPlugin, auditLogPlugin, parseCookie, sanitizeBody, isAmendmentGateExempt };

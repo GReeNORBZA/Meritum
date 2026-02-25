@@ -8,6 +8,17 @@ import {
   updateIncidentSchema,
   updateComponentStatusSchema,
 } from '@meritum/shared/schemas/platform.schema.js';
+import {
+  createAmendmentSchema,
+  amendmentIdParamSchema,
+  amendmentResponseSchema,
+  listAmendmentsQuerySchema,
+  createBreachSchema,
+  breachIdParamSchema,
+  breachUpdateSchema,
+  listBreachesQuerySchema,
+  fullHiExportSchema,
+} from '@meritum/shared/schemas/compliance.schema.js';
 import { z } from 'zod';
 import {
   createPlatformHandlers,
@@ -104,6 +115,12 @@ export async function platformRoutes(
     handler: handlers.listPaymentsHandler,
   });
 
+  // D19-004: Cancellation route
+  app.post('/api/v1/subscriptions/cancel', {
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.cancelSubscriptionHandler,
+  });
+
   // =========================================================================
   // Admin routes — auth required, admin role only
   // =========================================================================
@@ -167,5 +184,119 @@ export async function platformRoutes(
     },
     preHandler: [app.authenticate, requireRole('ADMIN')],
     handler: handlers.updateComponentStatusHandler,
+  });
+
+  // =========================================================================
+  // IMA Amendment routes — admin management
+  // =========================================================================
+
+  app.post('/api/v1/platform/amendments', {
+    schema: { body: createAmendmentSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.createAmendmentHandler,
+  });
+
+  app.get('/api/v1/platform/amendments', {
+    schema: { querystring: listAmendmentsQuerySchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.listAmendmentsHandler,
+  });
+
+  app.get('/api/v1/platform/amendments/:id', {
+    schema: { params: amendmentIdParamSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.getAmendmentHandler,
+  });
+
+  // =========================================================================
+  // IMA Amendment routes — physician acknowledge/respond
+  // =========================================================================
+
+  app.post('/api/v1/platform/amendments/:id/acknowledge', {
+    schema: { params: amendmentIdParamSchema },
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.acknowledgeAmendmentHandler,
+  });
+
+  app.post('/api/v1/platform/amendments/:id/respond', {
+    schema: {
+      params: amendmentIdParamSchema,
+      body: amendmentResponseSchema,
+    },
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.respondToAmendmentHandler,
+  });
+
+  // =========================================================================
+  // IMA Amendment: Physician pending amendments (account route)
+  // =========================================================================
+
+  app.get('/api/v1/account/pending-amendments', {
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.getMyPendingAmendmentsHandler,
+  });
+
+  // =========================================================================
+  // IMA Breach Notification routes — admin only
+  // =========================================================================
+
+  app.post('/api/v1/platform/breaches', {
+    schema: { body: createBreachSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.createBreachHandler,
+  });
+
+  app.get('/api/v1/platform/breaches', {
+    schema: { querystring: listBreachesQuerySchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.listBreachesHandler,
+  });
+
+  app.get('/api/v1/platform/breaches/:id', {
+    schema: { params: breachIdParamSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.getBreachHandler,
+  });
+
+  app.post('/api/v1/platform/breaches/:id/notify', {
+    schema: { params: breachIdParamSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.sendBreachNotificationsHandler,
+  });
+
+  app.post('/api/v1/platform/breaches/:id/updates', {
+    schema: {
+      params: breachIdParamSchema,
+      body: breachUpdateSchema,
+    },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.addBreachUpdateHandler,
+  });
+
+  app.post('/api/v1/platform/breaches/:id/resolve', {
+    schema: { params: breachIdParamSchema },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.resolveBreachHandler,
+  });
+
+  // =========================================================================
+  // IMA-051: Full Health Information Export — accessible in CANCELLED state
+  // =========================================================================
+
+  app.post('/api/v1/platform/export/full', {
+    schema: { body: fullHiExportSchema },
+    preHandler: [app.authenticate, app.authorize('DATA_EXPORT')],
+    config: { auditLog: true },
+    handler: handlers.generateFullExportHandler,
+  });
+
+  // =========================================================================
+  // IMA-060: Admin — Mark backup purged for a provider
+  // =========================================================================
+
+  app.post('/api/v1/admin/destruction/:providerId/backup-purged', {
+    schema: { params: z.object({ providerId: z.string().uuid() }) },
+    preHandler: [app.authenticate, requireRole('ADMIN')],
+    handler: handlers.markBackupPurgedHandler,
   });
 }

@@ -1,0 +1,40 @@
+# ============================================================================
+# Domain 17: Pricing Lifecycle & Discount Framework — Build Tasks (Batch 2)
+# Run: ./scripts/task-runner.sh scripts/tasks/domain-17-pricing-lifecycle.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-19
+#
+# Dependencies: Batch 1 (domain-16-clinic-tier) must be complete.
+# Clinic tier plans, practice tables, and practice_memberships must exist.
+# ============================================================================
+
+## Domain 17: Pricing Lifecycle — Constants & Utils
+
+D17-001 | Discount constants (annual, clinic, ceiling percentages) added to platform.constants.ts | scripts/tasks/prompts/d17/D17-001.md | pnpm --filter shared build
+D17-002 | Pure pricing calculation utility: calculateEffectiveRate with discount stacking and ceiling | scripts/tasks/prompts/d17/D17-002.md | pnpm --filter shared build
+D17-003 | Unit tests for pricing utils — all discount combinations, ceiling enforcement, early bird isolation | scripts/tasks/prompts/d17/D17-003.md | pnpm --filter shared vitest run src/utils/pricing.utils.test.ts
+
+## Domain 17: Pricing Lifecycle — Schema
+
+D17-004 | Add early_bird_locked_until and early_bird_expiry_notified columns to subscriptions table | scripts/tasks/prompts/d17/D17-004.md | pnpm --filter shared build
+D17-005 | Generate and apply migration for early bird rate lock columns | scripts/tasks/prompts/d17/D17-005.md | cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1
+
+## Domain 17: Pricing Lifecycle — Service Layer
+
+D17-010 | Service: early bird rate lock — set locked_until on checkout completion | scripts/tasks/prompts/d17/D17-010.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D17-011 | Service: early bird re-signup prevention — hasEverHadEarlyBird check in checkout | scripts/tasks/prompts/d17/D17-011.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D17-012 | Service: checkEarlyBirdExpiry scheduled job — 30-day warning, practice transition, standard transition | scripts/tasks/prompts/d17/D17-012.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D17-013 | Service: early bird + clinic interaction — acceptInvitation billing_mode determination, practice creation with early bird members | scripts/tasks/prompts/d17/D17-013.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D17-014 | Service: proactive transition notifications — practice admin alerts for early bird expiry | scripts/tasks/prompts/d17/D17-014.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+D17-015 | Integration tests: full early bird lifecycle (rate lock, expiry, re-signup prevention, practice transition) | scripts/tasks/prompts/d17/D17-015.md | pnpm --filter api vitest run src/domains/platform/platform.test.ts
+
+## Domain 17: Pricing Lifecycle — Security Tests
+
+D17-040 | Security: early bird re-signup prevention after cancellation | scripts/tasks/prompts/d17/D17-040.md | pnpm --filter api vitest run test/security/platform/platform.earlybird-resignup.security.ts
+D17-041 | Security: discount ceiling cannot be bypassed — no rate below 85% of base | scripts/tasks/prompts/d17/D17-041.md | pnpm --filter api vitest run test/security/platform/platform.discount-ceiling.security.ts
+D17-042 | Security: early bird expiry transitions — no orphaned subscriptions | scripts/tasks/prompts/d17/D17-042.md | pnpm --filter api vitest run test/security/platform/platform.earlybird-expiry.security.ts
+
+## Domain 17: Pricing Lifecycle — Final Validation
+
+D17-099 | Full validation: tsc --noEmit + all platform tests + regression check | scripts/tasks/prompts/d17/D17-099.md | pnpm --filter shared build && pnpm --filter api vitest run src/domains/platform/ test/integration/platform/ test/security/platform/

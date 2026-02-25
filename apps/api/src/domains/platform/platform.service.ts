@@ -3,22 +3,33 @@ import {
   EARLY_BIRD_CAP,
   GST_RATE,
   DELETION_GRACE_PERIOD_DAYS,
+  BACKUP_PURGE_DEADLINE_DAYS,
+  PlatformAuditAction,
   PaymentStatus,
   StripeWebhookEvent,
   FeatureAccessMatrix,
   StatusComponent,
   ComponentHealth,
   IncidentStatus,
+  EARLY_BIRD_RATE_LOCK_MONTHS,
+  EARLY_BIRD_EXPIRY_WARNING_DAYS,
+  BreachStatus,
+  BreachUpdateType,
   type Feature,
 } from '@meritum/shared/constants/platform.constants.js';
+import { isEarlyBirdRate } from '@meritum/shared/utils/pricing.utils.js';
 import { SubscriptionStatus } from '@meritum/shared/constants/iam.constants.js';
-import { ConflictError, BusinessRuleError, NotFoundError, ValidationError } from '../../lib/errors.js';
+import { ConflictError, BusinessRuleError, NotFoundError, ValidationError, ForbiddenError } from '../../lib/errors.js';
 import {
   type SubscriptionRepository,
   type PaymentRepository,
   type StatusComponentRepository,
   type IncidentRepository,
+  type AmendmentRepository,
+  type BreachRepository,
+  type DestructionTrackingRepository,
 } from './platform.repository.js';
+import { type SpacesFileClient } from '../../lib/spaces.js';
 
 // ---------------------------------------------------------------------------
 // Stripe SDK interface (injected for testability)
@@ -85,6 +96,11 @@ export interface StripeClient {
   };
   subscriptions: {
     cancel(subscriptionId: string): Promise<{ id: string; status: string }>;
+    update(subscriptionId: string, params: {
+      items?: Array<{ id?: string; price?: string; quantity?: number }>;
+      quantity?: number;
+      proration_behavior?: string;
+    }): Promise<{ id: string; status: string; items?: { data: Array<{ id: string; price: { id: string } }> } }>;
   };
 }
 
@@ -140,22 +156,38 @@ export interface AuditLogger {
   }): Promise<void>;
 }
 
+// ---------------------------------------------------------------------------
+// Active provider repo interface (for amendment notifications)
+// ---------------------------------------------------------------------------
+
+export interface ActiveProviderRepo {
+  findActiveProviderIds(): Promise<string[]>;
+}
+
 export interface PlatformServiceDeps {
   subscriptionRepo: SubscriptionRepository;
   paymentRepo: PaymentRepository;
   statusComponentRepo: StatusComponentRepository;
   incidentRepo: IncidentRepository;
+  amendmentRepo?: AmendmentRepository;
+  activeProviderRepo?: ActiveProviderRepo;
   userRepo: UserRepo;
   stripe: StripeClient;
   config: {
     stripePriceStandardMonthly: string;
     stripePriceStandardAnnual: string;
     stripePriceEarlyBirdMonthly: string;
+    stripePriceEarlyBirdAnnual: string;
+    stripePriceClinicMonthly?: string;
+    stripePriceClinicAnnual?: string;
     stripeWebhookSecret: string;
     gstTaxRateId?: string;
   };
   dataDeletionRepo?: DataDeletionRepo;
+  breachRepo?: BreachRepository;
   auditLogger?: AuditLogger;
+  destructionTrackingRepo?: DestructionTrackingRepository;
+  spacesFileClient?: SpacesFileClient;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +210,12 @@ function getPriceId(plan: string, config: PlatformServiceDeps['config']): string
       return config.stripePriceStandardAnnual;
     case SubscriptionPlan.EARLY_BIRD_MONTHLY:
       return config.stripePriceEarlyBirdMonthly;
+    case SubscriptionPlan.EARLY_BIRD_ANNUAL:
+      return config.stripePriceEarlyBirdAnnual;
+    case SubscriptionPlan.CLINIC_MONTHLY:
+      return config.stripePriceClinicMonthly ?? config.stripePriceStandardMonthly;
+    case SubscriptionPlan.CLINIC_ANNUAL:
+      return config.stripePriceClinicAnnual ?? config.stripePriceStandardAnnual;
     default:
       throw new BusinessRuleError(`Invalid subscription plan: ${plan}`);
   }
@@ -220,8 +258,19 @@ export async function createCheckoutSession(
     }
   }
 
-  // 2. Early bird cap check
-  if (plan === SubscriptionPlan.EARLY_BIRD_MONTHLY) {
+  // 2a. Early bird re-signup prevention (spec B2-3)
+  if (isEarlyBirdRate(plan)) {
+    const hadEarlyBird = await deps.subscriptionRepo.hasEverHadEarlyBird(userId);
+    if (hadEarlyBird) {
+      throw new BusinessRuleError(
+        'Early bird rate does not survive cancellation',
+        { code: 'EARLY_BIRD_INELIGIBLE' },
+      );
+    }
+  }
+
+  // 2b. Early bird cap check
+  if (plan === SubscriptionPlan.EARLY_BIRD_MONTHLY || plan === SubscriptionPlan.EARLY_BIRD_ANNUAL) {
     const earlyBirdCount = await deps.subscriptionRepo.countEarlyBirdSubscriptions();
     if (earlyBirdCount >= EARLY_BIRD_CAP) {
       throw new BusinessRuleError(
@@ -398,20 +447,43 @@ export async function handleCheckoutCompleted(
 
   const now = new Date();
   const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const effectivePlan = plan ?? SubscriptionPlan.STANDARD_MONTHLY;
 
-  await deps.subscriptionRepo.createSubscription({
+  const createdSub = await deps.subscriptionRepo.createSubscription({
     providerId: userId,
     stripeCustomerId,
     stripeSubscriptionId,
-    plan: plan ?? SubscriptionPlan.STANDARD_MONTHLY,
+    plan: effectivePlan,
     status: SubscriptionStatus.ACTIVE,
     currentPeriodStart: now,
     currentPeriodEnd: periodEnd,
   } as any);
 
+  // D17-010: Set early bird rate lock if plan is early bird
+  if (isEarlyBirdRate(effectivePlan)) {
+    const lockedUntil = new Date(now);
+    lockedUntil.setMonth(lockedUntil.getMonth() + EARLY_BIRD_RATE_LOCK_MONTHS);
+
+    await deps.subscriptionRepo.updateSubscription(createdSub.subscriptionId, {
+      earlyBirdLockedUntil: lockedUntil,
+    });
+
+    await deps.auditLogger?.log({
+      action: 'EARLY_BIRD_RATE_LOCKED',
+      resourceType: 'subscription',
+      resourceId: createdSub.subscriptionId,
+      actorType: 'system',
+      metadata: {
+        providerId: userId,
+        plan: effectivePlan,
+        lockedUntil: lockedUntil.toISOString(),
+      },
+    });
+  }
+
   eventEmitter?.emit('SUBSCRIPTION_CREATED', {
     userId,
-    plan: plan ?? SubscriptionPlan.STANDARD_MONTHLY,
+    plan: effectivePlan,
     stripeCustomerId,
     stripeSubscriptionId,
   });
@@ -682,6 +754,7 @@ export async function handleSubscriptionUpdated(
       [deps.config.stripePriceStandardMonthly]: SubscriptionPlan.STANDARD_MONTHLY,
       [deps.config.stripePriceStandardAnnual]: SubscriptionPlan.STANDARD_ANNUAL,
       [deps.config.stripePriceEarlyBirdMonthly]: SubscriptionPlan.EARLY_BIRD_MONTHLY,
+      [deps.config.stripePriceEarlyBirdAnnual]: SubscriptionPlan.EARLY_BIRD_ANNUAL,
     };
     const newPlan = planMap[priceId];
     if (newPlan && newPlan !== subscription.plan) {
@@ -745,6 +818,14 @@ export async function handleSubscriptionDeleted(
     providerId: subscription.providerId,
     cancelledAt: now.toISOString(),
     deletionScheduledAt: deletionScheduledAt.toISOString(),
+  });
+
+  // IMA-012: Emit EXPORT_WINDOW_STARTED — physician now has 45 days to export data
+  eventEmitter?.emit('EXPORT_WINDOW_STARTED', {
+    subscriptionId: subscription.subscriptionId,
+    providerId: subscription.providerId,
+    deletionScheduledAt: deletionScheduledAt.toISOString(),
+    exportWindowDays: DELETION_GRACE_PERIOD_DAYS,
   });
 }
 
@@ -920,6 +1001,14 @@ export async function runCancellationCheck(
       deletionScheduledAt: deletionScheduledAt.toISOString(),
     });
 
+    // IMA-012: Emit EXPORT_WINDOW_STARTED — physician now has 45 days to export data
+    eventEmitter?.emit('EXPORT_WINDOW_STARTED', {
+      subscriptionId: sub.subscriptionId,
+      providerId: sub.providerId,
+      deletionScheduledAt: deletionScheduledAt.toISOString(),
+      exportWindowDays: DELETION_GRACE_PERIOD_DAYS,
+    });
+
     await deps.auditLogger?.log({
       action: 'DUNNING_CANCELLATION',
       resourceType: 'subscription',
@@ -961,6 +1050,7 @@ export async function runDeletionCheck(
   deps: PlatformServiceDeps,
   eventEmitter?: PlatformEventEmitter,
 ): Promise<{ deleted: number }> {
+  const DAY_MS = 24 * 60 * 60 * 1000;
   const dueDeletion = await deps.subscriptionRepo.findSubscriptionsDueForDeletion();
   let deleted = 0;
 
@@ -969,6 +1059,17 @@ export async function runDeletionCheck(
     if (!deletionRepo) {
       continue; // Cannot process deletions without the deletion repository
     }
+
+    // IMA-012: Emit EXPORT_WINDOW_CLOSED before triggering deletion
+    eventEmitter?.emit('EXPORT_WINDOW_CLOSED', {
+      subscriptionId: sub.subscriptionId,
+      providerId: sub.providerId,
+      deletionScheduledAt: sub.deletionScheduledAt?.toISOString() ?? new Date().toISOString(),
+    });
+
+    // IMA-060: Look up user email BEFORE deactivation so we can store it
+    const user = await deps.userRepo.findUserById(sub.providerId);
+    const lastKnownEmail = user?.email ?? null;
 
     // 1. Delete PHI: claims, patients, reports
     await deletionRepo.deleteClaimsByProviderId(sub.providerId);
@@ -987,10 +1088,54 @@ export async function runDeletionCheck(
     // 5. Deactivate user account
     await deletionRepo.deactivateUser(sub.providerId);
 
+    const now = new Date();
+
+    // IMA-060: Create destruction tracking record (DB deletion complete)
+    if (deps.destructionTrackingRepo) {
+      const backupPurgeDeadline = new Date(
+        now.getTime() + BACKUP_PURGE_DEADLINE_DAYS * DAY_MS,
+      );
+
+      await deps.destructionTrackingRepo.createTrackingRecord({
+        providerId: sub.providerId,
+        lastKnownEmail: lastKnownEmail,
+        activeDeletedAt: now,
+        backupPurgeDeadline,
+      });
+
+      await deps.auditLogger?.log({
+        action: PlatformAuditAction.DESTRUCTION_ACTIVE_DELETED,
+        resourceType: 'destruction_tracking',
+        resourceId: sub.providerId,
+        actorType: 'system',
+        metadata: { subscriptionId: sub.subscriptionId },
+      });
+    }
+
+    // IMA-060: Delete DO Spaces files scoped to this provider
+    if (deps.spacesFileClient) {
+      await deps.spacesFileClient.deleteProviderFiles(sub.providerId);
+
+      if (deps.destructionTrackingRepo) {
+        await deps.destructionTrackingRepo.updateFilesDeletedAt(
+          sub.providerId,
+          new Date(),
+        );
+      }
+
+      await deps.auditLogger?.log({
+        action: PlatformAuditAction.DESTRUCTION_FILES_DELETED,
+        resourceType: 'destruction_tracking',
+        resourceId: sub.providerId,
+        actorType: 'system',
+        metadata: { subscriptionId: sub.subscriptionId },
+      });
+    }
+
     eventEmitter?.emit('ACCOUNT_DATA_DELETED', {
       subscriptionId: sub.subscriptionId,
       providerId: sub.providerId,
-      deletedAt: new Date().toISOString(),
+      deletedAt: now.toISOString(),
     });
 
     await deps.auditLogger?.log({
@@ -1008,6 +1153,103 @@ export async function runDeletionCheck(
   }
 
   return { deleted };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Run Export Window Reminders (daily scheduled job) — IMA-012
+// ---------------------------------------------------------------------------
+
+/**
+ * Check CANCELLED subscriptions approaching data deletion and emit reminder
+ * notifications at specific intervals:
+ *   - 15 days remaining: EXPORT_WINDOW_REMINDER (HIGH priority)
+ *   - 7 days remaining: EXPORT_WINDOW_CLOSING (URGENT priority)
+ *   - 1 day remaining: EXPORT_WINDOW_CLOSING (URGENT priority, final warning)
+ *
+ * The export window is 45 days (DELETION_GRACE_PERIOD_DAYS).
+ * Idempotent: safe to run multiple times per day. Notifications are emitted
+ * based on the exact day remaining, so running twice on the same day will
+ * produce duplicate events (the notification service should deduplicate).
+ */
+export async function runExportWindowReminders(
+  deps: PlatformServiceDeps,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<{ reminded: number }> {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const cancelledSubs = await deps.subscriptionRepo.findCancelledSubscriptionsInExportWindow();
+  let reminded = 0;
+  const now = Date.now();
+
+  for (const sub of cancelledSubs) {
+    if (!sub.deletionScheduledAt) continue;
+
+    const deletionTime = sub.deletionScheduledAt instanceof Date
+      ? sub.deletionScheduledAt.getTime()
+      : new Date(sub.deletionScheduledAt).getTime();
+
+    const daysRemaining = Math.ceil((deletionTime - now) / DAY_MS);
+
+    if (daysRemaining === 15) {
+      eventEmitter?.emit('EXPORT_WINDOW_REMINDER', {
+        subscriptionId: sub.subscriptionId,
+        providerId: sub.providerId,
+        daysRemaining: 15,
+        deletionScheduledAt: sub.deletionScheduledAt instanceof Date
+          ? sub.deletionScheduledAt.toISOString()
+          : new Date(sub.deletionScheduledAt).toISOString(),
+      });
+
+      await deps.auditLogger?.log({
+        action: 'EXPORT_WINDOW_REMINDER',
+        resourceType: 'subscription',
+        resourceId: sub.subscriptionId,
+        actorType: 'system',
+        metadata: { providerId: sub.providerId, daysRemaining: 15 },
+      });
+
+      reminded++;
+    } else if (daysRemaining === 7) {
+      eventEmitter?.emit('EXPORT_WINDOW_CLOSING', {
+        subscriptionId: sub.subscriptionId,
+        providerId: sub.providerId,
+        daysRemaining: 7,
+        deletionScheduledAt: sub.deletionScheduledAt instanceof Date
+          ? sub.deletionScheduledAt.toISOString()
+          : new Date(sub.deletionScheduledAt).toISOString(),
+      });
+
+      await deps.auditLogger?.log({
+        action: 'EXPORT_WINDOW_CLOSING',
+        resourceType: 'subscription',
+        resourceId: sub.subscriptionId,
+        actorType: 'system',
+        metadata: { providerId: sub.providerId, daysRemaining: 7 },
+      });
+
+      reminded++;
+    } else if (daysRemaining === 1) {
+      eventEmitter?.emit('EXPORT_WINDOW_CLOSING', {
+        subscriptionId: sub.subscriptionId,
+        providerId: sub.providerId,
+        daysRemaining: 1,
+        deletionScheduledAt: sub.deletionScheduledAt instanceof Date
+          ? sub.deletionScheduledAt.toISOString()
+          : new Date(sub.deletionScheduledAt).toISOString(),
+      });
+
+      await deps.auditLogger?.log({
+        action: 'EXPORT_WINDOW_CLOSING_FINAL',
+        resourceType: 'subscription',
+        resourceId: sub.subscriptionId,
+        actorType: 'system',
+        metadata: { providerId: sub.providerId, daysRemaining: 1 },
+      });
+
+      reminded++;
+    }
+  }
+
+  return { reminded };
 }
 
 // ---------------------------------------------------------------------------
@@ -1375,6 +1617,186 @@ export async function updateComponentStatus(
 }
 
 // ---------------------------------------------------------------------------
+// Service: Check Early Bird Expiry (daily scheduled job) — D17-012, D17-014
+// ---------------------------------------------------------------------------
+
+/**
+ * Scheduled job: check for early bird subscriptions approaching or past expiry.
+ * Runs daily via cron.
+ *
+ * Two phases:
+ * 1. Warning phase: early_bird_locked_until <= now() + 30 days AND early_bird_expiry_notified = false
+ * 2. Transition phase: early_bird_locked_until <= now()
+ *
+ * Spec reference: B2-2 — Early Bird Rate Lock
+ */
+export async function checkEarlyBirdExpiry(
+  deps: PlatformServiceDeps,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<{ warned: number; transitioned: number }> {
+  let warned = 0;
+  let transitioned = 0;
+
+  // --- Phase 1: 30-day warning notifications ---
+  const expiringSubs = await deps.subscriptionRepo.findExpiringEarlyBirdSubscriptions(
+    EARLY_BIRD_EXPIRY_WARNING_DAYS,
+  );
+
+  for (const sub of expiringSubs) {
+    // Emit warning to the physician
+    eventEmitter?.emit('EARLY_BIRD_EXPIRING', {
+      subscriptionId: sub.subscriptionId,
+      providerId: sub.providerId,
+      earlyBirdLockedUntil: sub.earlyBirdLockedUntil?.toISOString(),
+    });
+
+    // Set notified flag
+    await deps.subscriptionRepo.updateSubscription(sub.subscriptionId, {
+      earlyBirdExpiryNotified: true,
+    });
+
+    // D17-014: Proactive practice admin notification
+    const practiceMembership = await deps.subscriptionRepo.getActivePracticeMembership(
+      sub.providerId,
+    );
+    if (practiceMembership) {
+      const earlyBirdMembers = await deps.subscriptionRepo.getEarlyBirdMembersInPractice(
+        practiceMembership.practiceId,
+      );
+
+      // Check if any OTHER member has already been notified about expiry
+      const anyPreviouslyNotified = earlyBirdMembers.some(
+        (m) =>
+          m.physicianUserId !== sub.providerId &&
+          m.earlyBirdExpiryNotified === true,
+      );
+
+      if (!anyPreviouslyNotified) {
+        // This is the FIRST physician approaching expiry in this practice
+        eventEmitter?.emit('PRACTICE_EARLY_BIRD_TRANSITION_STARTING', {
+          practiceId: practiceMembership.practiceId,
+          message:
+            'A physician in your practice has an early bird rate expiring soon. Their billing will automatically transition to practice consolidated billing.',
+        });
+      }
+    }
+
+    warned++;
+  }
+
+  // --- Phase 2: Expiry transitions ---
+  const expiredSubs = await deps.subscriptionRepo.findExpiredEarlyBirdSubscriptions();
+
+  for (const sub of expiredSubs) {
+    const membership = await deps.subscriptionRepo.getActivePracticeMembership(
+      sub.providerId,
+    );
+
+    if (membership) {
+      // PATH A: Physician is in a practice
+      // 1. Cancel the individual early bird Stripe subscription
+      await deps.stripe.subscriptions.cancel(sub.stripeSubscriptionId);
+
+      // 2. Update subscription status to CANCELLED
+      await deps.subscriptionRepo.updateSubscriptionStatus(
+        sub.subscriptionId,
+        SubscriptionStatus.CANCELLED,
+        { cancelled_at: new Date() },
+      );
+
+      // 3. Transition practice membership billing_mode
+      await deps.subscriptionRepo.updatePracticeMembershipBillingMode(
+        membership.membershipId,
+        'PRACTICE_CONSOLIDATED',
+      );
+
+      // 4. Emit notifications
+      eventEmitter?.emit('EARLY_BIRD_EXPIRED', {
+        subscriptionId: sub.subscriptionId,
+        providerId: sub.providerId,
+        path: 'A',
+        transitionedTo: 'PRACTICE_CONSOLIDATED',
+      });
+
+      eventEmitter?.emit('PRACTICE_MEMBER_TRANSITIONED', {
+        practiceId: membership.practiceId,
+        providerId: sub.providerId,
+      });
+
+      // 5. Audit log
+      await deps.auditLogger?.log({
+        action: 'EARLY_BIRD_EXPIRED_PATH_A',
+        resourceType: 'subscription',
+        resourceId: sub.subscriptionId,
+        actorType: 'system',
+        metadata: {
+          providerId: sub.providerId,
+          practiceId: membership.practiceId,
+          membershipId: membership.membershipId,
+          transitionedTo: 'PRACTICE_CONSOLIDATED',
+        },
+      });
+
+      // D17-014: Check if all members are now post-early-bird
+      const remainingEarlyBird = await deps.subscriptionRepo.getEarlyBirdMembersInPractice(
+        membership.practiceId,
+      );
+      if (remainingEarlyBird.length === 0) {
+        eventEmitter?.emit('PRACTICE_ALL_MEMBERS_POST_EARLY_BIRD', {
+          practiceId: membership.practiceId,
+          message:
+            'All physicians in your practice have transitioned from early bird rates. Your practice is now fully on clinic tier consolidated billing.',
+        });
+      }
+    } else {
+      // PATH B: Physician is NOT in a practice
+      // 1. Determine new plan
+      const newPlan =
+        sub.plan === SubscriptionPlan.EARLY_BIRD_MONTHLY
+          ? SubscriptionPlan.STANDARD_MONTHLY
+          : SubscriptionPlan.STANDARD_ANNUAL;
+
+      // 2. Update Stripe subscription to new price
+      const newPriceId = getPriceId(newPlan, deps.config);
+      await deps.stripe.subscriptions.update(sub.stripeSubscriptionId, {
+        items: [{ price: newPriceId }],
+      });
+
+      // 3. Update subscription record
+      await deps.subscriptionRepo.updateSubscription(sub.subscriptionId, {
+        plan: newPlan,
+        earlyBirdLockedUntil: null,
+      });
+
+      // 4. Emit notification
+      eventEmitter?.emit('EARLY_BIRD_EXPIRED', {
+        subscriptionId: sub.subscriptionId,
+        providerId: sub.providerId,
+        path: 'B',
+        transitionedTo: newPlan,
+      });
+
+      // 5. Audit log
+      await deps.auditLogger?.log({
+        action: 'EARLY_BIRD_EXPIRED_PATH_B',
+        resourceType: 'subscription',
+        resourceId: sub.subscriptionId,
+        actorType: 'system',
+        metadata: {
+          providerId: sub.providerId,
+          previousPlan: sub.plan,
+          newPlan,
+        },
+      });
+    }
+
+    transitioned++;
+  }
+
+  return { warned, transitioned };
+}
+
+// ---------------------------------------------------------------------------
 // Service: Seed Status Components (idempotent)
 // ---------------------------------------------------------------------------
 
@@ -1397,4 +1819,721 @@ export async function seedStatusComponents(
   deps: PlatformServiceDeps,
 ): Promise<void> {
   await deps.statusComponentRepo.seedComponents(STATUS_COMPONENT_SEED);
+}
+
+// ---------------------------------------------------------------------------
+// Service: IMA Amendment — Create (admin only)
+// ---------------------------------------------------------------------------
+
+export interface CreateAmendmentInput {
+  amendmentType: string;
+  title: string;
+  description: string;
+  documentText: string;
+  effectiveDate: Date;
+}
+
+export interface AmendmentAdminContext {
+  userId: string;
+  role: string;
+}
+
+/**
+ * Create a new IMA amendment. Admin-only — enforced at service layer as
+ * defense-in-depth (do not rely solely on route-level guards).
+ *
+ * 1. Verify caller has ADMIN role.
+ * 2. Create amendment via repository.
+ * 3. Emit IMA_AMENDMENT_NOTICE notification to all active physicians (fire-and-forget).
+ * 4. Emit audit event amendment.created.
+ */
+export async function createAmendment(
+  deps: PlatformServiceDeps,
+  adminCtx: AmendmentAdminContext,
+  data: CreateAmendmentInput,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<ReturnType<NonNullable<PlatformServiceDeps['amendmentRepo']>['createAmendment']> extends Promise<infer T> ? T : never> {
+  // 1. Admin-only check (defense-in-depth)
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only administrators can create amendments');
+  }
+
+  if (!deps.amendmentRepo) {
+    throw new Error('Amendment repository not configured');
+  }
+
+  // 2. Create amendment record
+  const amendment = await deps.amendmentRepo.createAmendment({
+    amendmentType: data.amendmentType,
+    title: data.title,
+    description: data.description,
+    documentText: data.documentText,
+    effectiveDate: data.effectiveDate,
+    createdBy: adminCtx.userId,
+  });
+
+  // 3. Fire-and-forget notification to all active physicians
+  if (eventEmitter && deps.activeProviderRepo) {
+    try {
+      const providerIds = await deps.activeProviderRepo.findActiveProviderIds();
+      eventEmitter.emit('IMA_AMENDMENT_NOTICE', {
+        amendmentId: amendment.amendmentId,
+        amendmentType: data.amendmentType,
+        title: data.title,
+        effectiveDate: data.effectiveDate.toISOString(),
+        recipientProviderIds: providerIds,
+      });
+    } catch {
+      // Notification delivery failures must not fail the transaction
+    }
+  }
+
+  // 4. Audit event
+  await deps.auditLogger?.log({
+    action: 'amendment.created',
+    resourceType: 'ima_amendment',
+    resourceId: amendment.amendmentId,
+    actorType: 'admin',
+    metadata: {
+      adminUserId: adminCtx.userId,
+      amendmentType: data.amendmentType,
+      title: data.title,
+    },
+  });
+
+  return amendment;
+}
+
+// ---------------------------------------------------------------------------
+// Service: IMA Amendment — Acknowledge (NON_MATERIAL)
+// ---------------------------------------------------------------------------
+
+export interface AmendmentPhysicianContext {
+  userId: string;
+  providerId: string;
+  ipAddress: string;
+  userAgent: string;
+}
+
+/**
+ * Acknowledge a NON_MATERIAL amendment.
+ * Creates a response record with type ACKNOWLEDGED.
+ * Emits audit event amendment.acknowledged.
+ */
+export async function acknowledgeAmendment(
+  deps: PlatformServiceDeps,
+  ctx: AmendmentPhysicianContext,
+  amendmentId: string,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<void> {
+  if (!deps.amendmentRepo) {
+    throw new Error('Amendment repository not configured');
+  }
+
+  // Verify amendment exists
+  const amendment = await deps.amendmentRepo.findAmendmentById(amendmentId);
+  if (!amendment) {
+    throw new NotFoundError('Amendment');
+  }
+
+  // Create ACKNOWLEDGED response
+  await deps.amendmentRepo.createAmendmentResponse({
+    amendmentId,
+    providerId: ctx.providerId,
+    responseType: 'ACKNOWLEDGED',
+    ipAddress: ctx.ipAddress,
+    userAgent: ctx.userAgent,
+  });
+
+  // Audit event
+  await deps.auditLogger?.log({
+    action: 'amendment.acknowledged',
+    resourceType: 'ima_amendment',
+    resourceId: amendmentId,
+    actorType: 'physician',
+    metadata: {
+      userId: ctx.userId,
+      providerId: ctx.providerId,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Service: IMA Amendment — Respond (MATERIAL: ACCEPTED or REJECTED)
+// ---------------------------------------------------------------------------
+
+/**
+ * Respond to a MATERIAL amendment with ACCEPTED or REJECTED.
+ * Emits audit event amendment.accepted or amendment.rejected.
+ */
+export async function respondToAmendment(
+  deps: PlatformServiceDeps,
+  ctx: AmendmentPhysicianContext,
+  amendmentId: string,
+  responseType: 'ACCEPTED' | 'REJECTED',
+  eventEmitter?: PlatformEventEmitter,
+): Promise<void> {
+  if (!deps.amendmentRepo) {
+    throw new Error('Amendment repository not configured');
+  }
+
+  // Verify amendment exists
+  const amendment = await deps.amendmentRepo.findAmendmentById(amendmentId);
+  if (!amendment) {
+    throw new NotFoundError('Amendment');
+  }
+
+  // Create response
+  await deps.amendmentRepo.createAmendmentResponse({
+    amendmentId,
+    providerId: ctx.providerId,
+    responseType,
+    ipAddress: ctx.ipAddress,
+    userAgent: ctx.userAgent,
+  });
+
+  // Audit event
+  const auditAction = responseType === 'ACCEPTED'
+    ? 'amendment.accepted'
+    : 'amendment.rejected';
+
+  await deps.auditLogger?.log({
+    action: auditAction,
+    resourceType: 'ima_amendment',
+    resourceId: amendmentId,
+    actorType: 'physician',
+    metadata: {
+      userId: ctx.userId,
+      providerId: ctx.providerId,
+      responseType,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Service: IMA Amendment — Get Blocking Amendments (gate middleware)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return NON_MATERIAL amendments past their effective_date that the provider
+ * hasn't acknowledged. Used by gate middleware to block PHI access.
+ *
+ * MATERIAL amendments do NOT block — silence = existing terms continue
+ * per IMA section 11.3.
+ */
+export async function getBlockingAmendments(
+  deps: PlatformServiceDeps,
+  providerId: string,
+): Promise<Array<{ amendmentId: string; title: string; effectiveDate: Date }>> {
+  if (!deps.amendmentRepo) {
+    return [];
+  }
+
+  // Get all pending (unresponded, past effective date) amendments for this provider
+  const pending = await deps.amendmentRepo.findPendingAmendmentsForProvider(providerId);
+
+  // Filter to NON_MATERIAL only — MATERIAL amendments do not block
+  return pending
+    .filter((a) => a.amendmentType === 'NON_MATERIAL')
+    .map((a) => ({
+      amendmentId: a.amendmentId,
+      title: a.title,
+      effectiveDate: a.effectiveDate,
+    }));
+}
+
+// ---------------------------------------------------------------------------
+// Service: IMA Amendment — Run Reminders (scheduled job)
+// ---------------------------------------------------------------------------
+
+/**
+ * Scheduled job: find MATERIAL amendments where the deadline is 30 days or
+ * 7 days away, emit IMA_AMENDMENT_REMINDER to providers who haven't
+ * responded yet.
+ *
+ * Idempotent: safe to run multiple times per day.
+ */
+export async function runAmendmentReminders(
+  deps: PlatformServiceDeps,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<{ reminded: number }> {
+  if (!deps.amendmentRepo || !deps.activeProviderRepo) {
+    return { reminded: 0 };
+  }
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  let reminded = 0;
+
+  // Get all amendments (we need to filter for MATERIAL type with upcoming effective_date)
+  const allAmendments = await deps.amendmentRepo.listAmendments({
+    page: 1,
+    pageSize: 1000,
+  });
+
+  const activeProviderIds = await deps.activeProviderRepo.findActiveProviderIds();
+
+  for (const amendment of allAmendments.data) {
+    // Only MATERIAL amendments get reminders
+    if (amendment.amendmentType !== 'MATERIAL') {
+      continue;
+    }
+
+    const effectiveTime = amendment.effectiveDate instanceof Date
+      ? amendment.effectiveDate.getTime()
+      : new Date(amendment.effectiveDate).getTime();
+
+    const daysUntilEffective = Math.ceil((effectiveTime - now) / DAY_MS);
+
+    // Only send reminders at 30 days and 7 days
+    if (daysUntilEffective !== 30 && daysUntilEffective !== 7) {
+      continue;
+    }
+
+    // For each active provider, check if they've already responded
+    for (const providerId of activeProviderIds) {
+      const existingResponse = await deps.amendmentRepo.getAmendmentResponse(
+        amendment.amendmentId,
+        providerId,
+      );
+
+      if (!existingResponse) {
+        eventEmitter?.emit('IMA_AMENDMENT_REMINDER', {
+          amendmentId: amendment.amendmentId,
+          providerId,
+          title: amendment.title,
+          daysUntilEffective,
+          effectiveDate: amendment.effectiveDate instanceof Date
+            ? amendment.effectiveDate.toISOString()
+            : new Date(amendment.effectiveDate).toISOString(),
+        });
+        reminded++;
+      }
+    }
+  }
+
+  return { reminded };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Breach Notification — Create Breach (admin only)
+// ---------------------------------------------------------------------------
+
+export interface BreachAdminContext {
+  userId: string;
+  role: string;
+}
+
+export interface CreateBreachInput {
+  breachDescription: string;
+  breachDate: Date;
+  awarenessDate: Date;
+  hiDescription: string;
+  includesIihi: boolean;
+  affectedCount?: number;
+  riskAssessment?: string;
+  mitigationSteps?: string;
+  contactName: string;
+  contactEmail: string;
+  affectedProviderIds: string[];
+}
+
+/**
+ * Create a breach record and link all affected custodians.
+ * Admin-only — enforced at service layer (defense-in-depth).
+ */
+export async function createBreach(
+  deps: PlatformServiceDeps,
+  adminCtx: BreachAdminContext,
+  data: CreateBreachInput,
+  eventEmitter?: PlatformEventEmitter,
+) {
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only administrators can create breach records');
+  }
+
+  if (!deps.breachRepo) {
+    throw new Error('Breach repository not configured');
+  }
+
+  const breach = await deps.breachRepo.createBreachRecord({
+    breachDescription: data.breachDescription,
+    breachDate: data.breachDate,
+    awarenessDate: data.awarenessDate,
+    hiDescription: data.hiDescription,
+    includesIihi: data.includesIihi,
+    affectedCount: data.affectedCount,
+    riskAssessment: data.riskAssessment,
+    mitigationSteps: data.mitigationSteps,
+    contactName: data.contactName,
+    contactEmail: data.contactEmail,
+    createdBy: adminCtx.userId,
+  });
+
+  // Add all affected custodians
+  for (const providerId of data.affectedProviderIds) {
+    await deps.breachRepo.addAffectedCustodian(breach.breachId, providerId);
+  }
+
+  // Audit event
+  await deps.auditLogger?.log({
+    action: 'breach.created',
+    resourceType: 'breach_record',
+    resourceId: breach.breachId,
+    actorType: 'admin',
+    metadata: {
+      adminUserId: adminCtx.userId,
+      affectedProviderCount: data.affectedProviderIds.length,
+    },
+  });
+
+  return breach;
+}
+
+// ---------------------------------------------------------------------------
+// Service: Breach Notification — Send Initial Notifications
+// ---------------------------------------------------------------------------
+
+/**
+ * Send BREACH_INITIAL_NOTIFICATION to all unnotified custodians.
+ * Each custodian receives notification to both primary AND secondary email
+ * (IMA section 11.7) via the notification service's dual-delivery mechanism.
+ *
+ * Creates an INITIAL breach_update record after sending.
+ * Tracks the 72h deadline from awarenessDate.
+ */
+export async function sendBreachNotifications(
+  deps: PlatformServiceDeps,
+  adminCtx: BreachAdminContext,
+  breachId: string,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<{ notified: number }> {
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only administrators can send breach notifications');
+  }
+
+  if (!deps.breachRepo) {
+    throw new Error('Breach repository not configured');
+  }
+
+  const breach = await deps.breachRepo.findBreachById(breachId);
+  if (!breach) {
+    throw new NotFoundError('Breach record');
+  }
+
+  const unnotified = await deps.breachRepo.getUnnotifiedCustodians(breachId);
+
+  let notifiedCount = 0;
+
+  for (const custodian of unnotified) {
+    // Emit BREACH_INITIAL_NOTIFICATION — dual-delivery sends to both
+    // primary and secondary email automatically
+    try {
+      eventEmitter?.emit('BREACH_INITIAL_NOTIFICATION', {
+        breachId,
+        providerId: custodian.providerId,
+        breachDescription: breach.breachDescription,
+        contactName: breach.contactName,
+        contactEmail: breach.contactEmail,
+      });
+    } catch {
+      // Notification delivery failures must not halt the loop
+    }
+
+    await deps.breachRepo.markCustodianNotified(
+      breachId,
+      custodian.providerId,
+      'EMAIL',
+    );
+    notifiedCount++;
+  }
+
+  // Create INITIAL breach update record
+  if (notifiedCount > 0) {
+    await deps.breachRepo.createBreachUpdate(breachId, {
+      updateType: BreachUpdateType.INITIAL,
+      content: `Initial breach notification sent to ${notifiedCount} custodian(s).`,
+      createdBy: adminCtx.userId,
+    });
+
+    // Update breach status to NOTIFYING
+    await deps.breachRepo.updateBreachStatus(breachId, BreachStatus.NOTIFYING);
+  }
+
+  // Audit event
+  await deps.auditLogger?.log({
+    action: 'breach.notification_sent',
+    resourceType: 'breach_record',
+    resourceId: breachId,
+    actorType: 'admin',
+    metadata: {
+      adminUserId: adminCtx.userId,
+      notifiedCount,
+      awarenessDate: breach.awarenessDate instanceof Date
+        ? breach.awarenessDate.toISOString()
+        : String(breach.awarenessDate),
+    },
+  });
+
+  return { notified: notifiedCount };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Breach Notification — Add Supplementary Update
+// ---------------------------------------------------------------------------
+
+/**
+ * Add a SUPPLEMENTARY breach update and notify all affected custodians
+ * (both primary and secondary email) via BREACH_UPDATE event.
+ */
+export async function addBreachUpdate(
+  deps: PlatformServiceDeps,
+  adminCtx: BreachAdminContext,
+  breachId: string,
+  content: string,
+  eventEmitter?: PlatformEventEmitter,
+) {
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only administrators can add breach updates');
+  }
+
+  if (!deps.breachRepo) {
+    throw new Error('Breach repository not configured');
+  }
+
+  const breach = await deps.breachRepo.findBreachById(breachId);
+  if (!breach) {
+    throw new NotFoundError('Breach record');
+  }
+
+  const update = await deps.breachRepo.createBreachUpdate(breachId, {
+    updateType: BreachUpdateType.SUPPLEMENTARY,
+    content,
+    createdBy: adminCtx.userId,
+  });
+
+  // Notify all affected custodians (not just unnotified — supplementary goes to all)
+  // The notification service's dual-delivery mechanism handles secondary emails
+  try {
+    eventEmitter?.emit('BREACH_UPDATE', {
+      breachId,
+      updateId: update.updateId,
+      content,
+      contactName: breach.contactName,
+      contactEmail: breach.contactEmail,
+    });
+  } catch {
+    // Notification delivery failures must not fail the update
+  }
+
+  // Audit event
+  await deps.auditLogger?.log({
+    action: 'breach.updated',
+    resourceType: 'breach_record',
+    resourceId: breachId,
+    actorType: 'admin',
+    metadata: {
+      adminUserId: adminCtx.userId,
+      updateId: update.updateId,
+      updateType: BreachUpdateType.SUPPLEMENTARY,
+    },
+  });
+
+  return update;
+}
+
+// ---------------------------------------------------------------------------
+// Service: Breach Notification — Resolve Breach
+// ---------------------------------------------------------------------------
+
+/**
+ * Set breach status to RESOLVED with resolvedAt timestamp.
+ */
+export async function resolveBreach(
+  deps: PlatformServiceDeps,
+  adminCtx: BreachAdminContext,
+  breachId: string,
+  eventEmitter?: PlatformEventEmitter,
+) {
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only administrators can resolve breach records');
+  }
+
+  if (!deps.breachRepo) {
+    throw new Error('Breach repository not configured');
+  }
+
+  const breach = await deps.breachRepo.findBreachById(breachId);
+  if (!breach) {
+    throw new NotFoundError('Breach record');
+  }
+
+  if (breach.status === BreachStatus.RESOLVED) {
+    throw new ConflictError('Breach is already resolved');
+  }
+
+  const resolved = await deps.breachRepo.updateBreachStatus(
+    breachId,
+    BreachStatus.RESOLVED,
+    new Date(),
+  );
+
+  // Audit event
+  await deps.auditLogger?.log({
+    action: 'breach.resolved',
+    resourceType: 'breach_record',
+    resourceId: breachId,
+    actorType: 'admin',
+    metadata: {
+      adminUserId: adminCtx.userId,
+    },
+  });
+
+  return resolved;
+}
+
+// ---------------------------------------------------------------------------
+// Service: Breach Notification — Check Deadlines (scheduled job)
+// ---------------------------------------------------------------------------
+
+/**
+ * Scheduled job: find breaches where awarenessDate + 72h is approaching
+ * and custodians are still unnotified. Returns overdue breaches for
+ * admin alerting.
+ */
+export async function checkBreachDeadlines(
+  deps: PlatformServiceDeps,
+): Promise<{ overdueBreaches: Array<{ breachId: string; awarenessDate: Date | string }> }> {
+  if (!deps.breachRepo) {
+    throw new Error('Breach repository not configured');
+  }
+
+  const overdue = await deps.breachRepo.getOverdueBreaches();
+
+  return {
+    overdueBreaches: overdue.map((b) => ({
+      breachId: b.breachId,
+      awarenessDate: b.awarenessDate,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Run Destruction Confirmation (daily scheduled job) — IMA-060
+// ---------------------------------------------------------------------------
+
+/**
+ * Scheduled job: find destruction tracking records where backup has been purged
+ * but confirmation email has not yet been sent. Sends DATA_DESTRUCTION_CONFIRMED
+ * notification to the physician's last known email.
+ *
+ * Also detects overdue backup purges (deadline passed but not yet marked purged)
+ * and alerts admin.
+ */
+export async function runDestructionConfirmation(
+  deps: PlatformServiceDeps,
+  eventEmitter?: PlatformEventEmitter,
+): Promise<{ confirmed: number; overdueAlerts: number }> {
+  if (!deps.destructionTrackingRepo) {
+    return { confirmed: 0, overdueAlerts: 0 };
+  }
+
+  let confirmed = 0;
+  let overdueAlerts = 0;
+
+  // Phase 1: Send confirmation emails where backup has been purged
+  const pendingConfirmations =
+    await deps.destructionTrackingRepo.findPendingConfirmations();
+
+  for (const record of pendingConfirmations) {
+    if (record.lastKnownEmail) {
+      eventEmitter?.emit('DATA_DESTRUCTION_CONFIRMED', {
+        providerId: record.providerId,
+        email: record.lastKnownEmail,
+        activeDeletedAt: record.activeDeletedAt?.toISOString() ?? null,
+        filesDeletedAt: record.filesDeletedAt?.toISOString() ?? null,
+        backupPurgedAt: record.backupPurgedAt?.toISOString() ?? null,
+      });
+    }
+
+    await deps.destructionTrackingRepo.updateConfirmationSentAt(
+      record.providerId,
+      new Date(),
+    );
+
+    await deps.auditLogger?.log({
+      action: PlatformAuditAction.DESTRUCTION_CONFIRMED,
+      resourceType: 'destruction_tracking',
+      resourceId: record.providerId,
+      actorType: 'system',
+      metadata: {
+        trackingId: record.trackingId,
+        emailSent: !!record.lastKnownEmail,
+      },
+    });
+
+    confirmed++;
+  }
+
+  // Phase 2: Alert admin about overdue backup purges
+  const overdueRecords =
+    await deps.destructionTrackingRepo.findOverdueBackupPurges();
+
+  for (const record of overdueRecords) {
+    eventEmitter?.emit('DESTRUCTION_BACKUP_OVERDUE', {
+      providerId: record.providerId,
+      backupPurgeDeadline: record.backupPurgeDeadline?.toISOString() ?? null,
+    });
+
+    overdueAlerts++;
+  }
+
+  return { confirmed, overdueAlerts };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Mark Backup Purged (admin action) — IMA-060
+// ---------------------------------------------------------------------------
+
+/**
+ * Admin marks a provider's backups as purged after manual confirmation
+ * that all backup copies have been destroyed.
+ */
+export async function markBackupPurged(
+  deps: PlatformServiceDeps,
+  adminCtx: { userId: string; role: string },
+  providerId: string,
+): Promise<{ backupPurgedAt: Date }> {
+  if (adminCtx.role.toUpperCase() !== 'ADMIN') {
+    throw new ForbiddenError('Only admin can mark backup purges');
+  }
+
+  if (!deps.destructionTrackingRepo) {
+    throw new Error('Destruction tracking repository not configured');
+  }
+
+  const existing = await deps.destructionTrackingRepo.findByProviderId(providerId);
+  if (!existing) {
+    throw new NotFoundError('Destruction tracking record');
+  }
+
+  if (existing.backupPurgedAt) {
+    throw new ConflictError('Backup already marked as purged');
+  }
+
+  const backupPurgedAt = new Date();
+  await deps.destructionTrackingRepo.updateBackupPurgedAt(
+    providerId,
+    backupPurgedAt,
+  );
+
+  await deps.auditLogger?.log({
+    action: PlatformAuditAction.DESTRUCTION_BACKUP_PURGED,
+    resourceType: 'destruction_tracking',
+    resourceId: providerId,
+    actorType: 'admin',
+    metadata: { adminUserId: adminCtx.userId },
+  });
+
+  return { backupPurgedAt };
 }
