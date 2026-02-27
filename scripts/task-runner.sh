@@ -44,8 +44,9 @@ commit_and_push() {
   git commit -m "${task_id}: ${task_desc}"
   echo -e "${GREEN}  ✓ Committed: ${task_id}${NC}"
 
-  # Push to origin
-  git push origin HEAD
+  # Push to origin (pull-rebase first to avoid rejection if remote advanced)
+  git pull --rebase origin main 2>/dev/null || true
+  git push origin HEAD || echo -e "${YELLOW}  Push failed (non-blocking)${NC}"
   echo -e "${GREEN}  ✓ Pushed${NC}"
 }
 
