@@ -23,8 +23,31 @@ set -euo pipefail
 MAX_RETRIES=2                    # Retry a failed task this many times
 RETRY_DELAY=5                    # Seconds between retries
 LOG_DIR="logs/build"
-TASK_TIMEOUT=600                 # 10 minutes per task invocation
+TASK_TIMEOUT=1200                # 20 minutes per task invocation
 CLAUDE_CMD="claude"              # Claude Code CLI command
+
+# --- Git Auto-Commit ---
+commit_and_push() {
+  local task_id="$1"
+  local task_desc="$2"
+
+  # Stage all changes (gitignore handles exclusions: logs/, node_modules/, .env, etc.)
+  git add -A
+
+  # Check if there's anything to commit
+  if git diff --cached --quiet; then
+    echo -e "${YELLOW}  No changes to commit${NC}"
+    return 0
+  fi
+
+  # Commit with task ID and description
+  git commit -m "${task_id}: ${task_desc}"
+  echo -e "${GREEN}  ✓ Committed: ${task_id}${NC}"
+
+  # Push to origin
+  git push origin HEAD
+  echo -e "${GREEN}  ✓ Pushed${NC}"
+}
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -262,6 +285,7 @@ ${PROMPT}"
 
   # --- Record Result ---
   if [[ "$TASK_PASSED" == true ]]; then
+    commit_and_push "$TASK_ID" "$TASK_DESC"
     echo "PASSED ${TASK_ID} ${TASK_DESC}" >> "$SUMMARY_FILE"
     echo "${TASK_ID} PASSED" >> "$PROGRESS_FILE"
     PASSED=$((PASSED + 1))

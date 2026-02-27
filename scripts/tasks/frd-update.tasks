@@ -1,0 +1,59 @@
+## FRD Documentation Update — Sync FRDs with Implementation
+## Reads actual implementation code and updates FRD markdown files in-place.
+## Folds supplementary specs (Connect Care, MVP Addendum, Pricing Gap Closure, Mobile v2) into domain FRDs.
+
+## ── Domain 1: Identity & Access Management ──
+
+FRD-01 | Update Domain 1 (IAM) FRD: fold in PRACTICE_ADMIN role, secondary email, IMA amendments, breach notification, PHI read-access audit | scripts/tasks/prompts/frd/FRD-01.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_01_Identity_Access_1.md 3000
+
+## ── Domain 2: Reference Data ──
+
+FRD-02 | Update Domain 2 (Reference Data) FRD: fold in ICD crosswalk, provincial PHN formats, provider registry, billing guidance, anesthesia rules, bundling rules, reciprocal rules, justification templates | scripts/tasks/prompts/frd/FRD-02.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_02_Reference_Data.md 3000
+
+## ── Domain 9: Notification Service (consolidates Domain 3) ──
+
+FRD-03 | Update Domain 9 (Notification) FRD: reconcile with Domain 3 FRD, add shift reminders, missed billing alerts, export window events, refund events | scripts/tasks/prompts/frd/FRD-03.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_09_Notification_Service.md 1500
+
+## ── Domain 4.0: Claim Lifecycle Core ──
+
+FRD-04 | Update Domain 4.0 (Claim Core) FRD: 14-state machine, Connect Care SCC import, reconciliation, import batches, templates, anesthesia calc, bundling, text justification | scripts/tasks/prompts/frd/FRD-04.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_04_0_Claim_Lifecycle_Core.md 2500
+
+## ── Domain 4.1: AHCIP Claim Pathway ──
+
+FRD-05 | Update Domain 4.1 (AHCIP) FRD: sync with implementation for validation, fee calculation, batching, assessment scoring, after-hours detection | scripts/tasks/prompts/frd/FRD-05.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_04_1_AHCIP_Claim_Pathway.md 1500
+
+## ── Domain 4.2: WCB Claim Pathway ──
+
+FRD-06 | Update Domain 4.2 (WCB) FRD: sync with implementation for 8 form types, HL7 XML batching, validation engine, fee calculation, consultation categories | scripts/tasks/prompts/frd/FRD-06.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_04_2_WCB_Claim_Pathway.md 3000
+
+## ── Domain 5: Provider Management ──
+
+FRD-07 | Update Domain 5 (Provider) FRD: fold in PCPCM payment reconciliation, ARP BA types, facility-BA mapping, is_connect_care_user flag, routing logic | scripts/tasks/prompts/frd/FRD-07.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_05_Provider_Management.md 2500
+
+## ── Domain 6: Patient Registry ──
+
+FRD-08 | Update Domain 6 (Patient) FRD: fold in eligibility verification, reciprocal billing province detection, patient access request export, correction audit trail | scripts/tasks/prompts/frd/FRD-08.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_06_Patient_Registry.md 1500
+
+## ── Domain 7: Intelligence Engine ──
+
+FRD-09 | Update Domain 7 (Intelligence) FRD: fold in confidence-tiered rules (Tier A/B/C), revenue optimisation alerts, bedside-contingent rules, import-sourced claim evaluation | scripts/tasks/prompts/frd/FRD-09.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_07_Intelligence_Engine.md 2000
+
+## ── Domain 8: Analytics & Reporting ──
+
+FRD-10 | Update Domain 8 (Analytics) FRD: fold in ARP dashboard section, TM summary report, reciprocal billing reporting, subscription-based report generation, caching layer | scripts/tasks/prompts/frd/FRD-10.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_08_Analytics_Reporting.md 1500
+
+## ── Domain 10: Mobile Companion ──
+
+FRD-11 | Update Domain 10 (Mobile) FRD: fold in v2 spec — shift scheduling with RRULE, PHN-based encounter logging, Connect Care reconciliation, Connect Care onboarding mode | scripts/tasks/prompts/frd/FRD-11.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_10_Mobile_Companion.md 1500
+
+## ── Domain 11: Onboarding ──
+
+FRD-12 | Update Domain 11 (Onboarding) FRD: sync with implementation for 7-step wizard, IMA acknowledgement, Connect Care onboarding steps, guided tour | scripts/tasks/prompts/frd/FRD-12.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_11_Onboarding.md 1000
+
+## ── Domain 12: Platform Operations ──
+
+FRD-13 | Update Domain 12 (Platform) FRD: fold in all 5 pricing gap closure batches — clinic/practice tier, pricing lifecycle, discount framework, referral program redesign, cancellation policies, data export | scripts/tasks/prompts/frd/FRD-13.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_12_Platform_Operations.md 2000
+
+## ── Domain 13: Support System ──
+
+FRD-14 | Update Domain 13 (Support) FRD: sync with implementation for help centre, support tickets, SLA tracking, context-aware help, satisfaction ratings | scripts/tasks/prompts/frd/FRD-14.md | ./scripts/verify-frd.sh docs/frd/extracted/Meritum_Domain_13_Support_System.md 800

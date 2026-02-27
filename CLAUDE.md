@@ -786,6 +786,15 @@ Build domains in this order. Each domain's FRD is in `docs/frd/`.
 13. **Domain 10: Mobile Companion** — Responsive UI, ED shifts, favourites.
 14. **Domain 13: Support System** — Help centre, email support, ticket tracking.
 
+## GitHub & Git Configuration
+
+- **GitHub account:** GReeNORBZA
+- **Repository:** https://github.com/GReeNORBZA/Meritum.git (HTTPS remote)
+- **Authentication:** `gh` CLI handles git credentials via `credential.helper=!/usr/bin/gh auth git-credential`. No SSH key exists — all git operations (push/pull) go through the `gh` token over HTTPS.
+- **Git user config:** `user.name` and `user.email` are currently placeholder values (`Your Name`, `your.email@example.com`) — update these before committing if they haven't been set yet.
+- **Verify auth:** Run `gh auth status` to confirm the token is active. If expired, run `gh auth login`.
+- **No SSH key** in `~/.ssh/` — do not attempt SSH-based git operations. The HTTPS remote + gh credential helper is the intended setup.
+
 ## Working With This Codebase
 
 ### Build-Test-Fix Loop (MANDATORY)
