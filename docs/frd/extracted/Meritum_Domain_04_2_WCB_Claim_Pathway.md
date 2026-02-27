@@ -10,7 +10,7 @@ Domain 4.2 of 13  |  Critical Path: Position 4
 
 Meritum Health Technologies Inc.
 
-Version 1.0  |  February 2026
+Version 1.1  |  February 2026
 
 CONFIDENTIAL
 
@@ -42,6 +42,12 @@ WCB payment remittance reconciliation: separate XML schema, disbursement matchin
 
 WCB-specific API endpoints for claim CRUD, batch management, return file ingestion, and remittance import
 
+Connect Care WCB import: routing WCB claims from SCC extracts to the WCB pipeline, with auto-detection of WCB extract format and WCB-specific row validation
+
+Multi-procedure unbundling: WCB-specific code-pair rules where each distinct procedure is billed at 100% (contrasting AHCIP bundling), driven by the `wcb_relationship` column in the bundling rules matrix
+
+Text justification: WCB narrative justification scenario for complex cases, capturing structured treatment description, progress notes, and work capacity assessment
+
 ## 1.3 Out of Scope
 
 AHCIP/H-Link claim pathway (Domain 4.1)
@@ -55,6 +61,16 @@ myWCB portal automation (Phase 2 is file upload, not portal UI automation)
 WCB policy adjudication logic (Meritum submits claims; WCB decides acceptance)
 
 ## 1.4 Domain Dependencies
+
+| Domain | Dependency Type | Key Interfaces |
+| --- | --- | --- |
+| 4.0 Claim Lifecycle Core | Parent | State machine, base claims table, validation architecture, audit history |
+| 1 Identity & Access | Consumed | Auth, RBAC, delegate permissions, audit logging |
+| 2 Reference Data | Consumed | WCB fee schedule, SOMB codes (for premium calc), modifier rules, POB/NOI/skill codes, bundling rules matrix |
+| 3 Notification Service | Consumed | Deadline reminders, submission confirmations, return file alerts, payment notifications |
+| 5 Provider Management | Consumed | Practitioner billing number, Contract ID, Role, skill code, facility type |
+| 6 Patient Registry | Consumed | Patient PHN, demographics, employer details for WCB forms |
+| 7 Intelligence Engine | Consumed | AI Coach suggestions for WCB-specific billing optimisation |
 
 ## 1.5 Relationship to Domain 4.0 and 4.1
 
@@ -72,9 +88,37 @@ WCB Alberta uses 8 electronic report/invoice form types for physician billing vi
 
 ## 2.1 Form Type Overview
 
+| Form ID | Name | Fields | Req'd | Type | Purpose |
+| --- | --- | --- | --- | --- | --- |
+| C050E | Physician First Report | 111 | 38 | Initial | GP/NP/ERS first report of workplace injury. Full clinical assessment with employer, injury, treatment plan, and return-to-work sections. |
+| C050S | OIS Physician First Report | 171 | 70 | Initial | Occupational Injury Service (OIS) variant of C050E with expanded clinical assessment, pain scales, functional capacity, and work restriction detail. |
+| C151 | Physician Progress Report | 136 | 39 | Follow-up | GP/NP/ERS follow-up report. Includes opioid management monitoring (16 medication side-effect fields) and updated treatment/return-to-work. |
+| C151S | OIS Physician Progress Report | 153 | 39 | Follow-up | OIS variant of C151 with expanded work restriction detail and functional capacity assessment. |
+| C568 | Medical Invoice | 61 | 17 | Either | Invoice-only form for services without clinical report. Supports multiple invoice lines with from/to date ranges. |
+| C568A | Medical Consultation Report | 69 | 19 | Either | Specialist consultation report with attached consultation letter (plain text or file attachment). |
+| C569 | Medical Supplies Invoice | 37 | 18 | Follow-up | Invoice for medical supplies (braces, supports, etc.). Line items by quantity and description. |
+| C570 | Medical Invoice Correction | 66 | 18 | Follow-up | Corrects a previously submitted C568 invoice. Contains paired Was/Should Be invoice line sets. |
+
+The implementation stores form type metadata in `WCB_FORM_TYPES` (packages/shared/src/constants/wcb.constants.ts), which encodes fieldCount, requiredFieldCount, formCategory ('initial' or 'follow-up'), and description for each of the 8 form types.
+
 ## 2.2 Form Sections by Type
 
 Each form type comprises a subset of 10 possible sections. The following matrix identifies which sections appear in which forms. This governs both the UI presentation (which form sections to show) and validation (which field groups are applicable).
+
+| Section | C050E | C050S | C151 | C151S | C568 | C568A | C569 | C570 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| General | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Participant: Claimant | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Participant: Practitioner | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Participant: Employer | ✓ | ✓ | ✓ | ✓ |  |  |  |  |
+| Accident | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Injury | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |
+| Treatment Plan | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| Return to Work | ✓ | ✓ | ✓ | ✓ |  |  |  |  |
+| Attachments | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |
+| Invoice | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+The section matrix is encoded in the implementation as `WCB_FORM_SECTIONS` which maps each form ID to its active section set using the `WcbFormSection` enum (GENERAL, CLAIMANT, PRACTITIONER, EMPLOYER, ACCIDENT, INJURY, TREATMENT_PLAN, RETURN_TO_WORK, ATTACHMENTS, INVOICE).
 
 ## 2.3 Contract ID / Role / Form ID Relationships
 
@@ -82,9 +126,40 @@ Not every practitioner can submit every form type. The WCB enforces a relationsh
 
 ### 2.3.1 Initial Report Permissions
 
+| Contract ID | Description | Role | Role Description | Initial Forms |
+| --- | --- | --- | --- | --- |
+| 000001 | WCB General | GP | General Practitioner | C050E, C568 |
+| 000004 | Authorized Ortho | OR | Ortho | C568A, C568 |
+| 000006 | Specialist | SP | Specialist | C568A, C568 |
+| 000006 | Specialist | ERS | ER Specialist/FTER | C050E, C568 |
+| 000006 | Specialist | ANE | Anesthesiologist | C568A, C568 |
+| 000022 | MRI | DP | Diagnostic Provider | C568 |
+| 000023 | CT Scan | DP | Diagnostic Provider | C568 |
+| 000024 | VSC Facility Fee | VSC | Visiting Specialist Clinic | C568A, C568 |
+| 000025 | Day Surgery Facility | VSCFAC | VSC Facility | C568 |
+| 000052 | Ultrasound FFS | DP | Diagnostic Provider | C568 |
+| 000053 | OIS General FFS | OIS | OIS | C050S, C568 |
+| 000065 | Alberta Hospitals | HP | Hospital | C568 |
+| 000066 | Non-Ortho VSC | SP | Specialist | C568A, C568 |
+| 000084 | Nurse Practitioners | NP | Nurse Practitioners | C050E, C568 |
+
+The implementation stores this matrix as `WCB_INITIAL_FORM_PERMISSIONS` in wcb.constants.ts, keyed by contractId and roleCode, mapping to an array of permitted initial form IDs.
+
 ### 2.3.2 Follow-Up Report Permissions
 
 Follow-up reports have an additional constraint: they can only be created from specific initial or prior report types. This is enforced during claim creation — the user must link to a prior WCB claim, and the system validates the chain.
+
+| Contract ID | Role | Progress Forms | Can Create From | Notes |
+| --- | --- | --- | --- | --- |
+| 000001 | GP | C151, C568, C569, C570 | C050E, C151, C568 | GP progress reports chain from first reports or prior progress |
+| 000006 | ERS | C151, C568, C569, C570 | C050E, C151, C568 | ER Specialist follows same chain as GP |
+| 000006 | SP | C568A, C568, C569, C570 | C568A, C568 | Specialist chains from consultation/invoice |
+| 000006 | ANE | C568A, C568, C569, C570 | C568A, C568 | Anesthesiologist follows specialist pattern |
+| 000004 | OR | C568A, C568, C569, C570 | C568A, C568 | Ortho follows specialist pattern |
+| 000053 | OIS | C151S, C568, C569, C570 | C050S, C151S, C568 | OIS uses S-variant progress reports |
+| 000084 | NP | C151, C568, C570 | C050E, C151, C568 | Nurse Practitioners: no C569 (supplies) |
+
+The implementation stores this as `WCB_FOLLOW_UP_FORM_PERMISSIONS` in wcb.constants.ts, keyed by contractId and roleCode, with each entry specifying permitted follow-up form IDs and `canCreateFrom` parent form restrictions.
 
 # 3. Data Model
 
@@ -98,37 +173,171 @@ The central WCB extension table. One row per WCB claim, linked 1:1 to the base c
 
 ### 3.1.1 General Fields
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_claim_detail_id | UUID | No | Primary key |
+| claim_id | UUID FK | No | FK to claims.claim_id (Domain 4.0) |
+| form_id | VARCHAR(5) | No | WCB form type: C050E, C050S, C151, C151S, C568, C568A, C569, C570 |
+| submitter_txn_id | VARCHAR(16) | No | Unique ID for reconciliation. First 2 chars = Meritum vendor prefix (assigned by WCB during accreditation). Implementation uses 'MRT' (3-char) prefix + 13 hex chars = 16 total. |
+| wcb_claim_number | VARCHAR(7) | Yes | WCB claim number (7-digit). Null for new/unknown claims; WCB assigns on acceptance. |
+| report_completion_date | DATE | No | Date the physician completed the report |
+| additional_comments | TEXT | Yes | Free-text additional comments (max 2048 chars) |
+| parent_wcb_claim_id | UUID FK | Yes | FK to wcb_claim_details for follow-up reports. Required for C151, C151S, C569, C570; validated against follow-up chain rules (Section 2.3.2). |
+| deleted_at | TIMESTAMPTZ | Yes | Soft-delete timestamp. Non-null indicates claim is deleted. |
+
 ### 3.1.2 Practitioner Fields
 
 Populated from Provider Management (Domain 5) but stored on the WCB claim for submission immutability — the values at time of submission are what gets sent.
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| practitioner_billing_number | VARCHAR(8) | No | AH billing number / practitioner ID |
+| contract_id | VARCHAR(10) | No | WCB Contract ID (e.g., 000001, 000006). Determines fee schedule and form permissions. |
+| role_code | VARCHAR(10) | No | Practitioner role: GP, SP, ERS, ANE, OR, DP, VSC, VSCFAC, OIS, NP, HP |
+| practitioner_first_name | VARCHAR(11) | No | Practitioner first name (max 11 chars per WCB spec) |
+| practitioner_middle_name | VARCHAR(11) | Yes | Practitioner middle name |
+| practitioner_last_name | VARCHAR(21) | No | Practitioner last name (max 21 chars per WCB spec) |
+| skill_code | VARCHAR(10) | No | WCB skill code (141 valid values; e.g., GENP, ANES, ORTH). Required for invoice section. |
+| facility_type | VARCHAR(1) | No | C = Clinic, F = Facility Non-Hospital, H = Hospital |
+| clinic_reference_number | VARCHAR(8) | Yes | Clinic reference number if applicable |
+| billing_contact_name | VARCHAR(30) | Yes | Billing contact name for invoice inquiries |
+| fax_country_code | VARCHAR(10) | Yes | Billing fax country code |
+| fax_number | VARCHAR(24) | Yes | Billing fax number |
 
 ### 3.1.3 Patient (Claimant) Fields
 
 Core patient demographics are resolved from Patient Registry (Domain 6) at claim creation. Stored on the WCB claim for immutability. WCB has specific field length constraints that differ from AH.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| patient_no_phn_flag | VARCHAR(1) | No | Y/N — does the patient lack an Alberta PHN? If Y, PHN field must be blank. |
+| patient_phn | VARCHAR(9) | Yes | Alberta PHN (9 digits). Required when patient_no_phn_flag = N. |
+| patient_gender | VARCHAR(1) | No | M, F, or U (codes per WCB Gender Codes table) |
+| patient_first_name | VARCHAR(11) | No | Patient first name (max 11 chars) |
+| patient_middle_name | VARCHAR(11) | Yes | Patient middle name |
+| patient_last_name | VARCHAR(21) | No | Patient last name (max 21 chars) |
+| patient_dob | DATE | No | Patient date of birth |
+| patient_address_line1 | VARCHAR(30) | No | Mailing address line 1 |
+| patient_address_line2 | VARCHAR(30) | Yes | Mailing address line 2 |
+| patient_city | VARCHAR(20) | No | City |
+| patient_province | VARCHAR(10) | Yes | Province code (per State Province Codes table) |
+| patient_postal_code | VARCHAR(9) | Yes | Postal code |
+| patient_phone_country | VARCHAR(10) | Yes | Phone country code |
+| patient_phone_number | VARCHAR(24) | Yes | Phone number |
+
 ### 3.1.4 Employer Fields
 
 Required for C050E, C050S, C151, C151S only (forms with Employer section per Section 2.2). Null for C568, C568A, C569, C570.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| employer_name | VARCHAR(50) | Yes* | Employer name. *Required when form has Employer section. |
+| employer_location | VARCHAR(100) | Yes* | Location of operations |
+| employer_city | VARCHAR(20) | Yes* | Employer city |
+| employer_province | VARCHAR(10) | Yes | Employer province |
+| employer_phone_country | VARCHAR(10) | Yes | Employer phone country code |
+| employer_phone_number | VARCHAR(24) | Yes | Employer phone number |
+| employer_phone_ext | VARCHAR(6) | Yes | Employer phone extension |
+
 ### 3.1.5 Accident Fields
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| worker_job_title | VARCHAR(50) | Yes* | Worker job title. *Required for C050E/S, C151/S. |
+| injury_developed_over_time | VARCHAR(1) | Yes* | Y/N. *Required for C050E/S, C151/S, C568A. |
+| date_of_injury | DATE | No | Date of workplace injury. Required for all forms (though optional on C568/C568A per schema, our validation requires it for claim integrity). |
+| injury_description | TEXT | Yes* | How and when the injury occurred (max 1024 chars). *Required for C050E/S, C151/S. |
 
 ### 3.1.6 Injury Assessment Fields (Scalar)
 
 These fields capture the physician's clinical assessment. Applicable to forms with Injury section (C050E/S, C151/S, C568, C568A). Repeating injury entries (POB/SOB/NOI sets) are in the wcb_injuries child table (Section 3.2).
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| date_of_examination | DATE | Yes* | Date of examination. *Required for forms with Injury section. |
+| symptoms | TEXT | Yes* | Symptoms (max 2048 chars). *Required for C050E/S, C151/S. |
+| objective_findings | TEXT | Yes* | Objective findings (max 1024 chars). *Required for C050E/S, C151/S. |
+| current_diagnosis | TEXT | Yes* | Current diagnosis text (max 1024). *Required for C050E/S. |
+| previous_diagnosis | TEXT | Yes* | Previous diagnosis text (max 1024). *Required for C151/S. |
+| diagnosis_changed | VARCHAR(1) | Yes* | Y/N: has the diagnosis changed? *C151/S only. |
+| diagnosis_changed_desc | TEXT | Yes* | Description of change (max 1024). *Required when diagnosis_changed = Y. |
+| diagnostic_code_1 | VARCHAR(8) | Yes* | Primary ICD diagnostic code. *Required for forms with Injury section. |
+| diagnostic_code_2 | VARCHAR(8) | Yes | Secondary diagnostic code |
+| diagnostic_code_3 | VARCHAR(8) | Yes | Tertiary diagnostic code |
+| additional_injuries_desc | TEXT | Yes | Additional injuries beyond 5 POB entries (max 1024) |
+| dominant_hand | VARCHAR(10) | Yes | L, R, or AMB. Conditionally available when upper extremity injury. |
+| prior_conditions_flag | VARCHAR(1) | Yes* | Y/N: prior conditions in same anatomical area? *Required for C050E/S, C151/S. |
+| prior_conditions_desc | TEXT | Yes* | Prior condition diagnosis/treatment (max 1024). *Required when prior_conditions_flag = Y. |
+| referring_physician_name | VARCHAR(50) | Yes | Referring physician name (C568, C568A only) |
+| date_of_referral | DATE | Yes | Referral date (C568, C568A only) |
+
 ### 3.1.7 Treatment Plan Fields (Scalar)
 
 Applicable to C050E/S, C151/S, C568A. Repeating groups (prescriptions, consultations) are in child tables.
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| narcotics_prescribed | VARCHAR(1) | Yes* | Y/N: were narcotics/opioids prescribed? *Required for forms with Treatment Plan. |
+| treatment_plan_text | TEXT | Yes* | Treatment plan and non-opioid medications (max 1024). *Required for C050E/S, C151/S. |
+| case_conf_wcb_manager | VARCHAR(1) | Yes* | Y/N: request case conference with WCB case manager? *C050E/S, C151/S. |
+| case_conf_wcb_physician | VARCHAR(1) | Yes* | Y/N: request case conference with WCB physician? *C050E/S, C151/S. |
+| referral_rtw_provider | VARCHAR(1) | Yes* | Y/N: referral to Return to Work provider? *C050E/S, C151/S. |
+| consultation_letter_format | VARCHAR(5) | Yes* | ATTCH or TEXT. *Required for C568A. |
+| consultation_letter_text | TEXT | Yes* | Plain text consultation letter (max varies). *Required when format = TEXT. |
 
 ### 3.1.8 Opioid Management Fields (C151/C151S Only)
 
 The C151 progress report includes 16 opioid monitoring fields that become conditionally required when narcotics_prescribed = Y. These fields track medication side effects and abuse indicators.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| surgery_past_60_days | VARCHAR(1) | Yes* | Y/N. *Conditional: required when narcotics_prescribed = Y on C151/S. |
+| treating_malignant_pain | VARCHAR(1) | Yes* | Y/N |
+| wcb_advised_no_mmr | VARCHAR(1) | Yes* | Y/N: has WCB advised not to submit Medication Management Report? |
+| side_effect_nausea | VARCHAR(1) | Yes* | Y/N |
+| side_effect_sleep | VARCHAR(1) | Yes* | Y/N: sleep disorders/apnea |
+| side_effect_constipation | VARCHAR(1) | Yes* | Y/N |
+| side_effect_endocrine | VARCHAR(1) | Yes* | Y/N: endocrine dysfunction |
+| side_effect_sweating | VARCHAR(1) | Yes* | Y/N |
+| side_effect_cognitive | VARCHAR(1) | Yes* | Y/N: cognitive deficits |
+| side_effect_dry_mouth | VARCHAR(1) | Yes* | Y/N |
+| side_effect_fatigue | VARCHAR(1) | Yes* | Y/N: fatigue/drowsiness |
+| side_effect_depression | VARCHAR(1) | Yes* | Y/N: depressed mood |
+| side_effect_worsening_pain | VARCHAR(1) | Yes* | Y/N |
+| abuse_social_deterioration | VARCHAR(1) | Yes* | Y/N |
+| abuse_unsanctioned_use | VARCHAR(1) | Yes* | Y/N |
+| abuse_altered_route | VARCHAR(1) | Yes* | Y/N: altering route of delivery |
+| abuse_opioid_seeking | VARCHAR(1) | Yes* | Y/N |
+| abuse_other_sources | VARCHAR(1) | Yes* | Y/N: accessing opioids from other sources |
+| abuse_withdrawal | VARCHAR(1) | Yes* | Y/N: withdrawal symptoms |
+| patient_pain_estimate | SMALLINT | Yes* | 0–10 scale. Patient self-reported pain severity. |
+| opioid_reducing_pain | VARCHAR(1) | Yes* | Y/N: is current opioid therapy reducing pain? |
+| pain_reduction_desc | TEXT | Yes* | Description of reduction (max 2048). Required when opioid_reducing_pain = Y. |
+| clinician_function_estimate | SMALLINT | Yes* | 0–10 scale. Clinician estimate of patient function. |
+
 ### 3.1.9 Return to Work Fields (Scalar)
 
 Applicable to C050E/S, C151/S. Work restriction repeating entries are in the wcb_work_restrictions child table (Section 3.5).
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| missed_work_beyond_accident | VARCHAR(1) | Yes* | Y/N. *Required for forms with RTW section. |
+| patient_returned_to_work | VARCHAR(1) | Yes* | Y/N. *Conditional: required when missed_work = Y. |
+| date_returned_to_work | DATE | Yes* | Date returned. *Required when returned_to_work = Y. |
+| modified_hours | VARCHAR(1) | Yes* | Y/N. *Required when returned_to_work = Y. |
+| hours_capable_per_day | SMALLINT | Yes* | Hours/day. *Required when modified_hours = Y. |
+| modified_duties | VARCHAR(1) | Yes* | Y/N. *Required when returned_to_work = Y. |
+| rtw_hospitalized | VARCHAR(1) | Yes* | Y/N: is inability to work due to hospitalisation? |
+| rtw_self_reported_pain | VARCHAR(1) | Yes* | Y/N: self-reported pain preventing RTW? |
+| rtw_opioid_side_effects | VARCHAR(1) | Yes* | Y/N: opioid/medication side effects preventing RTW? |
+| rtw_other_restrictions | TEXT | Yes | Other restrictions/comments (max 2048) |
+| estimated_rtw_date | DATE | Yes* | Estimated date for pre-accident level work. *Required when missed_work = Y and returned_to_work = N. |
+
 ### 3.1.10 Invoice Correction Fields (C570 Only)
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| reassessment_comments | TEXT | Yes | Additional reassessment comments for C570 corrections (max 2048) |
 
 Timestamps and metadata (created_at, updated_at, created_by, updated_by) follow the pattern established in Domain 4.0 Core. Soft-delete via deleted_at.
 
@@ -136,19 +345,60 @@ Timestamps and metadata (created_at, updated_at, created_by, updated_by) follow 
 
 Each WCB claim with an Injury section can have 1–5 injury entries, each being a Part of Body / Side of Body / Nature of Injury tuple. The combination must pass POB-NOI validation (Section 4.3).
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_injury_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| ordinal | SMALLINT | No | Position 1–5 |
+| part_of_body_code | VARCHAR(10) | No | POB code (30 valid values; e.g., 42000 = Ankle, 01100 = Brain) |
+| side_of_body_code | VARCHAR(10) | Yes | SOB code: L, R, B. Required when POB requires side (per Side of Body Required flag in POB codes table). |
+| nature_of_injury_code | VARCHAR(10) | No | NOI code (46 valid values; e.g., 02100 = Sprain, 01200 = Fracture) |
+
 Constraint: UNIQUE on (wcb_claim_detail_id, ordinal). Max 5 rows per claim. POB-NOI combination validated against 382-row exclusion matrix (Section 4.3).
 
 ## 3.3 WCB Prescriptions Table (wcb_prescriptions)
 
 1–5 prescription entries when narcotics_prescribed = Y on C050E/S, C151/S, C568A. Each entry captures medication name, strength, and dosage.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_prescription_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| ordinal | SMALLINT | No | Position 1–5 |
+| prescription_name | VARCHAR(50) | No | Medication name |
+| strength | VARCHAR(30) | No | Strength/dosage form |
+| daily_intake | VARCHAR(30) | No | Daily intake (tab/ml) |
+
 ## 3.4 WCB Consultations Table (wcb_consultations)
 
 1–5 consultation/referral/investigation entries on C050E/S, C151/S. Each entry has a category (CONREF or INVE), type, details, and optional expedite flag.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_consultation_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| ordinal | SMALLINT | No | Position 1–5 |
+| category | VARCHAR(10) | No | CONREF (Consultation/Referral) or INVE (Investigation) |
+| type_code | VARCHAR(10) | No | Type within category: ORTHO, NEURO, PLASTIC, OTHER, XRAY, ULTRA, CT, MRI, EMG, OTHER |
+| details | VARCHAR(50) | No | Free-text details |
+| expedite_requested | VARCHAR(1) | Yes | Y/N. Only available for specific Category/Type combinations per Expedite Codes table. |
+
+The implementation defines two consultation categories in the `WcbConsultationCategory` enum: CONREF for Consultation/Referral entries and INVE for Investigation entries. Each consultation entry captures a type_code (1-10 chars), details (1-50 chars), and an optional expedite_requested flag.
+
 ## 3.5 WCB Work Restrictions Table (wcb_work_restrictions)
 
 Physical capacity restrictions for Return to Work section (C050E/S, C151/S). Each row represents one activity type with its restriction level and optional hours.
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_restriction_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| activity_type | VARCHAR(20) | No | SITTING, STANDING, WALKING, BENDING, TWISTING, KNEELING_SQUATTING, CLIMBING, LIFTING, PUSHING_PULLING, OVERHEAD_REACHING, DRIVING |
+| restriction_level | VARCHAR(10) | No | Able/Unable per Work Restriction Detail Codes (FULL, PART, UNABLE for OIS; simpler for standard) |
+| hours_per_day | SMALLINT | Yes | Applicable for SITTING, STANDING, WALKING, DRIVING (activities with hours fields) |
+| max_weight | VARCHAR(10) | Yes | Maximum weight category for LIFTING (per Weight Category Codes) |
+
+Constraint: UNIQUE on (wcb_claim_detail_id, activity_type). Up to 11 activity types per claim.
 
 ## 3.6 WCB Invoice Lines Table (wcb_invoice_lines)
 
@@ -156,25 +406,147 @@ Every WCB form has an Invoice section with 1–N invoice line items. The structu
 
 Cardinality constraints by form type: C050E/S and C151/S: 1–25 lines. C568/A: 1–25 lines. C569: 1–25 lines. C570: 1–25 Was lines each paired with 1 Should Be line.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_invoice_line_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| invoice_detail_id | SMALLINT | No | Sequential line number within the invoice (1-based, max 25) |
+| line_type | VARCHAR(10) | No | STANDARD (C050E/S, C151/S), DATED (C568/A), SUPPLY (C569), WAS (C570), SHOULD_BE (C570) |
+| health_service_code | VARCHAR(7) | Yes | HSC. Required for STANDARD and DATED lines. |
+| diagnostic_code_1 | VARCHAR(8) | Yes | Primary diagnostic code (C568/A DATED lines) |
+| diagnostic_code_2 | VARCHAR(8) | Yes | Secondary diagnostic code |
+| diagnostic_code_3 | VARCHAR(8) | Yes | Tertiary diagnostic code |
+| modifier_1 | VARCHAR(6) | Yes | Primary modifier |
+| modifier_2 | VARCHAR(6) | Yes | Secondary modifier |
+| modifier_3 | VARCHAR(6) | Yes | Tertiary modifier |
+| calls | SMALLINT | Yes | Number of calls (0–7) |
+| encounters | SMALLINT | Yes | Number of encounters (0 or 1) |
+| date_of_service_from | DATE | Yes | Service start date (C568/A DATED lines) |
+| date_of_service_to | DATE | Yes | Service end date (C568/A DATED lines) |
+| facility_type_override | VARCHAR(1) | Yes | Per-line facility type override for C568/A |
+| skill_code_override | VARCHAR(10) | Yes | Per-line skill code override for C568/A |
+| invoice_detail_type_code | VARCHAR(10) | Yes | Detail type code for C568/A lines |
+| invoice_detail_desc | VARCHAR(50) | Yes | Detail description for C568/A lines |
+| quantity | SMALLINT | Yes | Quantity for C569 supply lines (1–25) |
+| supply_description | VARCHAR(50) | Yes | Supply type and description for C569 |
+| amount | DECIMAL(10,2) | Yes | Fee amount (C568/A fees_submitted, C569 amount) |
+| adjustment_indicator | VARCHAR(10) | Yes | C570 only: adjustment indicator for Was/Should Be pairing |
+| billing_number_override | VARCHAR(8) | Yes | C570 only: per-line billing number for corrections |
+| correction_pair_id | SMALLINT | Yes | C570 only: links Was line to its corresponding Should Be line |
+
+The implementation models invoice lines as a discriminated union on `line_type`. The Zod schemas in `packages/shared/src/schemas/wcb.schema.ts` define separate sub-schemas for STANDARD, DATED, SUPPLY, WAS, and SHOULD_BE line types, each with their own required/optional field sets.
+
 ## 3.7 WCB Attachments Table (wcb_attachments)
 
 Up to 3 file attachments per claim (all form types). Stored as base64-encoded content for inclusion in HL7 XML batch files.
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_attachment_id | UUID | No | Primary key |
+| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
+| ordinal | SMALLINT | No | Position 1–3 |
+| file_name | VARCHAR(255) | No | Original file name |
+| file_type | VARCHAR(10) | No | File type code per WCB attachment codes (e.g., PDF, DOC, JPG) |
+| file_content_b64 | TEXT | No | Base64-encoded file content. Stored encrypted at rest. |
+| file_description | VARCHAR(60) | No | Description of attachment content |
+| file_size_bytes | INTEGER | No | Original file size in bytes (for validation and UI display) |
 
 ## 3.8 WCB Batches Table (wcb_batches)
 
 WCB batches are completely separate from AHCIP batches. Each WCB batch generates an HL7 v2.3.1 XML file for upload to myWCB. Unlike H-Link's Thursday cycle, WCB batches can be submitted at any time (though timing affects fees).
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_batch_id | UUID | No | Primary key |
+| physician_id | UUID FK | No | FK to providers. Each batch is per-physician. |
+| batch_control_id | VARCHAR(50) | No | Batch control ID (appears in BHS.11). Used for return file reconciliation. |
+| file_control_id | VARCHAR(50) | No | File control ID (appears in FHS.11). |
+| status | VARCHAR(20) | No | ASSEMBLING, GENERATED, VALIDATED, UPLOADED, RETURN_RECEIVED, RECONCILED, ERROR |
+| report_count | INTEGER | No | Number of reports in the batch |
+| xml_file_path | VARCHAR(255) | Yes | Path to generated XML file (encrypted at rest) |
+| xml_file_hash | VARCHAR(64) | Yes | SHA-256 hash of generated XML file |
+| xsd_validation_passed | BOOLEAN | Yes | Did the file pass XSD schema validation? |
+| xsd_validation_errors | JSONB | Yes | Array of XSD validation errors if failed |
+| uploaded_at | TIMESTAMPTZ | Yes | When the file was uploaded to myWCB |
+| uploaded_by | UUID FK | Yes | Who uploaded (physician or delegate) |
+| return_file_received_at | TIMESTAMPTZ | Yes | When batch return notification was received |
+| return_file_path | VARCHAR(255) | Yes | Path to return file |
+| created_at | TIMESTAMPTZ | No | Batch creation timestamp |
+| created_by | UUID FK | No | Who initiated the batch |
+
+The implementation defines batch statuses as the `WcbBatchStatus` enum: ASSEMBLING → GENERATED → VALIDATED → UPLOADED → RETURN_RECEIVED → RECONCILED, with ERROR as a terminal state from any stage.
+
 ## 3.9 WCB Return Records Table (wcb_return_records)
 
 Each row in the batch return file is stored here. The return file is a tab-delimited text file emailed by WCB after batch processing. Each report in the batch gets a status (Complete or Invalid) with error details if rejected.
+
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_return_record_id | UUID | No | Primary key |
+| wcb_batch_id | UUID FK | No | FK to wcb_batches |
+| wcb_claim_detail_id | UUID FK | Yes | FK to matched wcb_claim_details (null if unable to match) |
+| report_txn_id | VARCHAR(20) | No | WCB-assigned transaction ID |
+| submitter_txn_id | VARCHAR(16) | No | Our submitter transaction ID (for matching) |
+| processed_claim_number | VARCHAR(7) | Yes | WCB claim number assigned/confirmed |
+| claim_decision | VARCHAR(20) | No | Accepted or empty (for invalid reports) |
+| report_status | VARCHAR(20) | No | Complete or Invalid |
+| txn_submission_date | DATE | No | Submission date as recorded by WCB |
+| errors | JSONB | Yes | Array of {error_number, error_description} for Invalid reports |
+
+The implementation defines return report statuses as the `WcbReturnReportStatus` enum: COMPLETE and INVALID.
 
 ## 3.10 WCB Return Invoice Lines Table (wcb_return_invoice_lines)
 
 For successfully processed reports, the return file includes per-invoice-line status. Stored for reconciliation with the original invoice lines.
 
+| Column | Type | Nullable | Description |
+| --- | --- | --- | --- |
+| wcb_return_invoice_line_id | UUID | No | Primary key |
+| wcb_return_record_id | UUID FK | No | FK to wcb_return_records |
+| invoice_sequence | SMALLINT | No | Invoice line sequence number |
+| service_date | DATE | Yes | Service date for the line |
+| health_service_code | VARCHAR(7) | Yes | HSC for the line |
+| invoice_status | VARCHAR(20) | Yes | Line-level status (typically empty for accepted) |
+
 ## 3.11 WCB Remittance Records Table (wcb_remittance_records)
 
 WCB payment remittance is delivered as an XML file (separate schema from the batch submission). Each PaymentRemittanceRecord becomes a row here. Matched to WCB claims for financial reconciliation. Weekly cycle with Tuesday remittance reports.
+
+The implementation includes a parent `wcb_remittance_imports` table (one row per uploaded remittance XML file) and child `wcb_remittance_records` (one row per PaymentRemittanceRecord within the file).
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| wcb_remittance_id | UUID | No | Primary key |
+| remittance_import_id | UUID FK | No | FK to remittance import batch record |
+| wcb_claim_detail_id | UUID FK | Yes | FK to matched wcb_claim_details |
+| report_week_start | DATE | No | Remittance report week start date |
+| report_week_end | DATE | No | Remittance report week end date |
+| disbursement_number | VARCHAR(8) | Yes | Disbursement/cheque number |
+| disbursement_type | VARCHAR(3) | Yes | EFT or AUT (cheque) |
+| disbursement_issue_date | DATE | Yes | Date disbursement was issued |
+| disbursement_amount | DECIMAL(11,2) | Yes | Total disbursement amount |
+| disbursement_recipient_billing | VARCHAR(8) | Yes | Recipient billing number |
+| disbursement_recipient_name | VARCHAR(40) | Yes | Recipient name |
+| payment_payee_billing | VARCHAR(8) | No | Payee billing number |
+| payment_payee_name | VARCHAR(40) | No | Payee name |
+| payment_reason_code | VARCHAR(3) | No | REQ, ISS, etc. |
+| payment_status | VARCHAR(3) | No | ISS (Issued), DEL (Deleted), PAE/PGA (Pending Approval), PGD (Pending Decision), REJ (Rejected), REQ (Requested) |
+| payment_start_date | DATE | No | Payment period start |
+| payment_end_date | DATE | No | Payment period end |
+| payment_amount | DECIMAL(11,2) | No | Payment amount for this line |
+| billed_amount | DECIMAL(10,2) | Yes | Original billed amount from electronic report |
+| electronic_report_txn_id | VARCHAR(20) | Yes | WCB transaction ID (for matching to return records) |
+| claim_number | VARCHAR(7) | Yes | WCB claim number |
+| worker_phn | VARCHAR(11) | Yes | Worker PHN |
+| worker_first_name | VARCHAR(11) | Yes | Worker first name |
+| worker_last_name | VARCHAR(21) | Yes | Worker last name |
+| service_code | VARCHAR(7) | Yes | Health service code |
+| modifier_1 | VARCHAR(6) | Yes | Primary modifier |
+| modifier_2 | VARCHAR(6) | Yes | Secondary modifier |
+| modifier_3 | VARCHAR(6) | Yes | Tertiary modifier |
+| number_of_calls | SMALLINT | Yes | Number of calls |
+| encounter_number | SMALLINT | Yes | Encounter number |
+| overpayment_recovery | DECIMAL(10,2) | Yes | Overpayment recovery amount deducted |
 
 # 4. WCB Validation Engine
 
@@ -185,6 +557,27 @@ Validation results use the same structure as the core pipeline (errors, warnings
 ## 4.1 WCB Validation Pipeline
 
 The WCB validation pipeline runs the following checks in order. Each check produces errors (blocking) or warnings (flagging). Checks may short-circuit subsequent checks when prerequisites fail.
+
+| # | Check | Severity | Description |
+| --- | --- | --- | --- |
+| 1 | Form ID Valid | Error | form_id is one of the 8 valid WCB form types. |
+| 2 | Contract ID / Role / Form ID | Error | The practitioner's Contract ID and Role permit the selected Form ID (per Section 2.3 matrix). For follow-up forms, validates the parent claim chain. |
+| 3 | Required Fields Present | Error | All 'Always Required' fields for this form type are populated and non-empty. |
+| 4 | Conditional Field Logic | Error | All 'Conditionally Available and Required' fields are present when their trigger conditions are met (Section 4.2). |
+| 5 | Data Type / Length | Error | Each field value conforms to its data type (Alpha, Char, Num, Date, Cur) and length constraints per the HL7 mapping. |
+| 6 | Date Validation | Error | All date fields are valid dates in accepted formats (YYYYMMDD, YYYY-MM-DD, YYYY/MM/DD). Date of examination >= date of injury. Report completion date >= date of examination. |
+| 7 | POB-NOI Combination | Error | Each injury entry's Part of Body / Nature of Injury combination is not in the 382-entry exclusion list (Section 4.3). |
+| 8 | Side of Body Required | Error | Side of Body is provided when the selected Part of Body requires it (per POB codes table 'Side of Body Required' flag). |
+| 9 | Code Table Values | Error | All coded fields contain values from their respective code tables (Gender, Province, POB, NOI, Skill Code, Facility Type, etc.). |
+| 10 | Submitter Txn ID Format | Error | First 2 characters match Meritum's vendor prefix. Total length 1–16. Unique within this batch. |
+| 11 | PHN Logic | Error | If patient_no_phn_flag = N, PHN must be present and 9 digits. If Y, PHN must be blank. |
+| 12 | Invoice Line Integrity | Error | At least 1 invoice line present. Line numbers sequential. Form-specific line field requirements met (Section 3.6). |
+| 13 | Attachment Constraints | Warning | Max 3 attachments per form. File type is in permitted attachment codes for this form type. |
+| 14 | WCB Timing Deadline | Warning | Calculates submission timing tier (same-day, on-time, late) and warns if claim is approaching or past the on-time window (Section 4.5). |
+| 15 | Expedite Eligibility | Info | If expedite_requested = Y on a consultation, validates the Category/Type combination permits expedite per Expedite Codes table. |
+| 16 | Duplicate Detection | Warning | Checks for existing WCB claims with same patient + same date of injury + same form type within configurable window. |
+
+The implementation encodes these as the `WcbValidationCheckId` enum with corresponding default severities. Check #8 (Side of Body Required) uses WARNING severity in the implementation rather than ERROR, to allow claims with missing side-of-body to proceed with a flag rather than hard-blocking.
 
 ## 4.2 Conditional Field Optionality Engine
 
@@ -230,6 +623,14 @@ WCB fees are tiered by submission timing. The fee tier is determined by when WCB
 
 ### 4.5.1 Timing Rules
 
+| Tier | GP First (C050E) | GP Progress (C151) | Specialist (C568A) |
+| --- | --- | --- | --- |
+| Same-day | Exam day or next biz day by 10:00 MT | Exam day or next biz day by 10:00 MT | Exam day or next biz day by 10:00 MT |
+| On-time | Within 3 biz days (by 10:00 MT day 4) | Within 4 biz days (by 10:00 MT day 5) | Within 4 biz days (by 10:00 MT day 5) |
+| Late | After on-time deadline | After on-time deadline | After on-time deadline |
+
+The implementation encodes these as `WCB_TIMING_DEADLINES` keyed by form code, specifying `onTimeBusinessDays` (3 for C050E, 4 for C151 and C568A) and the cutoff hour (10:00 MT) for each.
+
 ### 4.5.2 Business Day Calculation
 
 Business days = Monday through Friday, excluding 10 named Alberta statutory holidays: New Year's Day, Family Day, Good Friday, Victoria Day, Canada Day, Heritage Day (AB), Labour Day, National Day for Truth and Reconciliation, Thanksgiving, Christmas Day.
@@ -240,9 +641,20 @@ The 10:00 MT cutoff on the deadline day means: if the report is received by WCB 
 
 'Received by WCB' = the timestamp when WCB processes the batch, NOT when the physician submits to Meritum. Meritum can estimate but cannot guarantee the tier. The AI Coach should warn when submission is close to cutoff.
 
+The implementation stores the 10 Alberta statutory holidays in `WCB_ALBERTA_STATUTORY_HOLIDAYS` and resolves them to specific dates per calendar year for business day calculation.
+
 ### 4.5.3 Fee Tiers (2025 Schedule)
 
+| Report Type | Same-day | On-time | Late | Fee Type |
+| --- | --- | --- | --- | --- |
+| C050E GP First Report | $94.15 | $85.80 | $54.08 | Report fee |
+| C151 GP Progress Report | $57.19 | $52.12 | $32.86 | Report fee |
+| RF01E Specialist Consultation | $115.05 | $104.87 | $66.09 | Report fee |
+| RF03E Specialist Follow-up | $57.19 | $52.12 | $32.86 | Report fee |
+
 Meritum displays the current tier, the deadline for the next tier down, and the fee difference to motivate timely submission. This is a key AI Coach prompt: 'Submit within [X hours] to earn [$Y] more.'
+
+The implementation stores fee schedule entries in `WCB_FEE_SCHEDULE` as `WcbFeeScheduleEntry` objects containing sameDayFee, onTimeFee, and lateFee as string values (monetary amounts with 2 decimal places). Form-to-fee-code mapping: C050E and C050S share the 'C050E' fee code; C151 and C151S share the 'C151' fee code.
 
 ## 4.6 Business Processing Rules
 
@@ -254,7 +666,7 @@ Invoice line HSC validation: Health service codes must be valid WCB codes (which
 
 Modifier compatibility: Modifier codes must be valid for the HSC and the practitioner's Contract ID/Role.
 
-351 premium code eligibility: One premium code per operative encounter, excluded within 4 calendar days of accident date. Validated against date_of_injury and date_of_service.
+351 premium code eligibility: One premium code per operative encounter, excluded within 4 calendar days of accident date. Validated against date_of_injury and date_of_service. The implementation enforces this via `WCB_PREMIUM_EXCLUSION_DAYS` (4 calendar days) and `WCB_PREMIUM_LIMIT_PER_ENCOUNTER` (1 premium code per operative encounter).
 
 C570 Was/Should Be pairing: Each Was invoice line must have exactly one corresponding Should Be line. The invoice_detail_id must match between pairs. Adjustment indicators must be consistent.
 
@@ -289,6 +701,8 @@ Upload (Manual): Physician/delegate logs into myWCB portal and uploads the XML f
 Return Processing: WCB emails batch return file. Meritum parses it and updates claim states.
 
 Remittance: WCB issues weekly payment remittance XML. Meritum imports and reconciles.
+
+The implementation tracks the current operational phase via the `WcbPhase` enum: `MVP` (pre-accreditation, manual portal entry with pre-filled export) and `VENDOR` (post-accreditation, automated XML batch generation).
 
 ## 5.2 HL7 v2.3.1 XML Batch File Structure
 
@@ -331,6 +745,20 @@ BTS — Batch Trailer Segment: batch message count
 FTS — File Trailer Segment: file batch count
 
 ### 5.2.2 Batch Header Values
+
+| Segment.Field | Value | Notes |
+| --- | --- | --- |
+| FHS.3 / BHS.3 / MSH.3 | Meritum vendor source ID | Assigned by WCB during accreditation. Stored in secrets management. |
+| FHS.4 / BHS.4 / MSH.4 | Meritum submitter ID | Assigned by WCB during accreditation. |
+| FHS.5 / BHS.5 | WCB-EDM | Fixed value: Workers Compensation Board Edmonton |
+| FHS.6 / BHS.6 | RAPID-RPT | Fixed value: RapidReport component |
+| FHS.7 / BHS.7 / MSH.7 | YYYYMMDDHHmm | File/batch/message creation timestamp in Mountain Time |
+| FHS.9 | Generated filename | e.g., meritum_batch_20260212_001.xml |
+| FHS.11 | File control ID | Unique per file. Format: MER-{YYYYMMDD}-{sequence} |
+| BHS.11 | Batch control ID | Unique per batch. Used to match return files. Format: MER-B-{UUID short} |
+| MSH.9 | ZRPT | Fixed: WCB Batch Report Message type |
+| MSH.10 | submitter_txn_id | Per-report unique ID. First 2 chars = vendor prefix. |
+| EVN.4 | form_id | C050E, C050S, C151, C151S, C568, C568A, C569, C570 |
 
 ### 5.2.3 Field-to-Segment Mapping Strategy
 
@@ -394,6 +822,16 @@ Until accreditation is complete, Meritum operates in MVP mode (Section 5.7).
 
 WCB and AHCIP batches are fundamentally separate:
 
+| Aspect | AHCIP (Domain 4.1) | WCB (Domain 4.2) |
+| --- | --- | --- |
+| Cycle | Weekly: Thursday 12:00 MT cutoff | On-demand (timing affects fees, not submission window) |
+| Format | Fixed-width/delimited per AHCIP spec | HL7 v2.3.1 XML per WCB XSD |
+| Transport | H-Link (SFTP/API) | Manual file upload to myWCB portal |
+| Accreditation | H-Link accreditation (AHC2210) | WCB vendor accreditation (9-step process) |
+| Return | Assessment file via H-Link | Tab-delimited return file via email |
+| Payment | Friday following Thursday submission | Weekly cycle, Tuesday remittance XML |
+| Grouping | Per-physician, per-BA | Per-physician (single vendor credentials) |
+
 ## 5.7 Transitional MVP: WCB Submission Helper
 
 Until vendor accreditation is complete, Meritum operates a WCB Submission Helper that provides value without direct batch submission. This is the Day 1 WCB experience.
@@ -425,6 +863,8 @@ No automated remittance reconciliation.
 Physician/MOA must manually enter data into myWCB portal (49% of physicians already do this today).
 
 Transition path: When accreditation completes, the MVP export endpoint is deprecated. Existing claims in the system transition seamlessly to Phase 2 — the data model and validation are identical. Only the submission, return, and reconciliation modules activate.
+
+The implementation tracks the active phase via the `WcbPhase` enum (`MVP` or `VENDOR`). MVP-only endpoints (export and manual-outcome) are feature-flagged: they return 404 when the system is operating in VENDOR phase.
 
 # 6. WCB Return File Processing
 
@@ -502,6 +942,17 @@ Notify: WCB_PAYMENT_RECEIVED notification emitted with payment summary.
 
 ## 7.3 Payment Status Codes
 
+| Code | Status | Meritum Action |
+| --- | --- | --- |
+| ISS | Issued | Payment confirmed. Claim → paid state. |
+| REQ | Requested | Payment in progress. No state change yet. |
+| PAE / PGA | Pending Approval | Awaiting WCB internal approval. No state change. |
+| PGD | Pending Decision | Awaiting adjudication. Monitor and notify. |
+| REJ | Rejected | Payment rejected. Claim flagged for review. |
+| DEL | Deleted | Payment deleted by WCB. Claim flagged for review. |
+
+The implementation defines these as the `WcbPaymentStatus` enum with 7 values: ISS, REQ, PAE, PGA, PGD, REJ, DEL.
+
 ## 7.4 Discrepancy Detection
 
 When the remittance payment_amount differs from the expected fee calculated by Meritum, the system flags the claim with a reconciliation discrepancy. Common causes:
@@ -534,43 +985,197 @@ Exclusion: Premium codes are excluded if the date of service is within 4 calenda
 
 Calculation: premium_fee = SOMB_base_rate × 2. The premium code list is maintained in Reference Data (Domain 2) and versioned with the WCB fee schedule.
 
+The implementation encodes the multiplier as `WCB_PREMIUM_MULTIPLIER` (2), the exclusion window as `WCB_PREMIUM_EXCLUSION_DAYS` (4 calendar days), and the per-encounter limit as `WCB_PREMIUM_LIMIT_PER_ENCOUNTER` (1).
+
 ## 8.3 Expedited Services
 
 When a physician requests an expedited consultation/investigation (via the consultation table's expedite_requested field) and the service is completed:
 
-Within 15 business days: Full expedited fee.
+Within 15 business days: Full expedited fee ($150.00 base).
 
 16–25 business days: Pro-rated fee.
 
 After 25 business days: No expedited fee.
 
+The implementation encodes these thresholds as `WCB_EXPEDITED_FULL_DAYS` (15), `WCB_EXPEDITED_PRORATE_END_DAYS` (25), and `WCB_EXPEDITED_CONSULTATION_FEE` ('150.00').
+
 ## 8.4 Unbundling
 
 Unlike AHCIP (which has complex bundling rules per governing rules), WCB pays each distinct service component at 100% of its individual fee. There is no bundling discount for multiple services on the same date. This simplifies WCB fee calculation but means the validation engine must not apply AHCIP bundling rules to WCB claims.
+
+### 8.4.1 WCB-Specific Unbundling Rules (Bundling Rules Matrix)
+
+The multi-procedure bundling system (from MVP Features Addendum B9) uses a shared `bundling_rules` reference data table with separate columns for AHCIP and WCB relationships:
+
+| Column | Description |
+| --- | --- |
+| code_a | First SOMB code in the pair |
+| code_b | Second SOMB code in the pair |
+| ahcip_relationship | BUNDLED, INDEPENDENT, or INTRINSICALLY_LINKED (AHCIP rules) |
+| wcb_relationship | BUNDLED, INDEPENDENT, or INTRINSICALLY_LINKED (WCB rules) |
+| higher_value_code | Which code is higher-value (for BUNDLED pairs) |
+| reduction_rate | Reduction for secondary procedure (e.g. 0.50 = 50%) |
+
+For WCB claims, the validation and fee engines use the `wcb_relationship` column:
+
+- **INDEPENDENT**: Each code billed at 100% of its individual fee. This is the most common WCB relationship — WCB pays each distinct procedure separately without bundling discounts.
+- **BUNDLED**: Only the higher-value code is billed (rare for WCB; typically applies only when codes are truly duplicative).
+- **INTRINSICALLY_LINKED**: Codes are combined into a single fee (e.g., surgical components that are always performed together).
+
+The WCB bundling rules are sourced from the WCB Physician's Reference Guide (separate from the SOMB governing rules used for AHCIP). The bundling rules matrix is loaded and maintained in Reference Data (Domain 2).
+
+The bundling check endpoint (`POST /api/v1/claims/bundling/check`) accepts a `claimType` parameter ('AHCIP' or 'WCB') and returns the appropriate relationship and fee calculation for the submitted code pairs.
 
 ## 8.5 RRNP and Variable Fee Premium
 
 Rural and Remote Northern Physician (RRNP) flat fee applies to WCB claims at $32.77/claim. The RRNP Variable Fee Premium is calculated quarterly by WCB. Both are tracked in Reference Data and applied during fee calculation when the physician's practice location qualifies.
 
+The implementation encodes the flat fee as `WCB_RRNP_FLAT_FEE` ('32.77').
+
 # 9. API Contracts (WCB-Specific)
 
 All WCB-specific endpoints extend the base claim API patterns defined in Domain 4.0 Core. Authentication, authorisation, rate limiting, and audit logging follow the same patterns. Endpoints are prefixed with /api/v1/wcb/.
 
+The implementation provides 18 endpoints across 5 functional groups: claim CRUD, batch management, return file processing, remittance reconciliation, and MVP-only features. All routes require authentication and appropriate permission guards.
+
 ## 9.1 WCB Claim CRUD
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /api/v1/wcb/claims | Create a WCB claim. Body includes form_id, which determines required fields. Returns claim_id and wcb_claim_detail_id. |
+| GET | /api/v1/wcb/claims/{id} | Retrieve WCB claim with all child records (injuries, prescriptions, consultations, restrictions, invoice lines, attachments). |
+| PUT | /api/v1/wcb/claims/{id} | Update WCB claim. Partial updates supported. Triggers revalidation. |
+| DELETE | /api/v1/wcb/claims/{id} | Soft-delete. Only allowed in draft state. |
+| POST | /api/v1/wcb/claims/{id}/validate | Run WCB validation pipeline and return results without changing state. |
+| GET | /api/v1/wcb/claims/{id}/form-schema | Returns the form field schema for this claim's form_id: which sections are active, which fields are required/conditional/optional, current conditional states based on existing data. |
+
+Required permissions: CLAIM_CREATE (POST), CLAIM_VIEW (GET), CLAIM_EDIT (PUT), CLAIM_DELETE (DELETE).
 
 ## 9.2 WCB Batch Management
 
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /api/v1/wcb/batches | Initiate WCB batch generation. Includes queued claims for the authenticated physician. Triggers XML generation and XSD validation. |
+| GET | /api/v1/wcb/batches/{id} | Retrieve batch details including status, report count, validation results. |
+| GET | /api/v1/wcb/batches/{id}/download | Download generated XML file (signed URL, single-use, 1-hour expiry). Requires VALIDATED status. |
+| POST | /api/v1/wcb/batches/{id}/confirm-upload | Physician/delegate confirms file was uploaded to myWCB. Transitions batch to UPLOADED. |
+| GET | /api/v1/wcb/batches | List batches for the authenticated physician with status filtering and pagination. |
+
+Required permissions: BATCH_APPROVE (POST create), BATCH_VIEW (GET), WCB_BATCH_UPLOAD (confirm-upload).
+
 ## 9.3 WCB Return File Ingestion
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /api/v1/wcb/returns/upload | Upload return file (tab-delimited text). Triggers parsing, matching, and state transitions. |
+| GET | /api/v1/wcb/returns/{batch_id} | Retrieve return file results for a specific batch, including per-report status and errors. |
+
+Required permissions: WCB_BATCH_UPLOAD (POST upload), BATCH_VIEW (GET).
 
 ## 9.4 WCB Remittance Import
 
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /api/v1/wcb/remittances/upload | Upload remittance XML file. Triggers parsing, storage, matching, and reconciliation. |
+| GET | /api/v1/wcb/remittances | List remittance imports with date range filtering. |
+| GET | /api/v1/wcb/remittances/{id}/discrepancies | Retrieve reconciliation discrepancies for a remittance import. |
+
+Required permissions: REPORT_VIEW (all remittance endpoints).
+
 ## 9.5 MVP Export Endpoint
 
-# 10. Security Requirements (WCB-Specific)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | /api/v1/wcb/claims/{id}/export | Generate pre-filled export (PDF/printable) for manual portal entry. MVP only — deprecated after accreditation. |
+| POST | /api/v1/wcb/claims/{id}/manual-outcome | Physician manually records WCB outcome (claim number, acceptance status, payment). MVP only. |
+
+These endpoints are feature-flagged behind the `WcbPhase.MVP` check and return 404 when the system operates in `WcbPhase.VENDOR` mode.
+
+# 10. Connect Care WCB Import
+
+WCB claims can be created from Connect Care SCC (Summary Clinical Codes) extracts. The Connect Care Integration specification (see Meritum_Connect_Care_Integration.md) defines the WCB-specific import pathway.
+
+## 10.1 WCB SCC Extract Format
+
+The "My WCB Codes" extract contains 13 fields specific to WCB billing:
+
+| # | Field Name | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| 1 | WCB Claim Number | VARCHAR(20) | Yes | WCB Alberta claim number assigned to the injured worker |
+| 2 | Employer Name | VARCHAR(200) | No | Injured worker's employer as documented |
+| 3 | Injury Date | DATE | Yes | Date of workplace injury. Required for timing tier calculation. |
+| 4 | Date of Service | DATE | Yes | Date physician provided the service |
+| 5 | Patient ULI | VARCHAR(12) | Yes | Patient's PHN |
+| 6 | Patient Name | VARCHAR(200) | Yes | Patient demographics |
+| 7 | Patient DOB | DATE | Yes | Date of birth |
+| 8 | Patient Gender | VARCHAR(1) | Yes | Gender code |
+| 9 | Service Code (SOMB) | VARCHAR(10) | Yes | Service code under WCB fee schedule rules (unbundled, payable at 100%) |
+| 10 | Diagnostic Code (ICD-9) | VARCHAR(10) | No | ICD-9 code (with same ICD-10→ICD-9 conversion as AHCIP extract) |
+| 11 | Billing Provider ID / BA Number | VARCHAR(20) | Yes | Provider identification fields |
+| 12 | Facility Code | VARCHAR(20) | No | AHS facility identifier |
+| 13 | Charge Status | VARCHAR(20) | Yes | ACTIVE, MODIFIED, or DELETED |
+
+Additional optional JSONB field: `wcbClinicalFields` — captures nature of injury, body part, treatment type when documented in Connect Care. Presence depends on physician documentation completeness.
+
+## 10.2 Extract Auto-Detection
+
+The SCC parser automatically identifies WCB extracts via column header inspection. When headers contain "WCB Claim Number", "Employer Name", and "Injury Date", the parser routes to the WCB row validation schema (`sccWcbRowSchema`).
+
+## 10.3 WCB Import Routing
+
+Claims from the "My WCB Codes" extract are routed to the WCB pipeline (Domain 4.2) based on extract type detection and presence of WCB-specific fields (wcbClaimNumber, injuryDate). The routing logic:
+
+1. SCC parser identifies the extract as WCB format.
+2. Each row is validated against the `sccWcbRowSchema` Zod schema.
+3. Valid rows are converted to WCB claim draft records with `import_source = 'CONNECT_CARE_CSV'` (manual upload) or `'CONNECT_CARE_SFTP'` (automated nightly transfer).
+4. The `scc_charge_status` column tracks ACTIVE, MODIFIED, or DELETED status from Connect Care.
+5. ICD-10→ICD-9 conversion is applied (same logic as AHCIP extract), with `icd_conversion_flag` and `icd10_source_code` preserved for audit trail.
+
+## 10.4 Charge Status Processing
+
+When processing `chargeStatus = 'DELETED'` or `chargeStatus = 'MODIFIED'`:
+1. Search for matching draft claim from prior import.
+2. If found in DRAFT or VALIDATED state: automatically remove or update.
+3. If claim advanced to SUBMITTED: log deletion indicator and surface as reconciliation alert.
+
+# 11. WCB Text Justification
+
+The WCB text justification feature (from MVP Features Addendum B11) provides structured narrative support for complex WCB claims.
+
+## 11.1 WCB Narrative Scenario
+
+| Scenario | Trigger | Required Fields |
+| --- | --- | --- |
+| WCB Detailed Narrative | WCB claim for complex case | Treatment description, progress notes, work capacity assessment |
+
+The system auto-detects when WCB detailed narrative justification is required based on claim context (e.g., complex injury, multiple body parts, extended treatment plan).
+
+## 11.2 Structured Prompted Fields
+
+When the WCB narrative scenario is triggered, the UI presents structured fields:
+
+- **Treatment description**: Free text describing the treatment provided and planned.
+- **Progress notes**: Free text capturing clinical progress since last report.
+- **Work capacity assessment**: Free text documenting the physician's assessment of the worker's current functional capacity and expected trajectory.
+
+## 11.3 Template System
+
+Justification templates are stored in the `justification_templates` reference data table:
+
+| Column | Description |
+| --- | --- |
+| scenario | `'WCB_NARRATIVE'` |
+| name | Display name (e.g., "WCB Complex Case Narrative") |
+| fields | Array of field definitions for WCB narrative |
+| output_format | Template string combining fields into formatted text block for WCB assessor expectations |
+
+The formatted text is generated by combining field entries into the structure WCB assessors expect. All required template fields must be completed before WCB claim submission. Physicians can save completed narratives as personal templates for reuse on future WCB cases.
+
+# 12. Security Requirements (WCB-Specific)
 
 WCB-specific security requirements supplement the shared security requirements in Domain 4.0 Core and Domain 1 (Identity & Access).
 
-## 10.1 Vendor Credentials
+## 12.1 Vendor Credentials
 
 WCB vendor UserID, password, submitter ID, source ID, and vendor prefix are stored in the secrets management system (e.g., HashiCorp Vault, AWS Secrets Manager, or DigitalOcean encrypted secrets).
 
@@ -580,7 +1185,7 @@ Access to credentials requires the WCB_VENDOR_ADMIN role. Credential rotation fo
 
 The vendor prefix (2 chars) is the only credential-derived value that appears in claim data (as the first 2 chars of submitter_txn_id).
 
-## 10.2 Batch File Security
+## 12.2 Batch File Security
 
 Generated XML files are encrypted at rest using AES-256.
 
@@ -592,13 +1197,34 @@ Batch generation and download actions are audit-logged with actor, timestamp, an
 
 Return files and remittance files are processed immediately upon ingestion. Raw files are stored encrypted for audit retention per HIA requirements.
 
-## 10.3 PHI in WCB Context
+## 12.3 PHI in WCB Context
 
 WCB claims contain additional PHI beyond AHCIP claims: employer details (name, location, phone), job title, detailed injury descriptions, opioid prescriptions, and work restriction assessments. The physician as HIA custodian retains responsibility for this data. Meritum's IMA (Information Manager Agreement) must explicitly cover WCB-specific PHI categories.
 
-# 11. Testing Requirements
+# 13. Audit Trail (WCB-Specific)
 
-## 11.1 Form Type Tests
+The implementation defines 12 WCB-specific audit action types in the `WcbAuditAction` enum:
+
+| Action | Description |
+| --- | --- |
+| WCB_FORM_CREATED | New WCB claim form created |
+| WCB_FORM_UPDATED | WCB claim form fields updated |
+| WCB_FORM_VALIDATED | WCB validation pipeline executed |
+| WCB_FORM_SUBMITTED | WCB claim submitted (queued for batch) |
+| WCB_BATCH_ASSEMBLED | Batch assembled from queued claims |
+| WCB_BATCH_VALIDATED | Batch XML passed XSD validation |
+| WCB_BATCH_DOWNLOADED | Batch XML file downloaded by physician/delegate |
+| WCB_BATCH_UPLOADED | Batch upload to myWCB confirmed |
+| WCB_RETURN_RECEIVED | Return file ingested and processed |
+| WCB_PAYMENT_RECEIVED | Remittance record matched and reconciled |
+| WCB_MVP_EXPORT_GENERATED | Pre-filled export generated (MVP phase only) |
+| WCB_MANUAL_OUTCOME_RECORDED | Manual outcome recorded (MVP phase only) |
+
+All audit actions include actor ID, timestamp, resource type, resource ID, and relevant metadata (e.g., old/new state for transitions). Audit records are append-only and cannot be modified or deleted via API.
+
+# 14. Testing Requirements
+
+## 14.1 Form Type Tests
 
 Create, validate, and submit claims for each of the 8 form types with minimum required fields.
 
@@ -608,7 +1234,7 @@ Verify that form types not permitted for a Contract ID/Role are rejected at vali
 
 Verify follow-up chain rules: C151 from C050E (valid), C151 from C568A (invalid for GP).
 
-## 11.2 Validation Matrix Tests
+## 14.2 Validation Matrix Tests
 
 All 382 POB-NOI exclusion combinations: verify each is rejected.
 
@@ -620,7 +1246,7 @@ Data type enforcement: alphabetic-only fields reject numbers, numeric fields rej
 
 Length enforcement: test at max length (pass), max+1 (fail).
 
-## 11.3 XML Generation Tests
+## 14.3 XML Generation Tests
 
 Generate XML for each form type and validate against both XSD schemas.
 
@@ -636,7 +1262,7 @@ Verify batch with attachments vs without attachments.
 
 Compare generated XML structure against sample files 5.01–5.17 from the accreditation package.
 
-## 11.4 Return File Tests
+## 14.4 Return File Tests
 
 Parse successful return file (sample 7.01): verify all fields extracted, claims matched, states updated to assessed.
 
@@ -646,7 +1272,7 @@ Return file with unmatched SubmitterTxnID: verify graceful handling and alert.
 
 Return file with mixed Complete and Invalid reports: verify each handled independently.
 
-## 11.5 Remittance Tests
+## 14.5 Remittance Tests
 
 Parse remittance XML (sample 8.02): verify all PaymentRemittanceRecord fields extracted and stored.
 
@@ -658,7 +1284,7 @@ Handle overpayment recovery amounts.
 
 Handle all 7 payment status codes correctly.
 
-## 11.6 Timing and Fee Tests
+## 14.6 Timing and Fee Tests
 
 Same-day tier: examination today, submission today → same-day fee.
 
@@ -676,7 +1302,7 @@ Unbundling: verify multiple services on same date each paid at 100%.
 
 RRNP flat fee applied when physician qualifies.
 
-## 11.7 WCB Billing Scenarios (End-to-End)
+## 14.7 WCB Billing Scenarios (End-to-End)
 
 GP first report (C050E) with on-time submission, accepted, paid.
 
@@ -698,570 +1324,33 @@ Late submission with fee tier downgrade notification.
 
 Batch with mixed form types: C050E + C568 + C569 in single batch.
 
-# 12. Appendix A: Form Field Summary Tables
+## 14.8 Connect Care Import Tests
+
+Parse WCB SCC extract with valid 13-field format.
+
+Auto-detect WCB extract type from column headers.
+
+Route WCB rows to Domain 4.2 pipeline.
+
+Handle charge status transitions (ACTIVE → MODIFIED → DELETED).
+
+Validate ICD-10→ICD-9 conversion on WCB extract rows.
+
+## 14.9 Unbundling Tests
+
+Verify WCB code-pair with wcb_relationship = INDEPENDENT: each code billed at 100%.
+
+Verify WCB code-pair with wcb_relationship = INTRINSICALLY_LINKED: combined single fee.
+
+Verify same code-pair returns different results for AHCIP vs WCB claimType.
+
+Verify bundling check endpoint accepts claimType parameter and returns WCB-specific analysis.
+
+# 15. Appendix A: Form Field Summary Tables
 
 The following tables summarise key fields per form type with their Meritum column mapping and HL7 segment targets. These are not exhaustive — the authoritative field-level reference is the HL7 Element Mapping spreadsheet (accreditation package document 3). These summaries cover fields with meaningful business logic, conditional rules, or non-obvious mapping.
 
 ## A.1 C050E — Physician First Report (Key Fields)
-
-## A.2 C151 — Physician Progress Report (Key Differences from C050E)
-
-## A.3 C568 — Medical Invoice (Key Differences)
-
-C568 is the simplest clinical form. No Treatment Plan or Return to Work sections. The Invoice section is more complex than C050E/C151, with from/to date ranges, per-line diagnostic codes, per-line facility type and skill code, and an explicit fees_submitted amount per line.
-
-## A.4 C570 — Medical Invoice Correction (Unique Structure)
-
-C570 is structurally unique. Instead of a single set of invoice lines, it has paired 'Was' and 'Should Be' line sets. Each Was line describes what was originally submitted; the paired Should Be line describes the corrected values. The system must enforce 1:1 pairing via the correction_pair_id field and matching invoice_detail_id values.
-
-# 13. Appendix B: WCB Reference Code Tables
-
-The following reference code tables are sourced from the HL7 Element Mapping spreadsheet and maintained in Reference Data (Domain 2). They are listed here for developer reference. The Reference Data domain is the system of record; these are a snapshot.
-
-## B.1 Part of Body Codes (30 values)
-
-## B.2 Practitioner Role Codes (10 values)
-
-## B.3 Facility Types (3 values)
-
-## B.4 Form ID to Attachment Codes
-
-All form types support a maximum of 3 attachments. Permitted file types are defined in the Form ID To Attachment Codes reference table in the HL7 mapping spreadsheet. Common types include PDF, DOC, DOCX, JPG, PNG, TIF.
-
-## B.5 Additional Reference Tables
-
-The following tables are maintained in Reference Data (Domain 2) and are not reproduced here due to size. Developers should reference the HL7 mapping spreadsheet directly:
-
-Nature of Injury Codes (46 values)
-
-POB-NOI Validation Exclusions (382 combinations)
-
-State/Province Codes (65 values)
-
-Country Codes (239 values)
-
-Skill Codes (141 values)
-
-Category Type Expedite Codes (40 form-specific entries)
-
-Pain Scale Codes, Function Level Codes, Weight Category Codes, Fit For Work Codes, Work Restriction Detail Codes, Consultation Letter Formats, Dominant Hand Codes, Gender Codes, Yes/No and Yes/No/NA response codes
-
-# 14. Appendix C: OIS-Specific Forms (C050S / C151S)
-
-The Occupational Injury Service (OIS) forms are expanded variants of the standard GP forms. C050S extends C050E; C151S extends C151. They share the same General, Participant, Accident, and Injury sections but have significantly expanded Return to Work sections with granular functional capacity assessment. These forms are used exclusively by OIS practitioners (Contract ID 000053, Role OIS).
-
-This appendix specifies the OIS-unique data model extensions, additional validation rules, and reference code tables required to support C050S and C151S. The OIS market segment is narrower than standard GP, but the forms must be fully supported for vendor accreditation.
-
-## C.1 OIS Return to Work: Expanded Restrictions
-
-The standard forms (C050E, C151) have 11 activity restriction types with simple Able/Unable levels. The OIS forms replace this with a granular functional capacity model featuring 3 key differences:
-
-All restriction fields are Always Required on C050S (vs Conditionally Required on C050E). The OIS physician must assess every activity, not just ones affected by the injury.
-
-Per-activity hours fields for every timed activity (not just sitting/standing/walking/driving). Bending, twisting, kneeling, and climbing all gain hours sub-fields.
-
-New activity types not present on standard forms: bilateral hand grasping (with sub-assessments), zone-specific lifting, directional reaching, and environmental restrictions.
-
-## C.2 OIS-Unique Field Groups
-
-### C.2.1 Hand Grasping Assessment (12 fields)
-
-The OIS forms assess grasping capacity per hand with 6 sub-fields each. This level of detail is absent from C050E/C151 entirely.
-
-*Required on C050S (Always Required). Conditionally required on C151S (when RTW status changed = Y and modified duties = Y).
-
-### C.2.2 Zone-Specific Lifting (6 fields)
-
-Standard forms have a single Lifting restriction with one max-weight field. OIS forms break lifting into 3 zones, each with its own restriction level and weight limit.
-
-### C.2.3 Directional Reaching (4 fields)
-
-Standard forms have a single 'Overhead reaching' field. OIS forms assess reaching in 4 directions (above/below each shoulder), reflecting the bilateral assessment model.
-
-### C.2.4 Environmental Restrictions (8 fields)
-
-OIS forms add an environmental assessment section entirely absent from standard forms. The physician assesses the worker's tolerance for 7 environmental conditions.
-
-### C.2.5 OIS Assessment Summary (C050S fields 114–141)
-
-The C050S form includes a structured three-party communication summary that is entirely absent from C050E. It captures coordinated return-to-work planning between the OIS physician, the employer, and the worker, plus a handoff to the family physician.
-
-## C.3 C151S: OIS Progress Report Differences
-
-C151S extends C151 with the same expanded restriction model as C050S, but adds an additional trigger: 'Has the patient's return to work status changed?' (field 58). This is a gating question that makes the entire expanded RTW section conditionally required — if the status has not changed since the last report, the OIS physician skips the detailed assessment. This differs from C050S where all RTW fields are Always Required.
-
-The C151S also retains the C151 opioid management section (16 side-effect fields), making it the most field-heavy form at 153 total fields.
-
-## C.4 OIS-Specific Reference Code Tables
-
-## C.5 Data Model Impact
-
-The OIS-specific fields are stored in the wcb_claim_details table as additional nullable columns. This keeps the single-table pattern for scalar fields. The columns are only populated when form_id is C050S or C151S; the validation engine enforces their presence/absence based on form type.
-
-Total additional columns for OIS support: approximately 45 (12 grasping + 6 zone lifting + 4 directional reaching + 8 environmental + 29 assessment summary − 14 that overlap with standard columns as expanded versions).
-
-Alternative approach considered: A separate wcb_ois_details table. Rejected because: (a) it would require an additional join on every OIS claim read, (b) the OIS columns are nullable and incur no storage cost on non-OIS claims, and (c) the form_id-based validation pattern already handles form-specific field requirements.
-
-## C.6 OIS Validation Additions
-
-Form ID gating: C050S requires Contract ID 000053 with Role OIS. No other Contract/Role can create C050S.
-
-Extended restriction codes: OIS restriction fields use Extended Work Restriction Codes (ABLE/UNABLE/LIMITEDTO) rather than Basic codes (ABLE/UNABLE/LIMITED). The validation engine checks the correct code table based on form_id.
-
-C151S RTW status gate: When rtw_status_changed = N on C151S, the entire expanded RTW section is conditionally unavailable. When = Y, all OIS RTW fields become required.
-
-Family physician cascade: ois_has_family_physician = Y triggers 10 dependent fields. If N, all family physician fields must be null.
-
-Grasping sub-field cascade: grasp_right_level = LIMITED triggers prolonged/repetitive/vibration sub-fields. grasp_right_specify = Y triggers specific_desc.
-
-# 15. Open Questions
-
-# 16. Document Control
-
-This document specifies the WCB EIR submission pathway. It should be read in conjunction with Domain 4.0 (Claim Lifecycle Core) for the shared state machine, base data model, and validation architecture, and Domain 4.1 (AHCIP Claim Pathway) for the H-Link submission pathway. Together, the three 4.x documents comprise the complete Claim Lifecycle specification.
-
-| Domain | Dependency Type | Key Interfaces |
-| --- | --- | --- |
-| 4.0 Claim Lifecycle Core | Parent | State machine, base claims table, validation architecture, audit history |
-| 1 Identity & Access | Consumed | Auth, RBAC, delegate permissions, audit logging |
-| 2 Reference Data | Consumed | WCB fee schedule, SOMB codes (for premium calc), modifier rules, POB/NOI/skill codes |
-| 3 Notification Service | Consumed | Deadline reminders, submission confirmations, return file alerts, payment notifications |
-| 5 Provider Management | Consumed | Practitioner billing number, Contract ID, Role, skill code, facility type |
-| 6 Patient Registry | Consumed | Patient PHN, demographics, employer details for WCB forms |
-| 7 Intelligence Engine | Consumed | AI Coach suggestions for WCB-specific billing optimisation |
-
-| Form ID | Name | Fields | Req'd | Type | Purpose |
-| --- | --- | --- | --- | --- | --- |
-| C050E | Physician First Report | 111 | 38 | Initial | GP/NP/ERS first report of workplace injury. Full clinical assessment with employer, injury, treatment plan, and return-to-work sections. |
-| C050S | OIS Physician First Report | 171 | 70 | Initial | Occupational Injury Service (OIS) variant of C050E with expanded clinical assessment, pain scales, functional capacity, and work restriction detail. |
-| C151 | Physician Progress Report | 136 | 39 | Follow-up | GP/NP/ERS follow-up report. Includes opioid management monitoring (16 medication side-effect fields) and updated treatment/return-to-work. |
-| C151S | OIS Physician Progress Report | 153 | 39 | Follow-up | OIS variant of C151 with expanded work restriction detail and functional capacity assessment. |
-| C568 | Medical Invoice | 61 | 17 | Either | Invoice-only form for services without clinical report. Supports multiple invoice lines with from/to date ranges. |
-| C568A | Medical Consultation Report | 69 | 19 | Either | Specialist consultation report with attached consultation letter (plain text or file attachment). |
-| C569 | Medical Supplies Invoice | 37 | 18 | Follow-up | Invoice for medical supplies (braces, supports, etc.). Line items by quantity and description. |
-| C570 | Medical Invoice Correction | 66 | 18 | Follow-up | Corrects a previously submitted C568 invoice. Contains paired Was/Should Be invoice line sets. |
-
-| Section | C050E | C050S | C151 | C151S | C568 | C568A | C569 | C570 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| General | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Participant: Claimant | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Participant: Practitioner | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Participant: Employer | ✓ | ✓ | ✓ | ✓ |  |  |  |  |
-| Accident | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Injury | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |
-| Treatment Plan | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |  |
-| Return to Work | ✓ | ✓ | ✓ | ✓ |  |  |  |  |
-| Attachments | ✓ | ✓ | ✓ | ✓ | ✓ |  |  |  |
-| Invoice | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-| Contract ID | Description | Role | Role Description | Initial Forms |
-| --- | --- | --- | --- | --- |
-| 000001 | WCB General | GP | General Practitioner | C050E, C568 |
-| 000004 | Authorized Ortho | OR | Ortho | C568A, C568 |
-| 000006 | Specialist | SP | Specialist | C568A, C568 |
-| 000006 | Specialist | ERS | ER Specialist/FTER | C050E, C568 |
-| 000006 | Specialist | ANE | Anesthesiologist | C568A, C568 |
-| 000022 | MRI | DP | Diagnostic Provider | C568 |
-| 000023 | CT Scan | DP | Diagnostic Provider | C568 |
-| 000024 | VSC Facility Fee | VSC | Visiting Specialist Clinic | C568A, C568 |
-| 000025 | Day Surgery Facility | VSCFAC | VSC Facility | C568 |
-| 000052 | Ultrasound FFS | DP | Diagnostic Provider | C568 |
-| 000053 | OIS General FFS | OIS | OIS | C050S, C568 |
-| 000065 | Alberta Hospitals | HP | Hospital | C568 |
-| 000066 | Non-Ortho VSC | SP | Specialist | C568A, C568 |
-| 000084 | Nurse Practitioners | NP | Nurse Practitioners | C050E, C568 |
-
-| Contract ID | Role | Progress Forms | Can Create From | Notes |
-| --- | --- | --- | --- | --- |
-| 000001 | GP | C151, C568, C569, C570 | C050E, C151, C568 | GP progress reports chain from first reports or prior progress |
-| 000006 | ERS | C151, C568, C569, C570 | C050E, C151, C568 | ER Specialist follows same chain as GP |
-| 000006 | SP | C568A, C568, C569, C570 | C568A, C568 | Specialist chains from consultation/invoice |
-| 000006 | ANE | C568A, C568, C569, C570 | C568A, C568 | Anesthesiologist follows specialist pattern |
-| 000004 | OR | C568A, C568, C569, C570 | C568A, C568 | Ortho follows specialist pattern |
-| 000053 | OIS | C151S, C568, C569, C570 | C050S, C151S, C568 | OIS uses S-variant progress reports |
-| 000084 | NP | C151, C568, C570 | C050E, C151, C568 | Nurse Practitioners: no C569 (supplies) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_claim_detail_id | UUID | No | Primary key |
-| claim_id | UUID FK | No | FK to claims.claim_id (Domain 4.0) |
-| form_id | VARCHAR(5) | No | WCB form type: C050E, C050S, C151, C151S, C568, C568A, C569, C570 |
-| submitter_txn_id | VARCHAR(16) | No | Unique ID for reconciliation. First 2 chars = Meritum vendor prefix (assigned by WCB during accreditation). |
-| wcb_claim_number | VARCHAR(7) | Yes | WCB claim number (7-digit). Null for new/unknown claims; WCB assigns on acceptance. |
-| report_completion_date | DATE | No | Date the physician completed the report |
-| additional_comments | TEXT | Yes | Free-text additional comments (max 2048 chars) |
-| parent_wcb_claim_id | UUID FK | Yes | FK to wcb_claim_details for follow-up reports. Required for C151, C151S, C569, C570; validated against follow-up chain rules (Section 2.3.2). |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| practitioner_billing_number | VARCHAR(8) | No | AH billing number / practitioner ID |
-| contract_id | VARCHAR(10) | No | WCB Contract ID (e.g., 000001, 000006). Determines fee schedule and form permissions. |
-| role_code | VARCHAR(10) | No | Practitioner role: GP, SP, ERS, ANE, OR, DP, VSC, VSCFAC, OIS, NP, HP |
-| practitioner_first_name | VARCHAR(11) | No | Practitioner first name (max 11 chars per WCB spec) |
-| practitioner_middle_name | VARCHAR(11) | Yes | Practitioner middle name |
-| practitioner_last_name | VARCHAR(21) | No | Practitioner last name (max 21 chars per WCB spec) |
-| skill_code | VARCHAR(10) | No | WCB skill code (141 valid values; e.g., GENP, ANES, ORTH). Required for invoice section. |
-| facility_type | VARCHAR(1) | No | C = Clinic, F = Facility Non-Hospital, H = Hospital |
-| clinic_reference_number | VARCHAR(8) | Yes | Clinic reference number if applicable |
-| billing_contact_name | VARCHAR(30) | Yes | Billing contact name for invoice inquiries |
-| fax_country_code | VARCHAR(10) | Yes | Billing fax country code |
-| fax_number | VARCHAR(24) | Yes | Billing fax number |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| patient_no_phn_flag | VARCHAR(1) | No | Y/N — does the patient lack an Alberta PHN? If Y, PHN field must be blank. |
-| patient_phn | VARCHAR(9) | Yes | Alberta PHN (9 digits). Required when patient_no_phn_flag = N. |
-| patient_gender | VARCHAR(1) | No | M, F, or U (codes per WCB Gender Codes table) |
-| patient_first_name | VARCHAR(11) | No | Patient first name (max 11 chars) |
-| patient_middle_name | VARCHAR(11) | Yes | Patient middle name |
-| patient_last_name | VARCHAR(21) | No | Patient last name (max 21 chars) |
-| patient_dob | DATE | No | Patient date of birth |
-| patient_address_line1 | VARCHAR(30) | No | Mailing address line 1 |
-| patient_address_line2 | VARCHAR(30) | Yes | Mailing address line 2 |
-| patient_city | VARCHAR(20) | No | City |
-| patient_province | VARCHAR(10) | Yes | Province code (per State Province Codes table) |
-| patient_postal_code | VARCHAR(9) | Yes | Postal code |
-| patient_phone_country | VARCHAR(10) | Yes | Phone country code |
-| patient_phone_number | VARCHAR(24) | Yes | Phone number |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| employer_name | VARCHAR(50) | Yes* | Employer name. *Required when form has Employer section. |
-| employer_location | VARCHAR(100) | Yes* | Location of operations |
-| employer_city | VARCHAR(20) | Yes* | Employer city |
-| employer_province | VARCHAR(10) | Yes | Employer province |
-| employer_phone_country | VARCHAR(10) | Yes | Employer phone country code |
-| employer_phone_number | VARCHAR(24) | Yes | Employer phone number |
-| employer_phone_ext | VARCHAR(6) | Yes | Employer phone extension |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| worker_job_title | VARCHAR(50) | Yes* | Worker job title. *Required for C050E/S, C151/S. |
-| injury_developed_over_time | VARCHAR(1) | Yes* | Y/N. *Required for C050E/S, C151/S, C568A. |
-| date_of_injury | DATE | No | Date of workplace injury. Required for all forms (though optional on C568/C568A per schema, our validation requires it for claim integrity). |
-| injury_description | TEXT | Yes* | How and when the injury occurred (max 1024 chars). *Required for C050E/S, C151/S. |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| date_of_examination | DATE | Yes* | Date of examination. *Required for forms with Injury section. |
-| symptoms | TEXT | Yes* | Symptoms (max 2048 chars). *Required for C050E/S, C151/S. |
-| objective_findings | TEXT | Yes* | Objective findings (max 1024 chars). *Required for C050E/S, C151/S. |
-| current_diagnosis | TEXT | Yes* | Current diagnosis text (max 1024). *Required for C050E/S. |
-| previous_diagnosis | TEXT | Yes* | Previous diagnosis text (max 1024). *Required for C151/S. |
-| diagnosis_changed | VARCHAR(1) | Yes* | Y/N: has the diagnosis changed? *C151/S only. |
-| diagnosis_changed_desc | TEXT | Yes* | Description of change (max 1024). *Required when diagnosis_changed = Y. |
-| diagnostic_code_1 | VARCHAR(8) | Yes* | Primary ICD diagnostic code. *Required for forms with Injury section. |
-| diagnostic_code_2 | VARCHAR(8) | Yes | Secondary diagnostic code |
-| diagnostic_code_3 | VARCHAR(8) | Yes | Tertiary diagnostic code |
-| additional_injuries_desc | TEXT | Yes | Additional injuries beyond 5 POB entries (max 1024) |
-| dominant_hand | VARCHAR(10) | Yes | L, R, or AMB. Conditionally available when upper extremity injury. |
-| prior_conditions_flag | VARCHAR(1) | Yes* | Y/N: prior conditions in same anatomical area? *Required for C050E/S, C151/S. |
-| prior_conditions_desc | TEXT | Yes* | Prior condition diagnosis/treatment (max 1024). *Required when prior_conditions_flag = Y. |
-| referring_physician_name | VARCHAR(50) | Yes | Referring physician name (C568, C568A only) |
-| date_of_referral | DATE | Yes | Referral date (C568, C568A only) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| narcotics_prescribed | VARCHAR(1) | Yes* | Y/N: were narcotics/opioids prescribed? *Required for forms with Treatment Plan. |
-| treatment_plan_text | TEXT | Yes* | Treatment plan and non-opioid medications (max 1024). *Required for C050E/S, C151/S. |
-| case_conf_wcb_manager | VARCHAR(1) | Yes* | Y/N: request case conference with WCB case manager? *C050E/S, C151/S. |
-| case_conf_wcb_physician | VARCHAR(1) | Yes* | Y/N: request case conference with WCB physician? *C050E/S, C151/S. |
-| referral_rtw_provider | VARCHAR(1) | Yes* | Y/N: referral to Return to Work provider? *C050E/S, C151/S. |
-| consultation_letter_format | VARCHAR(5) | Yes* | ATTCH or TEXT. *Required for C568A. |
-| consultation_letter_text | TEXT | Yes* | Plain text consultation letter (max varies). *Required when format = TEXT. |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| surgery_past_60_days | VARCHAR(1) | Yes* | Y/N. *Conditional: required when narcotics_prescribed = Y on C151/S. |
-| treating_malignant_pain | VARCHAR(1) | Yes* | Y/N |
-| wcb_advised_no_mmr | VARCHAR(1) | Yes* | Y/N: has WCB advised not to submit Medication Management Report? |
-| side_effect_nausea | VARCHAR(1) | Yes* | Y/N |
-| side_effect_sleep | VARCHAR(1) | Yes* | Y/N: sleep disorders/apnea |
-| side_effect_constipation | VARCHAR(1) | Yes* | Y/N |
-| side_effect_endocrine | VARCHAR(1) | Yes* | Y/N: endocrine dysfunction |
-| side_effect_sweating | VARCHAR(1) | Yes* | Y/N |
-| side_effect_cognitive | VARCHAR(1) | Yes* | Y/N: cognitive deficits |
-| side_effect_dry_mouth | VARCHAR(1) | Yes* | Y/N |
-| side_effect_fatigue | VARCHAR(1) | Yes* | Y/N: fatigue/drowsiness |
-| side_effect_depression | VARCHAR(1) | Yes* | Y/N: depressed mood |
-| side_effect_worsening_pain | VARCHAR(1) | Yes* | Y/N |
-| abuse_social_deterioration | VARCHAR(1) | Yes* | Y/N |
-| abuse_unsanctioned_use | VARCHAR(1) | Yes* | Y/N |
-| abuse_altered_route | VARCHAR(1) | Yes* | Y/N: altering route of delivery |
-| abuse_opioid_seeking | VARCHAR(1) | Yes* | Y/N |
-| abuse_other_sources | VARCHAR(1) | Yes* | Y/N: accessing opioids from other sources |
-| abuse_withdrawal | VARCHAR(1) | Yes* | Y/N: withdrawal symptoms |
-| patient_pain_estimate | SMALLINT | Yes* | 0–10 scale. Patient self-reported pain severity. |
-| opioid_reducing_pain | VARCHAR(1) | Yes* | Y/N: is current opioid therapy reducing pain? |
-| pain_reduction_desc | TEXT | Yes* | Description of reduction (max 2048). Required when opioid_reducing_pain = Y. |
-| clinician_function_estimate | SMALLINT | Yes* | 0–10 scale. Clinician estimate of patient function. |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| missed_work_beyond_accident | VARCHAR(1) | Yes* | Y/N. *Required for forms with RTW section. |
-| patient_returned_to_work | VARCHAR(1) | Yes* | Y/N. *Conditional: required when missed_work = Y. |
-| date_returned_to_work | DATE | Yes* | Date returned. *Required when returned_to_work = Y. |
-| modified_hours | VARCHAR(1) | Yes* | Y/N. *Required when returned_to_work = Y. |
-| hours_capable_per_day | SMALLINT | Yes* | Hours/day. *Required when modified_hours = Y. |
-| modified_duties | VARCHAR(1) | Yes* | Y/N. *Required when returned_to_work = Y. |
-| rtw_hospitalized | VARCHAR(1) | Yes* | Y/N: is inability to work due to hospitalisation? |
-| rtw_self_reported_pain | VARCHAR(1) | Yes* | Y/N: self-reported pain preventing RTW? |
-| rtw_opioid_side_effects | VARCHAR(1) | Yes* | Y/N: opioid/medication side effects preventing RTW? |
-| rtw_other_restrictions | TEXT | Yes | Other restrictions/comments (max 2048) |
-| estimated_rtw_date | DATE | Yes* | Estimated date for pre-accident level work. *Required when missed_work = Y and returned_to_work = N. |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| reassessment_comments | TEXT | Yes | Additional reassessment comments for C570 corrections (max 2048) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_injury_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| ordinal | SMALLINT | No | Position 1–5 |
-| part_of_body_code | VARCHAR(10) | No | POB code (30 valid values; e.g., 42000 = Ankle, 01100 = Brain) |
-| side_of_body_code | VARCHAR(10) | Yes | SOB code: L, R, B. Required when POB requires side (per Side of Body Required flag in POB codes table). |
-| nature_of_injury_code | VARCHAR(10) | No | NOI code (46 valid values; e.g., 02100 = Sprain, 01200 = Fracture) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_prescription_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| ordinal | SMALLINT | No | Position 1–5 |
-| prescription_name | VARCHAR(50) | No | Medication name |
-| strength | VARCHAR(30) | No | Strength/dosage form |
-| daily_intake | VARCHAR(30) | No | Daily intake (tab/ml) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_consultation_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| ordinal | SMALLINT | No | Position 1–5 |
-| category | VARCHAR(10) | No | CONREF (Consultation/Referral) or INVE (Investigation) |
-| type_code | VARCHAR(10) | No | Type within category: ORTHO, NEURO, PLASTIC, OTHER, XRAY, ULTRA, CT, MRI, EMG, OTHER |
-| details | VARCHAR(50) | No | Free-text details |
-| expedite_requested | VARCHAR(1) | Yes | Y/N. Only available for specific Category/Type combinations per Expedite Codes table. |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_restriction_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| activity_type | VARCHAR(20) | No | SITTING, STANDING, WALKING, BENDING, TWISTING, KNEELING_SQUATTING, CLIMBING, LIFTING, PUSHING_PULLING, OVERHEAD_REACHING, DRIVING |
-| restriction_level | VARCHAR(10) | No | Able/Unable per Work Restriction Detail Codes (FULL, PART, UNABLE for OIS; simpler for standard) |
-| hours_per_day | SMALLINT | Yes | Applicable for SITTING, STANDING, WALKING, DRIVING (activities with hours fields) |
-| max_weight | VARCHAR(10) | Yes | Maximum weight category for LIFTING (per Weight Category Codes) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_invoice_line_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| invoice_detail_id | SMALLINT | No | Sequential line number within the invoice (1-based) |
-| line_type | VARCHAR(10) | No | STANDARD (C050E/S, C151/S), DATED (C568/A), SUPPLY (C569), WAS (C570), SHOULD_BE (C570) |
-| health_service_code | VARCHAR(7) | Yes | HSC. Required for STANDARD and DATED lines. |
-| diagnostic_code_1 | VARCHAR(8) | Yes | Primary diagnostic code (C568/A DATED lines) |
-| diagnostic_code_2 | VARCHAR(8) | Yes | Secondary diagnostic code |
-| diagnostic_code_3 | VARCHAR(8) | Yes | Tertiary diagnostic code |
-| modifier_1 | VARCHAR(6) | Yes | Primary modifier |
-| modifier_2 | VARCHAR(6) | Yes | Secondary modifier |
-| modifier_3 | VARCHAR(6) | Yes | Tertiary modifier |
-| calls | SMALLINT | Yes | Number of calls (0–7) |
-| encounters | SMALLINT | Yes | Number of encounters (0 or 1) |
-| date_of_service_from | DATE | Yes | Service start date (C568/A DATED lines) |
-| date_of_service_to | DATE | Yes | Service end date (C568/A DATED lines) |
-| facility_type_override | VARCHAR(1) | Yes | Per-line facility type override for C568/A |
-| skill_code_override | VARCHAR(10) | Yes | Per-line skill code override for C568/A |
-| invoice_detail_type_code | VARCHAR(10) | Yes | Detail type code for C568/A lines |
-| invoice_detail_desc | VARCHAR(50) | Yes | Detail description for C568/A lines |
-| quantity | SMALLINT | Yes | Quantity for C569 supply lines |
-| supply_description | VARCHAR(50) | Yes | Supply type and description for C569 |
-| amount | DECIMAL(10,2) | Yes | Fee amount (C568/A fees_submitted, C569 amount) |
-| adjustment_indicator | VARCHAR(10) | Yes | C570 only: adjustment indicator for Was/Should Be pairing |
-| billing_number_override | VARCHAR(8) | Yes | C570 only: per-line billing number for corrections |
-| correction_pair_id | SMALLINT | Yes | C570 only: links Was line to its corresponding Should Be line |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_attachment_id | UUID | No | Primary key |
-| wcb_claim_detail_id | UUID FK | No | FK to wcb_claim_details |
-| ordinal | SMALLINT | No | Position 1–3 |
-| file_name | VARCHAR(255) | No | Original file name |
-| file_type | VARCHAR(10) | No | File type code per WCB attachment codes (e.g., PDF, DOC, JPG) |
-| file_content_b64 | TEXT | No | Base64-encoded file content. Stored encrypted at rest. |
-| file_description | VARCHAR(60) | No | Description of attachment content |
-| file_size_bytes | INTEGER | No | Original file size in bytes (for validation and UI display) |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_batch_id | UUID | No | Primary key |
-| physician_id | UUID FK | No | FK to providers. Each batch is per-physician. |
-| batch_control_id | VARCHAR(50) | No | Batch control ID (appears in BHS.11). Used for return file reconciliation. |
-| file_control_id | VARCHAR(50) | No | File control ID (appears in FHS.11). |
-| status | VARCHAR(20) | No | ASSEMBLING, GENERATED, VALIDATED, UPLOADED, RETURN_RECEIVED, RECONCILED, ERROR |
-| report_count | INTEGER | No | Number of reports in the batch |
-| xml_file_path | VARCHAR(255) | Yes | Path to generated XML file (encrypted at rest) |
-| xml_file_hash | VARCHAR(64) | Yes | SHA-256 hash of generated XML file |
-| xsd_validation_passed | BOOLEAN | Yes | Did the file pass XSD schema validation? |
-| xsd_validation_errors | JSONB | Yes | Array of XSD validation errors if failed |
-| uploaded_at | TIMESTAMPTZ | Yes | When the file was uploaded to myWCB |
-| uploaded_by | UUID FK | Yes | Who uploaded (physician or delegate) |
-| return_file_received_at | TIMESTAMPTZ | Yes | When batch return notification was received |
-| return_file_path | VARCHAR(255) | Yes | Path to return file |
-| created_at | TIMESTAMPTZ | No | Batch creation timestamp |
-| created_by | UUID FK | No | Who initiated the batch |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_return_record_id | UUID | No | Primary key |
-| wcb_batch_id | UUID FK | No | FK to wcb_batches |
-| wcb_claim_detail_id | UUID FK | Yes | FK to matched wcb_claim_details (null if unable to match) |
-| report_txn_id | VARCHAR(20) | No | WCB-assigned transaction ID |
-| submitter_txn_id | VARCHAR(16) | No | Our submitter transaction ID (for matching) |
-| processed_claim_number | VARCHAR(7) | Yes | WCB claim number assigned/confirmed |
-| claim_decision | VARCHAR(20) | No | Accepted or empty (for invalid reports) |
-| report_status | VARCHAR(20) | No | Complete or Invalid |
-| txn_submission_date | DATE | No | Submission date as recorded by WCB |
-| errors | JSONB | Yes | Array of {error_number, error_description} for Invalid reports |
-
-| Column | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| wcb_return_invoice_line_id | UUID | No | Primary key |
-| wcb_return_record_id | UUID FK | No | FK to wcb_return_records |
-| invoice_sequence | SMALLINT | No | Invoice line sequence number |
-| service_date | DATE | Yes | Service date for the line |
-| health_service_code | VARCHAR(7) | Yes | HSC for the line |
-| invoice_status | VARCHAR(20) | Yes | Line-level status (typically empty for accepted) |
-
-| Column | Type | Null | Description |
-| --- | --- | --- | --- |
-| wcb_remittance_id | UUID | No | Primary key |
-| remittance_import_id | UUID FK | No | FK to remittance import batch record |
-| wcb_claim_detail_id | UUID FK | Yes | FK to matched wcb_claim_details |
-| report_week_start | DATE | No | Remittance report week start date |
-| report_week_end | DATE | No | Remittance report week end date |
-| disbursement_number | VARCHAR(8) | Yes | Disbursement/cheque number |
-| disbursement_type | VARCHAR(3) | Yes | EFT or AUT (cheque) |
-| disbursement_issue_date | DATE | Yes | Date disbursement was issued |
-| disbursement_amount | DECIMAL(11,2) | Yes | Total disbursement amount |
-| disbursement_recipient_billing | VARCHAR(8) | Yes | Recipient billing number |
-| disbursement_recipient_name | VARCHAR(40) | Yes | Recipient name |
-| payment_payee_billing | VARCHAR(8) | No | Payee billing number |
-| payment_payee_name | VARCHAR(40) | No | Payee name |
-| payment_reason_code | VARCHAR(3) | No | REQ, ISS, etc. |
-| payment_status | VARCHAR(3) | No | ISS (Issued), DEL (Deleted), PAE/PGA (Pending Approval), PGD (Pending Decision), REJ (Rejected), REQ (Requested) |
-| payment_start_date | DATE | No | Payment period start |
-| payment_end_date | DATE | No | Payment period end |
-| payment_amount | DECIMAL(11,2) | No | Payment amount for this line |
-| billed_amount | DECIMAL(10,2) | Yes | Original billed amount from electronic report |
-| electronic_report_txn_id | VARCHAR(20) | Yes | WCB transaction ID (for matching to return records) |
-| claim_number | VARCHAR(7) | Yes | WCB claim number |
-| worker_phn | VARCHAR(11) | Yes | Worker PHN |
-| worker_first_name | VARCHAR(11) | Yes | Worker first name |
-| worker_last_name | VARCHAR(21) | Yes | Worker last name |
-| service_code | VARCHAR(7) | Yes | Health service code |
-| modifier_1 | VARCHAR(6) | Yes | Primary modifier |
-| modifier_2 | VARCHAR(6) | Yes | Secondary modifier |
-| modifier_3 | VARCHAR(6) | Yes | Tertiary modifier |
-| number_of_calls | SMALLINT | Yes | Number of calls |
-| encounter_number | SMALLINT | Yes | Encounter number |
-| overpayment_recovery | DECIMAL(10,2) | Yes | Overpayment recovery amount deducted |
-
-| # | Check | Severity | Description |
-| --- | --- | --- | --- |
-| 1 | Form ID Valid | Error | form_id is one of the 8 valid WCB form types. |
-| 2 | Contract ID / Role / Form ID | Error | The practitioner's Contract ID and Role permit the selected Form ID (per Section 2.3 matrix). For follow-up forms, validates the parent claim chain. |
-| 3 | Required Fields Present | Error | All 'Always Required' fields for this form type are populated and non-empty. |
-| 4 | Conditional Field Logic | Error | All 'Conditionally Available and Required' fields are present when their trigger conditions are met (Section 4.2). |
-| 5 | Data Type / Length | Error | Each field value conforms to its data type (Alpha, Char, Num, Date, Cur) and length constraints per the HL7 mapping. |
-| 6 | Date Validation | Error | All date fields are valid dates in accepted formats (YYYYMMDD, YYYY-MM-DD, YYYY/MM/DD). Date of examination >= date of injury. Report completion date >= date of examination. |
-| 7 | POB-NOI Combination | Error | Each injury entry's Part of Body / Nature of Injury combination is not in the 382-entry exclusion list (Section 4.3). |
-| 8 | Side of Body Required | Error | Side of Body is provided when the selected Part of Body requires it (per POB codes table 'Side of Body Required' flag). |
-| 9 | Code Table Values | Error | All coded fields contain values from their respective code tables (Gender, Province, POB, NOI, Skill Code, Facility Type, etc.). |
-| 10 | Submitter Txn ID Format | Error | First 2 characters match Meritum's vendor prefix. Total length 1–16. Unique within this batch. |
-| 11 | PHN Logic | Error | If patient_no_phn_flag = N, PHN must be present and 9 digits. If Y, PHN must be blank. |
-| 12 | Invoice Line Integrity | Error | At least 1 invoice line present. Line numbers sequential. Form-specific line field requirements met (Section 3.6). |
-| 13 | Attachment Constraints | Warning | Max 3 attachments per form. File type is in permitted attachment codes for this form type. |
-| 14 | WCB Timing Deadline | Warning | Calculates submission timing tier (same-day, on-time, late) and warns if claim is approaching or past the on-time window (Section 4.5). |
-| 15 | Expedite Eligibility | Warning | If expedite_requested = Y on a consultation, validates the Category/Type combination permits expedite per Expedite Codes table. |
-| 16 | Duplicate Detection | Warning | Checks for existing WCB claims with same patient + same date of injury + same form type within configurable window. |
-
-| Tier | GP First (C050E) | GP Progress (C151) | Specialist (C568A) |
-| --- | --- | --- | --- |
-| Same-day | Exam day or next biz day by 10:00 MT | Exam day or next biz day by 10:00 MT | Exam day or next biz day by 10:00 MT |
-| On-time | Within 3 biz days (by 10:00 MT day 4) | Within 4 biz days (by 10:00 MT day 5) | Within 4 biz days (by 10:00 MT day 5) |
-| Late | After on-time deadline | After on-time deadline | After on-time deadline |
-
-| Report Type | Same-day | On-time | Late | Fee Type |
-| --- | --- | --- | --- | --- |
-| C050E GP First Report | $94.15 | $85.80 | $54.08 | Report fee |
-| C151 GP Progress Report | $57.19 | $52.12 | $32.86 | Report fee |
-| RF01E Specialist Consultation | $115.05 | $104.87 | $66.09 | Report fee |
-| RF03E Specialist Follow-up | $57.19 | $52.12 | $32.86 | Report fee |
-
-| Segment.Field | Value | Notes |
-| --- | --- | --- |
-| FHS.3 / BHS.3 / MSH.3 | Meritum vendor source ID | Assigned by WCB during accreditation. Stored in secrets management. |
-| FHS.4 / BHS.4 / MSH.4 | Meritum submitter ID | Assigned by WCB during accreditation. |
-| FHS.5 / BHS.5 | WCB-EDM | Fixed value: Workers Compensation Board Edmonton |
-| FHS.6 / BHS.6 | RAPID-RPT | Fixed value: RapidReport component |
-| FHS.7 / BHS.7 / MSH.7 | YYYYMMDDHHmm | File/batch/message creation timestamp in Mountain Time |
-| FHS.9 | Generated filename | e.g., meritum_batch_20260212_001.xml |
-| FHS.11 | File control ID | Unique per file. Format: MER-{YYYYMMDD}-{sequence} |
-| BHS.11 | Batch control ID | Unique per batch. Used to match return files. Format: MER-B-{UUID short} |
-| MSH.9 | ZRPT | Fixed: WCB Batch Report Message type |
-| MSH.10 | submitter_txn_id | Per-report unique ID. First 2 chars = vendor prefix. |
-| EVN.4 | form_id | C050E, C050S, C151, C151S, C568, C568A, C569, C570 |
-
-| Aspect | AHCIP (Domain 4.1) | WCB (Domain 4.2) |
-| --- | --- | --- |
-| Cycle | Weekly: Thursday 12:00 MT cutoff | On-demand (timing affects fees, not submission window) |
-| Format | Fixed-width/delimited per AHCIP spec | HL7 v2.3.1 XML per WCB XSD |
-| Transport | H-Link (SFTP/API, TBD) | Manual file upload to myWCB portal |
-| Accreditation | H-Link accreditation (AHC2210) | WCB vendor accreditation (9-step process) |
-| Return | Assessment file via H-Link | Tab-delimited return file via email |
-| Payment | Friday following Thursday submission | Weekly cycle, Tuesday remittance XML |
-| Grouping | Per-physician, per-BA | Per-physician (single vendor credentials) |
-
-| Code | Status | Meritum Action |
-| --- | --- | --- |
-| ISS | Issued | Payment confirmed. Claim → paid state. |
-| REQ | Requested | Payment in progress. No state change yet. |
-| PAE / PGA | Pending Approval | Awaiting WCB internal approval. No state change. |
-| PGD | Pending Decision | Awaiting adjudication. Monitor and notify. |
-| REJ | Rejected | Payment rejected. Claim flagged for review. |
-| DEL | Deleted | Payment deleted by WCB. Claim flagged for review. |
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| POST | /api/v1/wcb/claims | Create a WCB claim. Body includes form_id, which determines required fields. Returns claim_id and wcb_claim_detail_id. |
-| GET | /api/v1/wcb/claims/{id} | Retrieve WCB claim with all child records (injuries, prescriptions, consultations, restrictions, invoice lines, attachments). |
-| PUT | /api/v1/wcb/claims/{id} | Update WCB claim. Partial updates supported. Triggers revalidation. |
-| DELETE | /api/v1/wcb/claims/{id} | Soft-delete. Only allowed in draft state. |
-| POST | /api/v1/wcb/claims/{id}/validate | Run WCB validation pipeline and return results without changing state. |
-| GET | /api/v1/wcb/claims/{id}/form-schema | Returns the form field schema for this claim's form_id: which sections are active, which fields are required/conditional/optional, current conditional states based on existing data. |
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| POST | /api/v1/wcb/batches | Initiate WCB batch generation. Includes queued claims for the authenticated physician. Triggers XML generation and XSD validation. |
-| GET | /api/v1/wcb/batches/{id} | Retrieve batch details including status, report count, validation results. |
-| GET | /api/v1/wcb/batches/{id}/download | Download generated XML file (signed URL, single-use, 1-hour expiry). Requires VALIDATED status. |
-| POST | /api/v1/wcb/batches/{id}/confirm-upload | Physician/delegate confirms file was uploaded to myWCB. Transitions batch to UPLOADED. |
-| GET | /api/v1/wcb/batches | List batches for the authenticated physician with status filtering and pagination. |
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| POST | /api/v1/wcb/returns/upload | Upload return file (tab-delimited text). Triggers parsing, matching, and state transitions. |
-| GET | /api/v1/wcb/returns/{batch_id} | Retrieve return file results for a specific batch, including per-report status and errors. |
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| POST | /api/v1/wcb/remittances/upload | Upload remittance XML file. Triggers parsing, storage, matching, and reconciliation. |
-| GET | /api/v1/wcb/remittances | List remittance imports with date range filtering. |
-| GET | /api/v1/wcb/remittances/{id}/discrepancies | Retrieve reconciliation discrepancies for a remittance import. |
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| GET | /api/v1/wcb/claims/{id}/export | Generate pre-filled export (PDF/printable) for manual portal entry. MVP only — deprecated after accreditation. |
-| POST | /api/v1/wcb/claims/{id}/manual-outcome | Physician manually records WCB outcome (claim number, acceptance status, payment). MVP only. |
 
 | Seq | WCB Field | Meritum Column | HL7 Seg | Notes |
 | --- | --- | --- | --- | --- |
@@ -1288,6 +1377,8 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | Invoice | Invoice | Invoice | Invoice | Invoice |
 | 90 | Invoice Lines [1..25] | wcb_invoice_lines table | FT1 | HSC + modifiers + calls + encounters |
 
+## A.2 C151 — Physician Progress Report (Key Differences from C050E)
+
 | Seq | WCB Field | Meritum Column | Notes |
 | --- | --- | --- | --- |
 | 40 | Previous diagnosis | previous_diagnosis | Text of previous diagnosis (vs C050E's 'current') |
@@ -1295,6 +1386,20 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | 53–75 | Opioid management (16 fields) | Various opioid/side-effect columns | Conditionally required when narcotics = Y. C151-specific feature. |
 | 72 | Pain severity 0–10 | patient_pain_estimate | Patient self-report. Conditional on narcotics. |
 | 75 | Function level 0–10 | clinician_function_estimate | Clinician estimate. Conditional on narcotics. |
+
+## A.3 C568 — Medical Invoice (Key Differences)
+
+C568 is the simplest clinical form. No Treatment Plan or Return to Work sections. The Invoice section is more complex than C050E/C151, with from/to date ranges, per-line diagnostic codes, per-line facility type and skill code, and an explicit fees_submitted amount per line.
+
+## A.4 C570 — Medical Invoice Correction (Unique Structure)
+
+C570 is structurally unique. Instead of a single set of invoice lines, it has paired 'Was' and 'Should Be' line sets. Each Was line describes what was originally submitted; the paired Should Be line describes the corrected values. The system must enforce 1:1 pairing via the correction_pair_id field and matching invoice_detail_id values.
+
+# 16. Appendix B: WCB Reference Code Tables
+
+The following reference code tables are sourced from the HL7 Element Mapping spreadsheet and maintained in Reference Data (Domain 2). They are listed here for developer reference. The Reference Data domain is the system of record; these are a snapshot.
+
+## B.1 Part of Body Codes (30 values)
 
 | Code | Description | Side of Body Required |
 | --- | --- | --- |
@@ -1329,6 +1434,8 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | 91000 | Personal effects only | No |
 | 99990 | Unknown/Other | No |
 
+## B.2 Practitioner Role Codes (10 values)
+
 | Code | Description |
 | --- | --- |
 | GP | General Practitioner |
@@ -1342,11 +1449,59 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | OIS | OIS |
 | NP | Nurse Practitioners |
 
+Note: The implementation also includes HP (Hospital) as a role code used with Contract ID 000065.
+
+## B.3 Facility Types (3 values)
+
 | Code | Description |
 | --- | --- |
 | C | Clinic |
 | F | Facility Non-Hospital |
 | H | Hospital |
+
+## B.4 Form ID to Attachment Codes
+
+All form types support a maximum of 3 attachments. Permitted file types are defined in the Form ID To Attachment Codes reference table in the HL7 mapping spreadsheet. Common types include PDF, DOC, DOCX, JPG, PNG, TIF.
+
+## B.5 Additional Reference Tables
+
+The following tables are maintained in Reference Data (Domain 2) and are not reproduced here due to size. Developers should reference the HL7 mapping spreadsheet directly:
+
+Nature of Injury Codes (46 values)
+
+POB-NOI Validation Exclusions (382 combinations)
+
+State/Province Codes (65 values)
+
+Country Codes (239 values)
+
+Skill Codes (141 values)
+
+Category Type Expedite Codes (40 form-specific entries)
+
+Pain Scale Codes, Function Level Codes, Weight Category Codes, Fit For Work Codes, Work Restriction Detail Codes, Consultation Letter Formats, Dominant Hand Codes, Gender Codes, Yes/No and Yes/No/NA response codes
+
+# 17. Appendix C: OIS-Specific Forms (C050S / C151S)
+
+The Occupational Injury Service (OIS) forms are expanded variants of the standard GP forms. C050S extends C050E; C151S extends C151. They share the same General, Participant, Accident, and Injury sections but have significantly expanded Return to Work sections with granular functional capacity assessment. These forms are used exclusively by OIS practitioners (Contract ID 000053, Role OIS).
+
+This appendix specifies the OIS-unique data model extensions, additional validation rules, and reference code tables required to support C050S and C151S. The OIS market segment is narrower than standard GP, but the forms must be fully supported for vendor accreditation.
+
+## C.1 OIS Return to Work: Expanded Restrictions
+
+The standard forms (C050E, C151) have 11 activity restriction types with simple Able/Unable levels. The OIS forms replace this with a granular functional capacity model featuring 3 key differences:
+
+All restriction fields are Always Required on C050S (vs Conditionally Required on C050E). The OIS physician must assess every activity, not just ones affected by the injury.
+
+Per-activity hours fields for every timed activity (not just sitting/standing/walking/driving). Bending, twisting, kneeling, and climbing all gain hours sub-fields.
+
+New activity types not present on standard forms: bilateral hand grasping (with sub-assessments), zone-specific lifting, directional reaching, and environmental restrictions.
+
+## C.2 OIS-Unique Field Groups
+
+### C.2.1 Hand Grasping Assessment (12 fields)
+
+The OIS forms assess grasping capacity per hand with 6 sub-fields each. This level of detail is absent from C050E/C151 entirely.
 
 | Column | Type | Nullable | Description |
 | --- | --- | --- | --- |
@@ -1363,6 +1518,12 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | grasp_left_specify | VARCHAR(1) | Yes* | Y/N: specific restriction applies? |
 | grasp_left_specific_desc | TEXT | Yes* | Description of specific left-hand restriction |
 
+*Required on C050S (Always Required). Conditionally required on C151S (when RTW status changed = Y and modified duties = Y).
+
+### C.2.2 Zone-Specific Lifting (6 fields)
+
+Standard forms have a single Lifting restriction with one max-weight field. OIS forms break lifting into 3 zones, each with its own restriction level and weight limit.
+
 | Column | Type | Nullable | Description |
 | --- | --- | --- | --- |
 | lift_floor_to_waist | VARCHAR(10) | No* | ABLE, UNABLE, LIMITEDTO (per Extended Work Restriction Codes) |
@@ -1372,12 +1533,20 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | lift_above_shoulder | VARCHAR(10) | No* | Restriction level for above-shoulder zone |
 | lift_above_shoulder_max | VARCHAR(10) | Yes* | Max weight for above-shoulder |
 
+### C.2.3 Directional Reaching (4 fields)
+
+Standard forms have a single 'Overhead reaching' field. OIS forms assess reaching in 4 directions (above/below each shoulder), reflecting the bilateral assessment model.
+
 | Column | Type | Nullable | Description |
 | --- | --- | --- | --- |
 | reach_above_right_shoulder | VARCHAR(10) | No* | ABLE, UNABLE, LIMITED |
 | reach_below_right_shoulder | VARCHAR(10) | No* | ABLE, UNABLE, LIMITED |
 | reach_above_left_shoulder | VARCHAR(10) | No* | ABLE, UNABLE, LIMITED |
 | reach_below_left_shoulder | VARCHAR(10) | No* | ABLE, UNABLE, LIMITED |
+
+### C.2.4 Environmental Restrictions (8 fields)
+
+OIS forms add an environmental assessment section entirely absent from standard forms. The physician assesses the worker's tolerance for 7 environmental conditions.
 
 | Column | Type | Nullable | Description |
 | --- | --- | --- | --- |
@@ -1390,16 +1559,20 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | env_lighting | VARCHAR(1) | Yes* | Y/N: lighting sensitivity |
 | env_noise | VARCHAR(1) | Yes* | Y/N: noise sensitivity |
 
+### C.2.5 OIS Assessment Summary (C050S fields 114–141)
+
+The C050S form includes a structured three-party communication summary that is entirely absent from C050E. It captures coordinated return-to-work planning between the OIS physician, the employer, and the worker, plus a handoff to the family physician.
+
 | Column | Type | Nullable | Description |
 | --- | --- | --- | --- |
-| Assessment Outcome | Assessment Outcome | Assessment Outcome | Assessment Outcome |
+| Assessment Outcome | | | |
 | ois_reviewed_with_patient | VARCHAR(1) | No* | Y/N: reviewed work capabilities with patient |
 | ois_fitness_assessment | VARCHAR(10) | No* | FIT (fit to return) or NOTFIT (not fit for any work) per Fit For Work Codes |
 | ois_estimated_rtw_date | DATE | Yes* | Estimated RTW date. Required when NOTFIT. |
 | ois_rtw_level | VARCHAR(10) | Yes* | PREINJURY or LIMITATION per Work Level Codes. Required when FIT. |
 | ois_followup_required | VARCHAR(1) | No* | Y/N: OIS follow-up visit required |
 | ois_followup_date | DATE | Yes* | Follow-up visit date. Required when followup_required = Y. |
-| Employer Communication | Employer Communication | Employer Communication | Employer Communication |
+| Employer Communication | | | |
 | ois_emp_modified_work_required | VARCHAR(1) | No* | Y/N: modified work is required |
 | ois_emp_modified_from_date | DATE | Yes* | Modified work required from date |
 | ois_emp_modified_to_date | DATE | Yes* | Modified work required to date |
@@ -1407,13 +1580,13 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | ois_emp_available_from_date | DATE | Yes* | Modified work available from date |
 | ois_emp_available_to_date | DATE | Yes* | Modified work available to date |
 | ois_emp_comments | TEXT | Yes | Employer communication comments |
-| Worker Communication | Worker Communication | Worker Communication | Worker Communication |
+| Worker Communication | | | |
 | ois_worker_rtw_date | DATE | No* | Return to work date communicated to worker |
 | ois_worker_modified_duration | VARCHAR(50) | No* | Duration of modified work if applicable |
 | ois_worker_diagnosis_plan | TEXT | No* | Diagnosis and treatment plan in worker-accessible language |
 | ois_worker_self_care | VARCHAR(1) | No* | Y/N: re-education on self-care and prevention of reinjury provided |
 | ois_worker_comments | TEXT | Yes | Worker communication comments |
-| Family Physician Handoff | Family Physician Handoff | Family Physician Handoff | Family Physician Handoff |
+| Family Physician Handoff | | | |
 | ois_has_family_physician | VARCHAR(1) | No* | Y/N: patient has a family physician |
 | ois_family_physician_name | VARCHAR(50) | Yes* | Family physician name. Required when has_family_physician = Y. |
 | ois_family_physician_phone_country | VARCHAR(10) | Yes* | Phone country code |
@@ -1425,6 +1598,14 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | ois_family_physician_modified | VARCHAR(10) | Yes* | NORESTRICT or RESTRICTFR (per Restriction Codes): return to modified work status |
 | ois_family_physician_comments | TEXT | Yes | Family physician communication comments |
 
+## C.3 C151S: OIS Progress Report Differences
+
+C151S extends C151 with the same expanded restriction model as C050S, but adds an additional trigger: 'Has the patient's return to work status changed?' (field 58). This is a gating question that makes the entire expanded RTW section conditionally required — if the status has not changed since the last report, the OIS physician skips the detailed assessment. This differs from C050S where all RTW fields are Always Required.
+
+The C151S also retains the C151 opioid management section (16 side-effect fields), making it the most field-heavy form at 153 total fields.
+
+## C.4 OIS-Specific Reference Code Tables
+
 | Table | Values |
 | --- | --- |
 | Basic Work Restriction Codes | ABLE (Able), UNABLE (Unable), LIMITED (Limited) |
@@ -1434,6 +1615,28 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | Restriction Codes | NORESTRICT (No restrictions), RESTRICTFR (Restricted from) |
 | Work Level Codes | PREINJURY (Pre-injury level), LIMITATION (With work limitations) |
 | OIS Family Physician Codes | OIS (OIS physician), FAMILY (Family physician) |
+
+## C.5 Data Model Impact
+
+The OIS-specific fields are stored in the wcb_claim_details table as additional nullable columns. This keeps the single-table pattern for scalar fields. The columns are only populated when form_id is C050S or C151S; the validation engine enforces their presence/absence based on form type.
+
+Total additional columns for OIS support: approximately 45 (12 grasping + 6 zone lifting + 4 directional reaching + 8 environmental + 29 assessment summary − 14 that overlap with standard columns as expanded versions).
+
+Alternative approach considered: A separate wcb_ois_details table. Rejected because: (a) it would require an additional join on every OIS claim read, (b) the OIS columns are nullable and incur no storage cost on non-OIS claims, and (c) the form_id-based validation pattern already handles form-specific field requirements.
+
+## C.6 OIS Validation Additions
+
+Form ID gating: C050S requires Contract ID 000053 with Role OIS. No other Contract/Role can create C050S.
+
+Extended restriction codes: OIS restriction fields use Extended Work Restriction Codes (ABLE/UNABLE/LIMITEDTO) rather than Basic codes (ABLE/UNABLE/LIMITED). The validation engine checks the correct code table based on form_id.
+
+C151S RTW status gate: When rtw_status_changed = N on C151S, the entire expanded RTW section is conditionally unavailable. When = Y, all OIS RTW fields become required.
+
+Family physician cascade: ois_has_family_physician = Y triggers 10 dependent fields. If N, all family physician fields must be null.
+
+Grasping sub-field cascade: grasp_right_level = LIMITED triggers prolonged/repetitive/vibration sub-fields. grasp_right_specify = Y triggers specific_desc.
+
+# 18. Open Questions
 
 | # | Question | Context |
 | --- | --- | --- |
@@ -1445,6 +1648,10 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | 6 | What is the email delivery mechanism for return files? Is it IMAP-accessible or does WCB use a custom portal notification? | Determines whether return file ingestion can be automated or requires manual upload. |
 | 7 | How does WCB handle the vendor accreditation for the OIS-specific forms (C050S, C151S)? Is separate accreditation required? | OIS forms may have additional requirements. To be confirmed during accreditation. |
 
+# 19. Document Control
+
+This document specifies the WCB EIR submission pathway. It should be read in conjunction with Domain 4.0 (Claim Lifecycle Core) for the shared state machine, base data model, and validation architecture, and Domain 4.1 (AHCIP Claim Pathway) for the H-Link submission pathway. Together, the three 4.x documents comprise the complete Claim Lifecycle specification.
+
 | Item | Value |
 | --- | --- |
 | Parent document | Meritum PRD v1.3 |
@@ -1453,7 +1660,6 @@ This document specifies the WCB EIR submission pathway. It should be read in con
 | Dependencies | Domain 4.0 (Core), Domain 1 (IAM), Domain 2 (Reference Data), Domain 3 (Notifications) |
 | Consumes | Domain 5 (Provider Mgmt), Domain 6 (Patient Registry), Domain 7 (Intelligence Engine) |
 | Authoritative WCB reference | WCB Vendor Accreditation Package (40 files) and HL7 Element Mapping Spreadsheet |
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | February 2026 |
 | Next domain in critical path | Domain 5 (Provider Management) |
-
