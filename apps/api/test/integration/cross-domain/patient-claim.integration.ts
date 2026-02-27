@@ -41,6 +41,25 @@ async function scaffold(tx: NodePgDatabase) {
   return { provider, patient };
 }
 
+/** Minimal valid claim data with required NOT NULL fields. */
+function claimData(
+  physicianId: string,
+  patientId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    physicianId,
+    patientId,
+    claimType: 'AHCIP' as const,
+    dateOfService: '2026-01-15',
+    submissionDeadline: '2026-04-15',
+    importSource: 'MANUAL' as const,
+    createdBy: physicianId,
+    updatedBy: physicianId,
+    ...overrides,
+  };
+}
+
 // ===========================================================================
 // Patient-Claim Cross-Domain Tests
 // ===========================================================================
@@ -54,13 +73,7 @@ describe('Cross-Domain: Patient + Claim', () => {
       const { provider, patient } = await scaffold(tx);
       const claimRepo = createClaimRepository(tx);
 
-      const claim = await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patient.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-15',
-        importSource: 'MANUAL',
-      });
+      const claim = await claimRepo.createClaim(claimData(provider.userId, patient.patientId));
 
       expect(claim.patientId).toBe(patient.patientId);
       expect(claim.physicianId).toBe(provider.userId);
@@ -75,13 +88,7 @@ describe('Cross-Domain: Patient + Claim', () => {
       const { provider, patient } = await scaffold(tx);
       const claimRepo = createClaimRepository(tx);
 
-      const created = await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patient.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-02-01',
-        importSource: 'MANUAL',
-      });
+      const created = await claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-02-01' }));
 
       const found = await claimRepo.findClaimById(
         created.claimId,
@@ -111,27 +118,9 @@ describe('Cross-Domain: Patient + Claim', () => {
       const claimRepo = createClaimRepository(tx);
 
       // Create 2 claims for patient A and 1 for patient B
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patientA.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-10',
-        importSource: 'MANUAL',
-      });
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patientA.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-11',
-        importSource: 'MANUAL',
-      });
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patientB.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-12',
-        importSource: 'MANUAL',
-      });
+      await claimRepo.createClaim(claimData(provider.userId, patientA.patientId, { dateOfService: '2026-01-10' }));
+      await claimRepo.createClaim(claimData(provider.userId, patientA.patientId, { dateOfService: '2026-01-11' }));
+      await claimRepo.createClaim(claimData(provider.userId, patientB.patientId, { dateOfService: '2026-01-12' }));
 
       const result = await claimRepo.listClaims(provider.userId, {
         patientId: patientA.patientId,
@@ -163,20 +152,8 @@ describe('Cross-Domain: Patient + Claim', () => {
 
       const claimRepo = createClaimRepository(tx);
 
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patientA.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-03-01',
-        importSource: 'MANUAL',
-      });
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patientB.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-03-02',
-        importSource: 'MANUAL',
-      });
+      await claimRepo.createClaim(claimData(provider.userId, patientA.patientId, { dateOfService: '2026-03-01' }));
+      await claimRepo.createClaim(claimData(provider.userId, patientB.patientId, { dateOfService: '2026-03-02' }));
 
       const resultA = await claimRepo.listClaims(provider.userId, {
         patientId: patientA.patientId,
@@ -198,25 +175,18 @@ describe('Cross-Domain: Patient + Claim', () => {
     }));
 
   // -------------------------------------------------------------------------
-  // 5. Create claim with non-existent patientId — still inserts
+  // 5. Create claim with non-existent patientId — FK violation
   // -------------------------------------------------------------------------
-  it('creates a claim with non-existent patientId (no FK enforcement at repo level)', () =>
+  it('rejects a claim with non-existent patientId (FK constraint violation)', () =>
     withTestTransaction(db, async (tx) => {
       const provider = await createTestProvider(tx);
       const claimRepo = createClaimRepository(tx);
 
       const fakePatientId = '00000000-0000-0000-0000-000000000999';
 
-      const claim = await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: fakePatientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-15',
-        importSource: 'MANUAL',
-      });
-
-      expect(claim.claimId).toBeDefined();
-      expect(claim.patientId).toBe(fakePatientId);
+      await expect(
+        claimRepo.createClaim(claimData(provider.userId, fakePatientId)),
+      ).rejects.toThrow();
     }));
 
   // -------------------------------------------------------------------------
@@ -228,13 +198,7 @@ describe('Cross-Domain: Patient + Claim', () => {
       const claimRepo = createClaimRepository(tx);
       const patientRepo = createPatientRepository(tx);
 
-      const claim = await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patient.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-01-20',
-        importSource: 'MANUAL',
-      });
+      const claim = await claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-01-20' }));
 
       // Deactivate the patient (soft-delete)
       const deactivated = await patientRepo.deactivatePatient(
@@ -263,27 +227,9 @@ describe('Cross-Domain: Patient + Claim', () => {
       const claimRepo = createClaimRepository(tx);
 
       const claims = await Promise.all([
-        claimRepo.createClaim({
-          physicianId: provider.userId,
-          patientId: patient.patientId,
-          claimType: 'AHCIP',
-          dateOfService: '2026-02-01',
-          importSource: 'MANUAL',
-        }),
-        claimRepo.createClaim({
-          physicianId: provider.userId,
-          patientId: patient.patientId,
-          claimType: 'AHCIP',
-          dateOfService: '2026-02-02',
-          importSource: 'MANUAL',
-        }),
-        claimRepo.createClaim({
-          physicianId: provider.userId,
-          patientId: patient.patientId,
-          claimType: 'AHCIP',
-          dateOfService: '2026-02-03',
-          importSource: 'MANUAL',
-        }),
+        claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-02-01' })),
+        claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-02-02' })),
+        claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-02-03' })),
       ]);
 
       expect(claims).toHaveLength(3);
@@ -310,20 +256,8 @@ describe('Cross-Domain: Patient + Claim', () => {
       const claimRepo = createClaimRepository(tx);
 
       // Create two DRAFT claims
-      const draft1 = await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patient.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-03-01',
-        importSource: 'MANUAL',
-      });
-      await claimRepo.createClaim({
-        physicianId: provider.userId,
-        patientId: patient.patientId,
-        claimType: 'AHCIP',
-        dateOfService: '2026-03-02',
-        importSource: 'MANUAL',
-      });
+      const draft1 = await claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-03-01' }));
+      await claimRepo.createClaim(claimData(provider.userId, patient.patientId, { dateOfService: '2026-03-02' }));
 
       // Transition one claim to VALIDATED
       await claimRepo.transitionState(

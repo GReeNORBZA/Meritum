@@ -65,7 +65,10 @@ async function scaffold(tx: NodePgDatabase) {
     patientId: patient.patientId,
     claimType: 'AHCIP',
     dateOfService: '2026-01-15',
+    submissionDeadline: '2026-04-15',
     importSource: 'MANUAL',
+    createdBy: provider.userId,
+    updatedBy: provider.userId,
   });
   return { provider, patient, claim };
 }

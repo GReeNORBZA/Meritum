@@ -141,7 +141,7 @@ describe('NotificationWebSocketManager', () => {
         (socket.send as ReturnType<typeof vi.fn>).mock.calls[0][0],
       );
       expect(payload.type).toBe('notification');
-      expect(payload.data.notificationId).toBe(mockNotification.notificationId);
+      expect(payload.data.notification_id).toBe(mockNotification.notificationId);
       expect(payload.data.title).toBe('Claim Validated');
     });
 

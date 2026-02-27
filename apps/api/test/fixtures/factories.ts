@@ -124,7 +124,10 @@ export async function createTestClaim(
     patientId: overrides.patientId,
     claimType: overrides.claimType ?? 'AHCIP',
     dateOfService: overrides.dateOfService ?? '2026-01-15',
+    submissionDeadline: overrides.submissionDeadline ?? '2026-04-15',
     importSource: overrides.importSource ?? 'MANUAL',
+    createdBy: overrides.createdBy ?? overrides.physicianId,
+    updatedBy: overrides.updatedBy ?? overrides.physicianId,
     ...overrides,
   };
   const [row] = await db.insert(claims).values(data).returning();
@@ -144,6 +147,7 @@ export async function createTestNotification(
     priority: overrides.priority ?? 'MEDIUM',
     title: overrides.title ?? 'Test Notification',
     body: overrides.body ?? 'Test notification body',
+    channelsDelivered: overrides.channelsDelivered ?? ['in_app'],
     ...overrides,
   };
   const [row] = await db.insert(notifications).values(data).returning();

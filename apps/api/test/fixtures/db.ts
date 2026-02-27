@@ -204,6 +204,10 @@ async function applySchemaPatches(pool: pg.Pool): Promise<void> {
       last_used_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS recent_referrers_physician_cpsa_unique_idx
+      ON recent_referrers (physician_id, referrer_cpsa)
+  `);
 
   // -- claim_justifications: entire table missing --
   await pool.query(`
@@ -220,9 +224,9 @@ async function applySchemaPatches(pool: pg.Pool): Promise<void> {
     )
   `);
 
-  // -- patient_eligibility_cache: entire table missing --
+  // -- eligibility_cache: entire table missing --
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS patient_eligibility_cache (
+    CREATE TABLE IF NOT EXISTS eligibility_cache (
       cache_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       provider_id uuid NOT NULL REFERENCES providers(provider_id),
       phn_hash varchar(64) NOT NULL,
@@ -230,8 +234,11 @@ async function applySchemaPatches(pool: pg.Pool): Promise<void> {
       eligibility_details jsonb,
       verified_at timestamptz NOT NULL,
       expires_at timestamptz NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      UNIQUE (provider_id, phn_hash)
+      created_at timestamptz NOT NULL DEFAULT now()
     )
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS eligibility_cache_provider_phn_hash_idx
+      ON eligibility_cache (provider_id, phn_hash)
   `);
 }

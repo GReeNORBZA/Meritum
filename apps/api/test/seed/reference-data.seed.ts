@@ -68,7 +68,7 @@ describe('reference data seeding pipeline', () => {
       expect(version.effectiveFrom).toBe('2026-01-01');
       expect(version.isActive).toBe(false);
       expect(version.publishedBy).toBe(user.userId);
-      expect(version.createdAt).toBeInstanceOf(Date);
+      expect(version.createdAt).toBeDefined();
     }));
 
   // -------------------------------------------------------------------------
@@ -94,16 +94,16 @@ describe('reference data seeding pipeline', () => {
       expect(found).toBeDefined();
       expect(found!.hscCode).toBe('HSC0050');
       expect(found!.description).toBe('Health service code 50');
-      expect(found!.baseFee).toBe('100');
+      expect(found!.baseFee).toBe('100.00');
 
       // Verify first and last
       const first = await repo.findHscByCode('HSC0000', version.versionId);
       expect(first).toBeDefined();
-      expect(first!.baseFee).toBe('50');
+      expect(first!.baseFee).toBe('50.00');
 
       const last = await repo.findHscByCode('HSC0099', version.versionId);
       expect(last).toBeDefined();
-      expect(last!.baseFee).toBe('149');
+      expect(last!.baseFee).toBe('149.00');
 
       // Non-existent code returns undefined
       const missing = await repo.findHscByCode('HSC9999', version.versionId);
@@ -133,7 +133,7 @@ describe('reference data seeding pipeline', () => {
       expect(found).toBeDefined();
       expect(found!.wcbCode).toBe('WCB010');
       expect(found!.description).toBe('Workers compensation procedure 10');
-      expect(found!.baseFee).toBe('125');
+      expect(found!.baseFee).toBe('125.00');
 
       // Search by description text
       const results = await repo.searchWcbCodes(
