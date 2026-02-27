@@ -416,14 +416,14 @@ describe('AuditLogRepository', () => {
         userAgent: 'vitest/audit',
       });
 
-      expect(entry.auditLogId).toBeDefined();
+      expect(entry.logId).toBeDefined();
       expect(entry.action).toBe('auth.login_success');
 
       const result = await repo.queryAuditLog(user.userId, {
         action: 'auth.login_success',
       });
       expect(result.total).toBeGreaterThanOrEqual(1);
-      expect(result.data[0].auditLogId).toBe(entry.auditLogId);
+      expect(result.data[0].logId).toBe(entry.logId);
     }));
 
   it('sanitises sensitive fields in the detail payload', () =>

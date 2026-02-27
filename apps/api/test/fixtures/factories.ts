@@ -79,7 +79,7 @@ export async function createTestProvider(
     providerId: userId,
     billingNumber: overrides.billingNumber ?? `BN${crypto.randomBytes(4).toString('hex')}`,
     cpsaRegistrationNumber:
-      overrides.cpsaRegistrationNumber ?? `CPSA${crypto.randomBytes(4).toString('hex')}`,
+      overrides.cpsaRegistrationNumber ?? `CP${crypto.randomBytes(4).toString('hex')}`,
     firstName: overrides.firstName ?? 'Test',
     lastName: overrides.lastName ?? 'Provider',
     specialtyCode: overrides.specialtyCode ?? '00',
@@ -105,6 +105,7 @@ export async function createTestPatient(
     lastName: overrides.lastName ?? 'Doe',
     dateOfBirth: overrides.dateOfBirth ?? '1990-01-15',
     gender: overrides.gender ?? 'F',
+    createdBy: overrides.createdBy ?? overrides.providerId,
     ...overrides,
   };
   const [row] = await db.insert(patients).values(data).returning();

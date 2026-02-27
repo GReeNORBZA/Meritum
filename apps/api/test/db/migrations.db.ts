@@ -81,11 +81,11 @@ describe('Database Migrations', () => {
   // -----------------------------------------------------------------------
   it('key tables contain expected columns', async () => {
     const expectations: Record<string, string[]> = {
-      users: ['id', 'email', 'password_hash', 'created_at', 'updated_at'],
-      claims: ['id', 'provider_id', 'patient_id', 'status', 'created_at'],
-      providers: ['id', 'user_id', 'created_at'],
-      patients: ['id', 'first_name', 'last_name', 'created_at'],
-      notifications: ['id', 'user_id', 'type', 'created_at'],
+      users: ['user_id', 'email', 'password_hash', 'created_at', 'updated_at'],
+      claims: ['claim_id', 'physician_id', 'patient_id', 'state', 'created_at'],
+      providers: ['provider_id', 'billing_number', 'created_at'],
+      patients: ['patient_id', 'first_name', 'last_name', 'created_at'],
+      notifications: ['notification_id', 'recipient_id', 'event_type', 'created_at'],
     };
 
     for (const [table, expectedColumns] of Object.entries(expectations)) {
