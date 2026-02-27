@@ -68,7 +68,7 @@ describe('reference data seeding pipeline', () => {
       expect(version.effectiveFrom).toBe('2026-01-01');
       expect(version.isActive).toBe(false);
       expect(version.publishedBy).toBe(user.userId);
-      expect(version.createdAt).toBeDefined();
+      expect(version.publishedAt).toBeDefined();
     }));
 
   // -------------------------------------------------------------------------
