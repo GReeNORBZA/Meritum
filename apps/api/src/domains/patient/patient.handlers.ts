@@ -13,6 +13,10 @@ import {
   type ExportIdParam,
   type InternalPatientIdParam,
   type ValidatePhnParam,
+  type CheckEligibility,
+  type OverrideEligibility,
+  type BulkCheckEligibility,
+  type DetectProvince,
 } from '@meritum/shared/schemas/patient.schema.js';
 import { type PatientCorrection } from '@meritum/shared/schemas/compliance.schema.js';
 import {
@@ -37,6 +41,10 @@ import {
   getPatientAccessExportDownload,
   getPatientClaimContext,
   validatePhnService,
+  checkEligibility,
+  overrideEligibility,
+  bulkCheckEligibility,
+  detectPatientProvince,
   type PatientServiceDeps,
 } from './patient.service.js';
 import { ValidationError } from '../../lib/errors.js';
@@ -508,6 +516,117 @@ export function createPatientHandlers(deps: PatientHandlerDeps) {
     return reply.code(200).send({ data: corrected });
   }
 
+  // =========================================================================
+  // Eligibility Handlers (FRD MVPADD-001 §B2)
+  // =========================================================================
+
+  async function checkEligibilityHandler(
+    request: FastifyRequest<{ Body: CheckEligibility }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { phn, date_of_service } = request.body;
+
+    const result = await checkEligibility(
+      serviceDeps,
+      physicianId,
+      phn,
+      date_of_service,
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({
+      data: {
+        phn_masked: result.phnMasked,
+        is_eligible: result.isEligible,
+        source: result.source,
+        details: result.details,
+        verified_at: result.verifiedAt.toISOString(),
+      },
+    });
+  }
+
+  async function overrideEligibilityHandler(
+    request: FastifyRequest<{ Body: OverrideEligibility }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { phn, reason } = request.body;
+
+    const result = await overrideEligibility(
+      serviceDeps,
+      physicianId,
+      phn,
+      reason,
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({
+      data: {
+        phn_masked: result.phnMasked,
+        overridden: result.overridden,
+        reason: result.reason,
+      },
+    });
+  }
+
+  async function bulkCheckEligibilityHandler(
+    request: FastifyRequest<{ Body: BulkCheckEligibility }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { entries } = request.body;
+
+    const result = await bulkCheckEligibility(
+      serviceDeps,
+      physicianId,
+      entries.map((e) => ({ phn: e.phn, dateOfService: e.date_of_service })),
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({
+      data: {
+        results: result.results.map((r) => ({
+          phn_masked: r.phnMasked,
+          is_eligible: r.isEligible,
+          source: r.source,
+          details: r.details,
+          verified_at: r.verifiedAt.toISOString(),
+        })),
+        summary: result.summary,
+      },
+    });
+  }
+
+  // =========================================================================
+  // Province Detection Handler (FRD MVPADD-001 §3.2)
+  // =========================================================================
+
+  async function detectProvinceHandler(
+    request: FastifyRequest<{ Body: DetectProvince }>,
+    reply: FastifyReply,
+  ) {
+    const physicianId = getPhysicianId(request);
+    const { health_number } = request.body;
+
+    const result = await detectPatientProvince(
+      serviceDeps,
+      physicianId,
+      health_number,
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({
+      data: {
+        detected_province: result.detectedProvince,
+        confidence: result.confidence,
+        is_out_of_province: result.isOutOfProvince,
+        billing_mode: result.billingMode,
+        reciprocal_eligible: result.reciprocalEligible,
+      },
+    });
+  }
+
   return {
     createPatientHandler,
     getPatientHandler,
@@ -528,6 +647,10 @@ export function createPatientHandlers(deps: PatientHandlerDeps) {
     exportStatusHandler,
     exportPatientHiHandler,
     downloadPatientHiHandler,
+    checkEligibilityHandler,
+    overrideEligibilityHandler,
+    bulkCheckEligibilityHandler,
+    detectProvinceHandler,
   };
 }
 

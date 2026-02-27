@@ -8,6 +8,8 @@ import {
   ClaimImportSource,
   ClaimState,
   AutoSubmissionMode,
+  JustificationScenario,
+  ClaimTemplateType,
 } from '../constants/claim.constants.js';
 
 // --- Enum Value Arrays ---
@@ -18,6 +20,9 @@ const IMPORT_SOURCES = [
   ClaimImportSource.MANUAL,
   ClaimImportSource.EMR_IMPORT,
   ClaimImportSource.ED_SHIFT,
+  ClaimImportSource.CONNECT_CARE_CSV,
+  ClaimImportSource.CONNECT_CARE_SFTP,
+  ClaimImportSource.EMR_GENERIC,
 ] as const;
 
 const CLAIM_STATES = [
@@ -279,3 +284,171 @@ export const updateSubmissionModeSchema = z.object({
 });
 
 export type UpdateSubmissionMode = z.infer<typeof updateSubmissionModeSchema>;
+
+// ============================================================================
+// Claim Templates (FRD MVPADD-001 §B3)
+// ============================================================================
+
+const CLAIM_TEMPLATE_TYPES = [
+  ClaimTemplateType.CUSTOM,
+  ClaimTemplateType.SPECIALTY_STARTER,
+] as const;
+
+// --- Template Line Item ---
+
+const templateLineItemSchema = z.object({
+  health_service_code: z.string().min(1).max(10),
+  modifiers: z.array(z.string().max(4)).optional(),
+  diagnostic_code: z.string().max(10).optional(),
+  calls: z.number().int().min(1).default(1),
+});
+
+// --- Create Claim Template ---
+
+export const createClaimTemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  template_type: z.enum(CLAIM_TEMPLATE_TYPES).default('CUSTOM'),
+  claim_type: z.enum(CLAIM_TYPES),
+  line_items: z.array(templateLineItemSchema).min(1),
+  specialty_code: z.string().max(10).optional(),
+});
+
+export type CreateClaimTemplate = z.infer<typeof createClaimTemplateSchema>;
+
+// --- Update Claim Template ---
+
+export const updateClaimTemplateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  line_items: z.array(templateLineItemSchema).min(1).optional(),
+});
+
+export type UpdateClaimTemplate = z.infer<typeof updateClaimTemplateSchema>;
+
+// --- Template ID Parameter ---
+
+export const claimTemplateIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type ClaimTemplateIdParam = z.infer<typeof claimTemplateIdParamSchema>;
+
+// --- List Templates Query ---
+
+export const listClaimTemplatesQuerySchema = z.object({
+  template_type: z.enum(CLAIM_TEMPLATE_TYPES).optional(),
+  claim_type: z.enum(CLAIM_TYPES).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export type ListClaimTemplatesQuery = z.infer<typeof listClaimTemplatesQuerySchema>;
+
+// ============================================================================
+// Text Justifications (FRD MVPADD-001 §B11)
+// ============================================================================
+
+const JUSTIFICATION_SCENARIOS = [
+  JustificationScenario.UNLISTED_PROCEDURE,
+  JustificationScenario.ADDITIONAL_COMPENSATION,
+  JustificationScenario.PRE_OP_CONSERVATIVE,
+  JustificationScenario.POST_OP_COMPLICATION,
+  JustificationScenario.WCB_NARRATIVE,
+] as const;
+
+// --- Create Justification ---
+
+export const createJustificationSchema = z.object({
+  claim_id: z.string().uuid(),
+  scenario: z.enum(JUSTIFICATION_SCENARIOS),
+  justification_text: z.string().min(10).max(5000),
+  template_id: z.string().uuid().optional(),
+});
+
+export type CreateJustification = z.infer<typeof createJustificationSchema>;
+
+// --- Update Justification ---
+
+export const updateJustificationSchema = z.object({
+  justification_text: z.string().min(10).max(5000),
+});
+
+export type UpdateJustification = z.infer<typeof updateJustificationSchema>;
+
+// --- Justification ID Parameter ---
+
+export const justificationIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type JustificationIdParam = z.infer<typeof justificationIdParamSchema>;
+
+// --- Justification History Query ---
+
+export const justificationHistoryQuerySchema = z.object({
+  scenario: z.enum(JUSTIFICATION_SCENARIOS).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export type JustificationHistoryQuery = z.infer<typeof justificationHistoryQuerySchema>;
+
+// ============================================================================
+// Recent Referrers (FRD MVPADD-001 §2.1.2)
+// ============================================================================
+
+// --- Record Recent Referrer ---
+
+export const recordRecentReferrerSchema = z.object({
+  referrer_cpsa: z.string().min(1).max(10),
+  referrer_name: z.string().min(1).max(100),
+});
+
+export type RecordRecentReferrer = z.infer<typeof recordRecentReferrerSchema>;
+
+// ============================================================================
+// Bundling Check (FRD MVPADD-001 §4.3.2)
+// ============================================================================
+
+export const bundlingCheckSchema = z.object({
+  codes: z.array(z.string().min(1).max(10)).min(2),
+  claim_type: z.enum(CLAIM_TYPES),
+  patient_id: z.string().uuid().optional(),
+  date_of_service: z.string().date().optional(),
+});
+
+export type BundlingCheck = z.infer<typeof bundlingCheckSchema>;
+
+// ============================================================================
+// Anesthesia Calculator (FRD MVPADD-001 §4.2.2)
+// ============================================================================
+
+export const anesthesiaCalculateSchema = z.object({
+  procedure_codes: z.array(z.string().min(1).max(10)).min(1),
+  start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  end_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  duration_minutes: z.number().int().min(0).optional(),
+});
+
+export type AnesthesiaCalculate = z.infer<typeof anesthesiaCalculateSchema>;
+
+// ============================================================================
+// Template Application (FRD MVPADD-001 §4.1.3)
+// ============================================================================
+
+export const applyClaimTemplateSchema = z.object({
+  patient_id: z.string().uuid(),
+  date_of_service: z.string().date(),
+  auto_submit: z.boolean().optional().default(false),
+});
+
+export type ApplyClaimTemplate = z.infer<typeof applyClaimTemplateSchema>;
+
+// --- Reorder Templates ---
+
+export const reorderClaimTemplatesSchema = z.object({
+  template_ids: z.array(z.string().uuid()).min(1),
+});
+
+export type ReorderClaimTemplates = z.infer<typeof reorderClaimTemplatesSchema>;

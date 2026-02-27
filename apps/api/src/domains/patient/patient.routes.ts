@@ -14,6 +14,10 @@ import {
   patientAccessExportDownloadParamSchema,
   internalPatientIdParamSchema,
   validatePhnParamSchema,
+  checkEligibilitySchema,
+  overrideEligibilitySchema,
+  bulkCheckEligibilitySchema,
+  detectProvinceSchema,
 } from '@meritum/shared/schemas/patient.schema.js';
 import { patientCorrectionSchema } from '@meritum/shared/schemas/compliance.schema.js';
 import {
@@ -139,6 +143,42 @@ export async function patientRoutes(
     schema: { params: patientAccessExportDownloadParamSchema },
     preHandler: [app.authenticate, app.authorize('DATA_EXPORT')],
     handler: handlers.downloadPatientHiHandler,
+  });
+
+  // =========================================================================
+  // Eligibility Verification Routes (FRD MVPADD-001 §B2)
+  // =========================================================================
+
+  app.post('/api/v1/patients/eligibility/check', {
+    config: { auditLog: true },
+    schema: { body: checkEligibilitySchema },
+    preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
+    handler: handlers.checkEligibilityHandler,
+  });
+
+  app.post('/api/v1/patients/eligibility/override', {
+    config: { auditLog: true },
+    schema: { body: overrideEligibilitySchema },
+    preHandler: [app.authenticate, app.authorize('PATIENT_EDIT')],
+    handler: handlers.overrideEligibilityHandler,
+  });
+
+  app.post('/api/v1/patients/eligibility/bulk-check', {
+    config: { auditLog: true },
+    schema: { body: bulkCheckEligibilitySchema },
+    preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
+    handler: handlers.bulkCheckEligibilityHandler,
+  });
+
+  // =========================================================================
+  // Province Detection Routes (FRD MVPADD-001 §3.2)
+  // =========================================================================
+
+  app.post('/api/v1/patients/province/detect', {
+    config: { auditLog: true },
+    schema: { body: detectProvinceSchema },
+    preHandler: [app.authenticate, app.authorize('PATIENT_VIEW')],
+    handler: handlers.detectProvinceHandler,
   });
 
   // =========================================================================

@@ -17,6 +17,9 @@ import {
   shifts,
   claimExports,
   claimAuditHistory,
+  claimTemplates,
+  claimJustifications,
+  recentReferrers,
   type InsertClaim,
   type SelectClaim,
   type InsertImportBatch,
@@ -29,6 +32,12 @@ import {
   type SelectClaimExport,
   type InsertClaimAuditHistory,
   type SelectClaimAuditHistory,
+  type InsertClaimTemplate,
+  type SelectClaimTemplate,
+  type InsertClaimJustification,
+  type SelectClaimJustification,
+  type InsertRecentReferrer,
+  type SelectRecentReferrer,
 } from '@meritum/shared/schemas/db/claim.schema.js';
 import { ClaimState, ShiftStatus, ExportStatus } from '@meritum/shared/constants/claim.constants.js';
 import { ConflictError } from '../../lib/errors.js';
@@ -1116,6 +1125,378 @@ export function createClaimRepository(db: NodePgDatabase) {
           hasMore: page * pageSize < total,
         },
       };
+    },
+
+    // =========================================================================
+    // Recent Referrers (MVPADD-001 §2.1.2)
+    // =========================================================================
+
+    /**
+     * List recent referrers for a physician, ordered by last used descending.
+     * Physician-scoped. Max 20 per provider enforced by eviction.
+     */
+    async getRecentReferrers(
+      physicianId: string,
+      limit = 20,
+    ): Promise<SelectRecentReferrer[]> {
+      const rows = await db
+        .select()
+        .from(recentReferrers)
+        .where(eq(recentReferrers.physicianId, physicianId))
+        .orderBy(desc(recentReferrers.lastUsedAt))
+        .limit(limit);
+      return rows;
+    },
+
+    /**
+     * Upsert a recent referrer — increment use_count and update last_used_at
+     * if already exists, otherwise insert new. Physician-scoped.
+     */
+    async upsertRecentReferrer(
+      physicianId: string,
+      referrerCpsa: string,
+      referrerName: string,
+    ): Promise<SelectRecentReferrer> {
+      const rows = await db
+        .insert(recentReferrers)
+        .values({
+          physicianId,
+          referrerCpsa,
+          referrerName,
+          useCount: 1,
+          lastUsedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [recentReferrers.physicianId, recentReferrers.referrerCpsa],
+          set: {
+            referrerName,
+            useCount: sql`${recentReferrers.useCount} + 1`,
+            lastUsedAt: new Date(),
+          },
+        })
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Evict oldest referrers beyond the max limit (20) for a physician.
+     * Called after upsert to enforce the per-provider cap.
+     */
+    async evictOldestReferrers(
+      physicianId: string,
+      maxCount = 20,
+    ): Promise<number> {
+      const allReferrers = await db
+        .select({ id: recentReferrers.id })
+        .from(recentReferrers)
+        .where(eq(recentReferrers.physicianId, physicianId))
+        .orderBy(desc(recentReferrers.lastUsedAt));
+
+      if (allReferrers.length <= maxCount) {
+        return 0;
+      }
+
+      const idsToDelete = allReferrers
+        .slice(maxCount)
+        .map((r) => r.id);
+
+      const deleted = await db
+        .delete(recentReferrers)
+        .where(inArray(recentReferrers.id, idsToDelete))
+        .returning();
+
+      return deleted.length;
+    },
+
+    // =========================================================================
+    // Claim Templates (MVPADD-001 §4.1)
+    // =========================================================================
+
+    /**
+     * List active claim templates for a physician, ordered by usage desc.
+     * Physician-scoped. Supports optional type and claim_type filters.
+     */
+    async listClaimTemplates(
+      physicianId: string,
+      filters?: {
+        templateType?: string;
+        claimType?: string;
+        page?: number;
+        pageSize?: number;
+      },
+    ): Promise<PaginatedResult<SelectClaimTemplate>> {
+      const conditions = [
+        eq(claimTemplates.physicianId, physicianId),
+        eq(claimTemplates.isActive, true),
+      ];
+
+      if (filters?.templateType) {
+        conditions.push(eq(claimTemplates.templateType, filters.templateType));
+      }
+      if (filters?.claimType) {
+        conditions.push(eq(claimTemplates.claimType, filters.claimType));
+      }
+
+      const page = filters?.page ?? 1;
+      const pageSize = filters?.pageSize ?? 20;
+      const whereClause = and(...conditions);
+      const offset = (page - 1) * pageSize;
+
+      const [countResult, rows] = await Promise.all([
+        db
+          .select({ total: count() })
+          .from(claimTemplates)
+          .where(whereClause!),
+        db
+          .select()
+          .from(claimTemplates)
+          .where(whereClause!)
+          .orderBy(desc(claimTemplates.usageCount))
+          .limit(pageSize)
+          .offset(offset),
+      ]);
+
+      const total = Number(countResult[0]?.total ?? 0);
+
+      return {
+        data: rows,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          hasMore: page * pageSize < total,
+        },
+      };
+    },
+
+    /**
+     * Find a claim template by ID, scoped to physician.
+     */
+    async findClaimTemplateById(
+      templateId: string,
+      physicianId: string,
+    ): Promise<SelectClaimTemplate | undefined> {
+      const rows = await db
+        .select()
+        .from(claimTemplates)
+        .where(
+          and(
+            eq(claimTemplates.templateId, templateId),
+            eq(claimTemplates.physicianId, physicianId),
+          ),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Insert a new claim template. Physician-scoped via data.physicianId.
+     */
+    async createClaimTemplate(
+      data: InsertClaimTemplate,
+    ): Promise<SelectClaimTemplate> {
+      const rows = await db
+        .insert(claimTemplates)
+        .values(data)
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Update claim template fields. Physician-scoped.
+     */
+    async updateClaimTemplate(
+      templateId: string,
+      physicianId: string,
+      data: Partial<InsertClaimTemplate>,
+    ): Promise<SelectClaimTemplate | undefined> {
+      const rows = await db
+        .update(claimTemplates)
+        .set({ ...data, updatedAt: new Date() })
+        .where(
+          and(
+            eq(claimTemplates.templateId, templateId),
+            eq(claimTemplates.physicianId, physicianId),
+          ),
+        )
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Soft-delete a claim template by setting is_active = false.
+     * Physician-scoped.
+     */
+    async deleteClaimTemplate(
+      templateId: string,
+      physicianId: string,
+    ): Promise<boolean> {
+      const rows = await db
+        .update(claimTemplates)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(claimTemplates.templateId, templateId),
+            eq(claimTemplates.physicianId, physicianId),
+          ),
+        )
+        .returning();
+      return rows.length > 0;
+    },
+
+    /**
+     * Increment usage_count for a template. Called each time a template is applied.
+     * Physician-scoped.
+     */
+    async incrementClaimTemplateUsage(
+      templateId: string,
+      physicianId: string,
+    ): Promise<SelectClaimTemplate | undefined> {
+      const rows = await db
+        .update(claimTemplates)
+        .set({
+          usageCount: sql`${claimTemplates.usageCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(claimTemplates.templateId, templateId),
+            eq(claimTemplates.physicianId, physicianId),
+          ),
+        )
+        .returning();
+      return rows[0];
+    },
+
+    // =========================================================================
+    // Claim Justifications (MVPADD-001 §4.4)
+    // =========================================================================
+
+    /**
+     * Create a justification record attached to a claim.
+     * Physician-scoped via data.physicianId.
+     */
+    async createJustification(
+      data: InsertClaimJustification,
+    ): Promise<SelectClaimJustification> {
+      const rows = await db
+        .insert(claimJustifications)
+        .values(data)
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Get the justification for a specific claim.
+     * Physician-scoped.
+     */
+    async getJustificationForClaim(
+      claimId: string,
+      physicianId: string,
+    ): Promise<SelectClaimJustification | undefined> {
+      const rows = await db
+        .select()
+        .from(claimJustifications)
+        .where(
+          and(
+            eq(claimJustifications.claimId, claimId),
+            eq(claimJustifications.physicianId, physicianId),
+          ),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Update justification text. Physician-scoped.
+     */
+    async updateJustification(
+      justificationId: string,
+      physicianId: string,
+      justificationText: string,
+    ): Promise<SelectClaimJustification | undefined> {
+      const rows = await db
+        .update(claimJustifications)
+        .set({ justificationText, updatedAt: new Date() })
+        .where(
+          and(
+            eq(claimJustifications.justificationId, justificationId),
+            eq(claimJustifications.physicianId, physicianId),
+          ),
+        )
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Search justification history with filters. Physician-scoped.
+     */
+    async searchJustificationHistory(
+      physicianId: string,
+      filters: {
+        scenario?: string;
+        page?: number;
+        pageSize?: number;
+      },
+    ): Promise<PaginatedResult<SelectClaimJustification>> {
+      const conditions = [
+        eq(claimJustifications.physicianId, physicianId),
+      ];
+
+      if (filters.scenario) {
+        conditions.push(eq(claimJustifications.scenario, filters.scenario));
+      }
+
+      const page = filters.page ?? 1;
+      const pageSize = filters.pageSize ?? 20;
+      const whereClause = and(...conditions);
+      const offset = (page - 1) * pageSize;
+
+      const [countResult, rows] = await Promise.all([
+        db
+          .select({ total: count() })
+          .from(claimJustifications)
+          .where(whereClause!),
+        db
+          .select()
+          .from(claimJustifications)
+          .where(whereClause!)
+          .orderBy(desc(claimJustifications.createdAt))
+          .limit(pageSize)
+          .offset(offset),
+      ]);
+
+      const total = Number(countResult[0]?.total ?? 0);
+
+      return {
+        data: rows,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          hasMore: page * pageSize < total,
+        },
+      };
+    },
+
+    /**
+     * Find a justification by ID, scoped to physician.
+     */
+    async findJustificationById(
+      justificationId: string,
+      physicianId: string,
+    ): Promise<SelectClaimJustification | undefined> {
+      const rows = await db
+        .select()
+        .from(claimJustifications)
+        .where(
+          and(
+            eq(claimJustifications.justificationId, justificationId),
+            eq(claimJustifications.physicianId, physicianId),
+          ),
+        )
+        .limit(1);
+      return rows[0];
     },
   };
 }

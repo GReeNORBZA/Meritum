@@ -5,3 +5,8 @@ export {
   isEarlyBirdRate,
   type EffectiveRateResult,
 } from './pricing.utils.js';
+export {
+  detectProvinceFromPhn,
+  isOutOfProvincePhn,
+  type ProvinceDetectionResult,
+} from './province-detection.utils.js';

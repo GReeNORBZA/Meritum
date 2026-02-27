@@ -199,6 +199,75 @@ export const RuleClaimType = {
 export type RuleClaimType =
   (typeof RuleClaimType)[keyof typeof RuleClaimType];
 
+// --- Confidence Tiers for Bedside Rules (FRD B4/B4a) ---
+
+export const ConfidenceTier = {
+  /** Auto-apply — rule applied automatically, no user prompt */
+  TIER_A: 'TIER_A',
+  /** Pre-apply — rule pre-applied, user can remove (opt-out) */
+  TIER_B: 'TIER_B',
+  /** Suggestion — shown to user, user must accept (opt-in) */
+  TIER_C: 'TIER_C',
+  /** Suppressed — hidden for this physician (dismissal threshold reached) */
+  SUPPRESS: 'SUPPRESS',
+} as const;
+
+export type ConfidenceTier =
+  (typeof ConfidenceTier)[keyof typeof ConfidenceTier];
+
+// --- Confidence Tier Threshold Defaults ---
+
+interface ConfidenceTierConfig {
+  readonly tier: ConfidenceTier;
+  readonly label: string;
+  readonly description: string;
+  readonly minAcceptanceRate: number;
+}
+
+export const CONFIDENCE_TIER_CONFIGS: Readonly<
+  Record<ConfidenceTier, ConfidenceTierConfig>
+> = Object.freeze({
+  [ConfidenceTier.TIER_A]: {
+    tier: ConfidenceTier.TIER_A,
+    label: 'Auto-apply',
+    description: 'Rule automatically applied; user not prompted',
+    minAcceptanceRate: 0.95,
+  },
+  [ConfidenceTier.TIER_B]: {
+    tier: ConfidenceTier.TIER_B,
+    label: 'Pre-apply (opt-out)',
+    description: 'Rule pre-applied; user can remove before save',
+    minAcceptanceRate: 0.80,
+  },
+  [ConfidenceTier.TIER_C]: {
+    tier: ConfidenceTier.TIER_C,
+    label: 'Suggestion (opt-in)',
+    description: 'Shown as a suggestion; user must explicitly accept',
+    minAcceptanceRate: 0.0,
+  },
+  [ConfidenceTier.SUPPRESS]: {
+    tier: ConfidenceTier.SUPPRESS,
+    label: 'Suppressed',
+    description: 'Hidden for this physician after repeated dismissals',
+    minAcceptanceRate: -1,
+  },
+});
+
+// --- Bedside Contingent Signals ---
+
+export const BedsideContingentSignal = {
+  DOS_WEEKDAY_EVENING: 'DOS_WEEKDAY_EVENING',
+  DOS_WEEKDAY_NIGHT: 'DOS_WEEKDAY_NIGHT',
+  DOS_WEEKEND_HOLIDAY: 'DOS_WEEKEND_HOLIDAY',
+  FACILITY_ED: 'FACILITY_ED',
+  FACILITY_HOSPITAL: 'FACILITY_HOSPITAL',
+  PATIENT_AGE_OVER_65: 'PATIENT_AGE_OVER_65',
+  PATIENT_AGE_UNDER_2: 'PATIENT_AGE_UNDER_2',
+} as const;
+
+export type BedsideContingentSignal =
+  (typeof BedsideContingentSignal)[keyof typeof BedsideContingentSignal];
+
 // --- Learning Loop Constants ---
 
 /** Consecutive dismissals before a rule is suppressed for a physician */

@@ -42,6 +42,12 @@ export const claims = pgTable(
     importSource: varchar('import_source', { length: 20 }).notNull(),
     importBatchId: uuid('import_batch_id'),
     shiftId: uuid('shift_id'),
+    rawFileReference: varchar('raw_file_reference', { length: 500 }),
+    sccChargeStatus: varchar('scc_charge_status', { length: 20 }),
+    icdConversionFlag: boolean('icd_conversion_flag').default(false),
+    icd10SourceCode: varchar('icd10_source_code', { length: 10 }),
+    routingBaId: uuid('routing_ba_id'),
+    routingReason: varchar('routing_reason', { length: 30 }),
     dateOfService: date('date_of_service', { mode: 'string' }).notNull(),
     submissionDeadline: date('submission_deadline', { mode: 'string' }).notNull(),
     submittedBatchId: uuid('submitted_batch_id'),
@@ -140,6 +146,16 @@ export const importBatches = pgTable(
     errorCount: integer('error_count').notNull(),
     errorDetails: jsonb('error_details'),
     status: varchar('status', { length: 20 }).notNull(),
+    // Connect Care extension fields (FRD CC-001)
+    importSource: varchar('import_source', { length: 30 }),
+    sccSpecVersion: varchar('scc_spec_version', { length: 20 }),
+    rawRowCount: integer('raw_row_count'),
+    validRowCount: integer('valid_row_count'),
+    warningCount: integer('warning_count'),
+    duplicateCount: integer('duplicate_count'),
+    confirmationStatus: varchar('confirmation_status', { length: 20 }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    confirmedBy: uuid('confirmed_by').references(() => users.userId),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -158,6 +174,12 @@ export const importBatches = pgTable(
     uniqueIndex('import_batches_physician_file_hash_idx').on(
       table.physicianId,
       table.fileHash,
+    ),
+
+    // CC-specific: lookup by confirmation status
+    index('import_batches_confirmation_status_idx').on(
+      table.physicianId,
+      table.confirmationStatus,
     ),
   ],
 );
@@ -270,6 +292,113 @@ export const claimAuditHistory = pgTable(
   ],
 );
 
+// --- Claim Templates Table (FRD MVPADD-001 §B3) ---
+// Physician-specific reusable claim templates (CUSTOM or SPECIALTY_STARTER).
+// line_items JSONB stores an array of { hsc_code, modifiers, di_code, ... }.
+// Physician-scoped via physician_id (HIA custodian boundary).
+
+export const claimTemplates = pgTable(
+  'claim_templates',
+  {
+    templateId: uuid('template_id').primaryKey().defaultRandom(),
+    physicianId: uuid('physician_id')
+      .notNull()
+      .references(() => providers.providerId),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    templateType: varchar('template_type', { length: 30 }).notNull(),
+    claimType: varchar('claim_type', { length: 10 }).notNull(),
+    lineItems: jsonb('line_items')
+      .notNull()
+      .$type<Record<string, unknown>[]>(),
+    specialtyCode: varchar('specialty_code', { length: 10 }),
+    usageCount: integer('usage_count').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('claim_templates_physician_active_idx').on(
+      table.physicianId,
+      table.isActive,
+    ),
+    index('claim_templates_specialty_type_idx').on(
+      table.specialtyCode,
+      table.templateType,
+    ),
+  ],
+);
+
+// --- Claim Justifications Table (FRD MVPADD-001 §B11) ---
+// Per-claim text justifications attached to claims requiring narrative support.
+// Physician-scoped via physician_id (HIA custodian boundary).
+
+export const claimJustifications = pgTable(
+  'claim_justifications',
+  {
+    justificationId: uuid('justification_id').primaryKey().defaultRandom(),
+    claimId: uuid('claim_id')
+      .notNull()
+      .references(() => claims.claimId),
+    physicianId: uuid('physician_id')
+      .notNull()
+      .references(() => providers.providerId),
+    scenario: varchar('scenario', { length: 40 }).notNull(),
+    justificationText: text('justification_text').notNull(),
+    templateId: uuid('template_id'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.userId),
+  },
+  (table) => [
+    index('claim_justifications_claim_idx').on(table.claimId),
+    index('claim_justifications_physician_scenario_idx').on(
+      table.physicianId,
+      table.scenario,
+    ),
+  ],
+);
+
+// --- Recent Referrers Table (FRD MVPADD-001 §B1) ---
+// Tracks recently used referring physicians per provider for quick selection.
+// Physician-scoped via physician_id (HIA custodian boundary).
+
+export const recentReferrers = pgTable(
+  'recent_referrers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    physicianId: uuid('physician_id')
+      .notNull()
+      .references(() => providers.providerId),
+    referrerCpsa: varchar('referrer_cpsa', { length: 10 }).notNull(),
+    referrerName: varchar('referrer_name', { length: 100 }).notNull(),
+    useCount: integer('use_count').notNull().default(1),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('recent_referrers_physician_cpsa_unique_idx').on(
+      table.physicianId,
+      table.referrerCpsa,
+    ),
+    index('recent_referrers_physician_last_used_idx').on(
+      table.physicianId,
+      table.lastUsedAt,
+    ),
+  ],
+);
+
 // --- Inferred Types ---
 
 export type InsertClaim = typeof claims.$inferInsert;
@@ -291,3 +420,12 @@ export type SelectClaimExport = typeof claimExports.$inferSelect;
 
 export type InsertClaimAuditHistory = typeof claimAuditHistory.$inferInsert;
 export type SelectClaimAuditHistory = typeof claimAuditHistory.$inferSelect;
+
+export type InsertClaimTemplate = typeof claimTemplates.$inferInsert;
+export type SelectClaimTemplate = typeof claimTemplates.$inferSelect;
+
+export type InsertClaimJustification = typeof claimJustifications.$inferInsert;
+export type SelectClaimJustification = typeof claimJustifications.$inferSelect;
+
+export type InsertRecentReferrer = typeof recentReferrers.$inferInsert;
+export type SelectRecentReferrer = typeof recentReferrers.$inferSelect;

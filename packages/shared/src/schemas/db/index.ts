@@ -108,6 +108,14 @@ export {
   statutoryHolidays,
   explanatoryCodes,
   referenceDataStaging,
+  icdCrosswalk,
+  providerRegistry,
+  billingGuidance,
+  provincialPhnFormats,
+  reciprocalBillingRules,
+  anesthesiaRules,
+  bundlingRules,
+  justificationTemplates,
 } from './reference.schema.js';
 export type {
   InsertVersion,
@@ -134,6 +142,22 @@ export type {
   SelectExplanatoryCode,
   InsertReferenceDataStaging,
   SelectReferenceDataStaging,
+  InsertIcdCrosswalk,
+  SelectIcdCrosswalk,
+  InsertProviderRegistry,
+  SelectProviderRegistry,
+  InsertBillingGuidance,
+  SelectBillingGuidance,
+  InsertProvincialPhnFormat,
+  SelectProvincialPhnFormat,
+  InsertReciprocalBillingRule,
+  SelectReciprocalBillingRule,
+  InsertAnesthesiaRule,
+  SelectAnesthesiaRule,
+  InsertBundlingRule,
+  SelectBundlingRule,
+  InsertJustificationTemplate,
+  SelectJustificationTemplate,
 } from './reference.schema.js';
 
 export {
@@ -145,6 +169,10 @@ export {
   delegateRelationships,
   submissionPreferences,
   hlinkConfigurations,
+  pcpcmPayments,
+  pcpcmPanelEstimates,
+  baFacilityMappings,
+  baScheduleMappings,
 } from './provider.schema.js';
 export type {
   InsertProvider,
@@ -163,12 +191,21 @@ export type {
   SelectSubmissionPreferences,
   InsertHlinkConfig,
   SelectHlinkConfig,
+  InsertPcpcmPayment,
+  SelectPcpcmPayment,
+  InsertPcpcmPanelEstimate,
+  SelectPcpcmPanelEstimate,
+  InsertBaFacilityMapping,
+  SelectBaFacilityMapping,
+  InsertBaScheduleMapping,
+  SelectBaScheduleMapping,
 } from './provider.schema.js';
 
 export {
   patients,
   patientImportBatches,
   patientMergeHistory,
+  eligibilityCache,
 } from './patient.schema.js';
 export type {
   InsertPatient,
@@ -177,6 +214,8 @@ export type {
   SelectPatientImportBatch,
   InsertPatientMergeHistory,
   SelectPatientMergeHistory,
+  InsertEligibilityCache,
+  SelectEligibilityCache,
 } from './patient.schema.js';
 
 export {
@@ -186,6 +225,9 @@ export {
   shifts,
   claimExports,
   claimAuditHistory,
+  claimTemplates,
+  claimJustifications,
+  recentReferrers,
 } from './claim.schema.js';
 export type {
   InsertClaim,
@@ -200,6 +242,12 @@ export type {
   SelectClaimExport,
   InsertClaimAuditHistory,
   SelectClaimAuditHistory,
+  InsertClaimTemplate,
+  SelectClaimTemplate,
+  InsertClaimJustification,
+  SelectClaimJustification,
+  InsertRecentReferrer,
+  SelectRecentReferrer,
 } from './claim.schema.js';
 
 export { ahcipClaimDetails, ahcipBatches } from './ahcip.schema.js';
@@ -293,10 +341,19 @@ export type {
   SelectImaRecord,
 } from './onboarding.schema.js';
 
-export { edShifts, favouriteCodes } from './mobile.schema.js';
+export {
+  shiftSchedules,
+  edShifts,
+  edShiftEncounters,
+  favouriteCodes,
+} from './mobile.schema.js';
 export type {
+  InsertShiftSchedule,
+  SelectShiftSchedule,
   InsertEdShift,
   SelectEdShift,
+  InsertEdShiftEncounter,
+  SelectEdShiftEncounter,
   InsertFavouriteCode,
   SelectFavouriteCode,
 } from './mobile.schema.js';

@@ -10,6 +10,7 @@ import {
   CSV_GENDER_VALUE_MAPPINGS,
 } from '@meritum/shared/constants/patient.constants.js';
 import { validateAlbertaPhn, maskPhn } from '@meritum/shared/utils/phn.utils.js';
+import { detectProvinceFromPhn, isOutOfProvincePhn } from '@meritum/shared/utils/province-detection.utils.js';
 import { NotFoundError, ConflictError, ValidationError } from '../../lib/errors.js';
 
 // ---------------------------------------------------------------------------
@@ -1885,6 +1886,297 @@ export async function validatePhnService(
     formatOk: true,
     exists: existsResult.exists,
     patientId: existsResult.patientId,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Eligibility Check (FRD MVPADD-001 §3.1)
+// ---------------------------------------------------------------------------
+
+/** 24-hour TTL for eligibility cache entries. */
+const ELIGIBILITY_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+export interface EligibilityCheckResult {
+  phnMasked: string;
+  isEligible: boolean;
+  source: 'CACHE' | 'HLINK' | 'FALLBACK';
+  details: Record<string, unknown>;
+  verifiedAt: Date;
+}
+
+/**
+ * Check patient eligibility via:
+ * 1. PHN format validation
+ * 2. Cache lookup (SHA-256 hashed PHN)
+ * 3. H-Link inquiry (simulated — returns eligible with placeholder)
+ * 4. Cache result
+ *
+ * Falls back to FALLBACK mode if H-Link is unavailable.
+ */
+export async function checkEligibility(
+  deps: PatientServiceDeps,
+  physicianId: string,
+  phn: string,
+  dateOfService?: string,
+  actorId?: string,
+): Promise<EligibilityCheckResult> {
+  // 1. Validate PHN format
+  const formatCheck = validateAlbertaPhn(phn);
+  if (!formatCheck.valid) {
+    throw new ValidationError('Invalid Alberta PHN format');
+  }
+
+  // 2. Compute PHN hash for cache lookup
+  const phnHash = createHash('sha256').update(phn).digest('hex');
+  const masked = maskPhn(phn);
+
+  // 3. Check cache
+  const cached = await deps.repo.getCachedEligibility(physicianId, phnHash);
+  if (cached) {
+    // Audit: cache hit
+    await deps.auditRepo.appendAuditLog({
+      userId: actorId,
+      action: PatientAuditAction.ELIGIBILITY_CHECKED,
+      category: 'patient',
+      resourceType: 'eligibility',
+      detail: { phn_masked: masked, source: 'CACHE', date_of_service: dateOfService ?? null },
+    });
+
+    return {
+      phnMasked: masked,
+      isEligible: cached.isEligible,
+      source: 'CACHE',
+      details: (cached.eligibilityDetails ?? {}) as Record<string, unknown>,
+      verifiedAt: cached.verifiedAt,
+    };
+  }
+
+  // 4. H-Link inquiry (simulated — real implementation will call H-Link API)
+  // In production, this would be an HTTP call to the H-Link eligibility endpoint.
+  // For now, return eligible with placeholder details.
+  const now = new Date();
+  const isEligible = true;
+  const details: Record<string, unknown> = {
+    status: 'ELIGIBLE',
+    coverage_start: '2020-01-01',
+    coverage_end: null,
+    group_number: null,
+    date_of_service: dateOfService ?? null,
+  };
+
+  // 5. Cache the result
+  const expiresAt = new Date(now.getTime() + ELIGIBILITY_CACHE_TTL_MS);
+  await deps.repo.setCachedEligibility({
+    providerId: physicianId,
+    phnHash,
+    isEligible,
+    eligibilityDetails: details,
+    verifiedAt: now,
+    expiresAt,
+  });
+
+  // 6. Audit log
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: PatientAuditAction.ELIGIBILITY_CHECKED,
+    category: 'patient',
+    resourceType: 'eligibility',
+    detail: { phn_masked: masked, source: 'HLINK', date_of_service: dateOfService ?? null },
+  });
+
+  deps.events.emit('patient.eligibility_checked', {
+    physicianId,
+    phnMasked: masked,
+    source: 'HLINK',
+    isEligible,
+  });
+
+  return {
+    phnMasked: masked,
+    isEligible,
+    source: 'HLINK',
+    details,
+    verifiedAt: now,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Override Eligibility (FRD MVPADD-001 §3.1.4)
+// ---------------------------------------------------------------------------
+
+export interface EligibilityOverrideResult {
+  phnMasked: string;
+  overridden: boolean;
+  reason: string;
+}
+
+/**
+ * Override an eligibility determination for a specific claim.
+ * Records the override reason in the audit log.
+ */
+export async function overrideEligibility(
+  deps: PatientServiceDeps,
+  physicianId: string,
+  phn: string,
+  reason: string,
+  actorId: string,
+): Promise<EligibilityOverrideResult> {
+  const masked = maskPhn(phn);
+  const phnHash = createHash('sha256').update(phn).digest('hex');
+
+  // Update the cache entry to reflect the override
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ELIGIBILITY_CACHE_TTL_MS);
+  await deps.repo.setCachedEligibility({
+    providerId: physicianId,
+    phnHash,
+    isEligible: true,
+    eligibilityDetails: { status: 'OVERRIDE', reason, overridden_by: actorId, overridden_at: now.toISOString() },
+    verifiedAt: now,
+    expiresAt,
+  });
+
+  // Audit log
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: PatientAuditAction.ELIGIBILITY_OVERRIDDEN,
+    category: 'patient',
+    resourceType: 'eligibility',
+    detail: { phn_masked: masked, reason },
+  });
+
+  deps.events.emit('patient.eligibility_overridden', {
+    physicianId,
+    phnMasked: masked,
+    reason,
+    actorId,
+  });
+
+  return { phnMasked: masked, overridden: true, reason };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Bulk Eligibility Check (FRD MVPADD-001 §3.1.4)
+// ---------------------------------------------------------------------------
+
+export interface BulkEligibilityEntry {
+  phn: string;
+  dateOfService?: string;
+}
+
+export interface BulkEligibilityResult {
+  results: EligibilityCheckResult[];
+  summary: { total: number; eligible: number; ineligible: number; errors: number };
+}
+
+/**
+ * Check eligibility for multiple PHNs.
+ * Limited to 50 entries per request.
+ */
+export async function bulkCheckEligibility(
+  deps: PatientServiceDeps,
+  physicianId: string,
+  entries: BulkEligibilityEntry[],
+  actorId?: string,
+): Promise<BulkEligibilityResult> {
+  if (entries.length > 50) {
+    throw new ValidationError('Bulk eligibility check limited to 50 entries');
+  }
+
+  const results: EligibilityCheckResult[] = [];
+  let eligible = 0;
+  let ineligible = 0;
+  let errors = 0;
+
+  for (const entry of entries) {
+    try {
+      const result = await checkEligibility(deps, physicianId, entry.phn, entry.dateOfService, actorId);
+      results.push(result);
+      if (result.isEligible) eligible++;
+      else ineligible++;
+    } catch {
+      errors++;
+      results.push({
+        phnMasked: maskPhn(entry.phn),
+        isEligible: false,
+        source: 'FALLBACK',
+        details: { error: 'Eligibility check failed' },
+        verifiedAt: new Date(),
+      });
+    }
+  }
+
+  return {
+    results,
+    summary: { total: entries.length, eligible, ineligible, errors },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Province Detection (FRD MVPADD-001 §3.2)
+// ---------------------------------------------------------------------------
+
+export interface ProvinceDetectionResult {
+  detectedProvince: string | null;
+  confidence: string;
+  isOutOfProvince: boolean;
+  billingMode: 'STANDARD' | 'RECIPROCAL' | 'PRIVATE' | 'UNKNOWN';
+  reciprocalEligible: boolean;
+}
+
+/**
+ * Detect the province from a health number using format matching.
+ * Enriches the detection with billing mode determination:
+ * - Alberta → STANDARD
+ * - Quebec → PRIVATE (no reciprocal agreement)
+ * - Other provinces → RECIPROCAL
+ * - Unknown → UNKNOWN
+ */
+export async function detectPatientProvince(
+  deps: PatientServiceDeps,
+  physicianId: string,
+  healthNumber: string,
+  actorId?: string,
+): Promise<ProvinceDetectionResult> {
+  const detection = detectProvinceFromPhn(healthNumber);
+  const outOfProvince = isOutOfProvincePhn(healthNumber);
+
+  // Map isDefinitive → confidence string
+  const confidence = detection.isDefinitive ? 'HIGH' : detection.candidates.length > 0 ? 'LOW' : 'NONE';
+
+  let billingMode: ProvinceDetectionResult['billingMode'] = 'UNKNOWN';
+  let reciprocalEligible = false;
+
+  if (detection.provinceCode === 'AB') {
+    billingMode = 'STANDARD';
+  } else if (detection.provinceCode === 'QC') {
+    // Quebec does not participate in reciprocal billing
+    billingMode = 'PRIVATE';
+  } else if (detection.provinceCode && confidence !== 'LOW') {
+    billingMode = 'RECIPROCAL';
+    reciprocalEligible = true;
+  }
+
+  // Audit log
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: PatientAuditAction.PROVINCE_DETECTED,
+    category: 'patient',
+    resourceType: 'province_detection',
+    detail: {
+      detected_province: detection.provinceCode,
+      confidence,
+      billing_mode: billingMode,
+      is_out_of_province: outOfProvince,
+    },
+  });
+
+  return {
+    detectedProvince: detection.provinceCode,
+    confidence,
+    isOutOfProvince: outOfProvince,
+    billingMode,
+    reciprocalEligible,
   };
 }
 

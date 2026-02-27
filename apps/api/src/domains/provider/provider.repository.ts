@@ -1,4 +1,4 @@
-import { eq, and, ne, count, lte, gte } from 'drizzle-orm';
+import { eq, and, ne, count, lte, gte, sql } from 'drizzle-orm';
 import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   providers,
@@ -25,6 +25,12 @@ import {
   hlinkConfigurations,
   type InsertHlinkConfig,
   type SelectHlinkConfig,
+  baFacilityMappings,
+  type InsertBaFacilityMapping,
+  type SelectBaFacilityMapping,
+  baScheduleMappings,
+  type InsertBaScheduleMapping,
+  type SelectBaScheduleMapping,
 } from '@meritum/shared/schemas/db/provider.schema.js';
 import { users } from '@meritum/shared/schemas/db/iam.schema.js';
 import {
@@ -1384,6 +1390,246 @@ export function createProviderRepository(db: NodePgDatabase) {
       }
 
       return null;
+    },
+
+    // =========================================================================
+    // BA Subtype (FRD MVPADD-001 §6.1.1)
+    // =========================================================================
+
+    /**
+     * Update the BA subtype for a specific business arrangement.
+     * Scoped to providerId.
+     */
+    async updateBaSubtype(
+      baId: string,
+      providerId: string,
+      subtype: string | null,
+    ): Promise<SelectBa | undefined> {
+      const rows = await db
+        .update(businessArrangements)
+        .set({ baSubtype: subtype, updatedAt: new Date() })
+        .where(
+          and(
+            eq(businessArrangements.baId, baId),
+            eq(businessArrangements.providerId, providerId),
+          ),
+        )
+        .returning();
+      return rows[0];
+    },
+
+    // =========================================================================
+    // Connect Care User (FRD MOB-002 §6.1)
+    // =========================================================================
+
+    /**
+     * Enable or disable Connect Care user status for a provider.
+     */
+    async setConnectCareUser(
+      providerId: string,
+      isConnectCare: boolean,
+    ): Promise<SelectProvider | undefined> {
+      const rows = await db
+        .update(providers)
+        .set({
+          isConnectCareUser: isConnectCare,
+          connectCareEnabledAt: isConnectCare ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(providers.providerId, providerId))
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Return the Connect Care status for a provider.
+     */
+    async getConnectCareStatus(
+      providerId: string,
+    ): Promise<{ isConnectCareUser: boolean; connectCareEnabledAt: Date | null } | undefined> {
+      const rows = await db
+        .select({
+          isConnectCareUser: providers.isConnectCareUser,
+          connectCareEnabledAt: providers.connectCareEnabledAt,
+        })
+        .from(providers)
+        .where(eq(providers.providerId, providerId))
+        .limit(1);
+      return rows[0];
+    },
+
+    // =========================================================================
+    // BA Facility Mappings (FRD MVPADD-001 §6.2.1)
+    // =========================================================================
+
+    /**
+     * List all active facility mappings for a provider.
+     */
+    async getFacilityMappings(
+      providerId: string,
+    ): Promise<SelectBaFacilityMapping[]> {
+      return db
+        .select()
+        .from(baFacilityMappings)
+        .where(
+          and(
+            eq(baFacilityMappings.providerId, providerId),
+            eq(baFacilityMappings.isActive, true),
+          ),
+        );
+    },
+
+    /**
+     * Upsert facility mappings for a provider.
+     * Uses ON CONFLICT on (ba_id, functional_centre) to update existing.
+     */
+    async upsertFacilityMappings(
+      providerId: string,
+      mappings: Array<Omit<InsertBaFacilityMapping, 'providerId'>>,
+    ): Promise<SelectBaFacilityMapping[]> {
+      if (mappings.length === 0) return [];
+
+      const values = mappings.map((m) => ({
+        ...m,
+        providerId,
+      }));
+
+      const results: SelectBaFacilityMapping[] = [];
+      for (const val of values) {
+        const rows = await db
+          .insert(baFacilityMappings)
+          .values(val)
+          .onConflictDoUpdate({
+            target: [baFacilityMappings.baId, baFacilityMappings.functionalCentre],
+            set: {
+              priority: val.priority,
+              isActive: val.isActive ?? true,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+        if (rows[0]) results.push(rows[0]);
+      }
+      return results;
+    },
+
+    /**
+     * Deactivate all facility mappings for a provider (soft delete).
+     */
+    async deactivateAllFacilityMappings(
+      providerId: string,
+    ): Promise<number> {
+      const result = await db
+        .update(baFacilityMappings)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(baFacilityMappings.providerId, providerId));
+      return (result as any).rowCount ?? 0;
+    },
+
+    // =========================================================================
+    // BA Schedule Mappings (FRD MVPADD-001 §6.2.2)
+    // =========================================================================
+
+    /**
+     * List all active schedule mappings for a provider.
+     */
+    async getScheduleMappings(
+      providerId: string,
+    ): Promise<SelectBaScheduleMapping[]> {
+      return db
+        .select()
+        .from(baScheduleMappings)
+        .where(
+          and(
+            eq(baScheduleMappings.providerId, providerId),
+            eq(baScheduleMappings.isActive, true),
+          ),
+        );
+    },
+
+    /**
+     * Upsert schedule mappings for a provider.
+     */
+    async upsertScheduleMappings(
+      providerId: string,
+      mappings: Array<Omit<InsertBaScheduleMapping, 'providerId'>>,
+    ): Promise<SelectBaScheduleMapping[]> {
+      if (mappings.length === 0) return [];
+
+      const values = mappings.map((m) => ({
+        ...m,
+        providerId,
+      }));
+
+      const results: SelectBaScheduleMapping[] = [];
+      for (const val of values) {
+        const rows = await db
+          .insert(baScheduleMappings)
+          .values(val)
+          .returning();
+        results.push(rows[0]);
+      }
+      return results;
+    },
+
+    /**
+     * Deactivate all schedule mappings for a provider (soft delete).
+     */
+    async deactivateAllScheduleMappings(
+      providerId: string,
+    ): Promise<number> {
+      const result = await db
+        .update(baScheduleMappings)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(baScheduleMappings.providerId, providerId));
+      return (result as any).rowCount ?? 0;
+    },
+
+    /**
+     * Find facility mapping by functional centre for a provider.
+     * Returns the mapping with highest priority.
+     */
+    async findFacilityMappingByFc(
+      providerId: string,
+      functionalCentre: string,
+    ): Promise<SelectBaFacilityMapping | undefined> {
+      const rows = await db
+        .select()
+        .from(baFacilityMappings)
+        .where(
+          and(
+            eq(baFacilityMappings.providerId, providerId),
+            eq(baFacilityMappings.functionalCentre, functionalCentre),
+            eq(baFacilityMappings.isActive, true),
+          ),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Find schedule mapping that matches a specific day + time for a provider.
+     * Returns the mapping with highest priority.
+     */
+    async findScheduleMappingByTime(
+      providerId: string,
+      dayOfWeek: number,
+      time: string,
+    ): Promise<SelectBaScheduleMapping | undefined> {
+      const rows = await db
+        .select()
+        .from(baScheduleMappings)
+        .where(
+          and(
+            eq(baScheduleMappings.providerId, providerId),
+            eq(baScheduleMappings.dayOfWeek, dayOfWeek),
+            lte(baScheduleMappings.startTime, time),
+            gte(baScheduleMappings.endTime, time),
+            eq(baScheduleMappings.isActive, true),
+          ),
+        )
+        .limit(1);
+      return rows[0];
     },
   };
 }

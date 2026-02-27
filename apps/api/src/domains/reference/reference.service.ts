@@ -2209,3 +2209,511 @@ export async function dryRunRule(
     sample_results: sampleResults,
   };
 }
+
+// ---------------------------------------------------------------------------
+// ICD Crosswalk (FRD CC-001 §A4)
+// ---------------------------------------------------------------------------
+
+export interface IcdCrosswalkResult {
+  icd10Code: string;
+  icd10Description: string;
+  icd9Code: string;
+  icd9Description: string;
+  matchQuality: string;
+  isPreferred: boolean;
+  notes: string | null;
+}
+
+/**
+ * Look up ICD-9 mappings for an ICD-10 code.
+ * Resolves ICD_CROSSWALK version, returns results sorted by preferred flag
+ * then match quality.
+ */
+export async function getIcdCrosswalk(
+  deps: ReferenceServiceDeps,
+  icd10Code: string,
+  dateOfService?: Date,
+): Promise<IcdCrosswalkResult[]> {
+  const { versionId } = await resolveVersion(deps, 'ICD_CROSSWALK', dateOfService);
+
+  const rows = await deps.repo.getIcdCrosswalkByIcd10(icd10Code, versionId);
+
+  return rows.map((r) => ({
+    icd10Code: r.icd10Code,
+    icd10Description: r.icd10Description,
+    icd9Code: r.icd9Code,
+    icd9Description: r.icd9Description ?? '',
+    matchQuality: r.matchQuality,
+    isPreferred: r.isPreferred,
+    notes: r.notes ?? null,
+  }));
+}
+
+/**
+ * Search ICD crosswalk by code prefix or description text.
+ */
+export async function searchIcdCrosswalkEntries(
+  deps: ReferenceServiceDeps,
+  query: string,
+  limit: number = 20,
+  dateOfService?: Date,
+): Promise<IcdCrosswalkResult[]> {
+  const { versionId } = await resolveVersion(deps, 'ICD_CROSSWALK', dateOfService);
+
+  const rows = await deps.repo.searchIcdCrosswalk(query, versionId, limit);
+
+  return rows.map((r) => ({
+    icd10Code: r.icd10Code,
+    icd10Description: r.icd10Description,
+    icd9Code: r.icd9Code,
+    icd9Description: r.icd9Description ?? '',
+    matchQuality: r.matchQuality,
+    isPreferred: r.isPreferred,
+    notes: r.notes ?? null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Provider Registry (FRD MVPADD-001 §B1)
+// ---------------------------------------------------------------------------
+
+export interface ProviderRegistryResult {
+  registryId: string;
+  cpsa: string;
+  firstName: string;
+  lastName: string;
+  specialtyCode: string | null;
+  specialtyDescription: string | null;
+  city: string | null;
+  facilityName: string | null;
+  phone: string | null;
+  fax: string | null;
+  isActive: boolean;
+}
+
+/**
+ * Search the provider registry by name with optional specialty/city filters.
+ * Uses trigram fuzzy matching for typo tolerance.
+ */
+export async function searchProviderRegistryEntries(
+  deps: ReferenceServiceDeps,
+  query: string,
+  filters: { specialty?: string; city?: string } = {},
+  limit: number = 20,
+): Promise<ProviderRegistryResult[]> {
+  const rows = await deps.repo.searchProviderRegistry(query, filters, limit);
+
+  return rows.map((r) => ({
+    registryId: r.registryId,
+    cpsa: r.cpsa,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    specialtyCode: r.specialtyCode ?? null,
+    specialtyDescription: r.specialtyDescription ?? null,
+    city: r.city ?? null,
+    facilityName: r.facilityName ?? null,
+    phone: r.phone ?? null,
+    fax: r.fax ?? null,
+    isActive: r.isActive,
+  }));
+}
+
+/**
+ * Get a single provider from the registry by CPSA registration number.
+ */
+export async function getProviderByCpsa(
+  deps: ReferenceServiceDeps,
+  cpsa: string,
+): Promise<ProviderRegistryResult> {
+  const row = await deps.repo.getProviderByCpsa(cpsa);
+  if (!row) {
+    throw new NotFoundError('Provider registry entry');
+  }
+
+  return {
+    registryId: row.registryId,
+    cpsa: row.cpsa,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    specialtyCode: row.specialtyCode ?? null,
+    specialtyDescription: row.specialtyDescription ?? null,
+    city: row.city ?? null,
+    facilityName: row.facilityName ?? null,
+    phone: row.phone ?? null,
+    fax: row.fax ?? null,
+    isActive: row.isActive,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Billing Guidance (FRD MVPADD-001 §B6)
+// ---------------------------------------------------------------------------
+
+export interface BillingGuidanceResult {
+  guidanceId: string;
+  category: string;
+  title: string;
+  content: string;
+  applicableHscCodes: string[];
+  applicableSpecialties: string[];
+  sourceReference: string | null;
+  sourceUrl: string | null;
+  sortOrder: number;
+}
+
+/**
+ * List billing guidance entries with optional category/specialty/HSC filtering.
+ * Only active entries are returned, sorted by sortOrder.
+ */
+export async function listBillingGuidanceEntries(
+  deps: ReferenceServiceDeps,
+  filters: { category?: string; specialty?: string; hsc?: string } = {},
+  limit: number = 20,
+  offset: number = 0,
+): Promise<BillingGuidanceResult[]> {
+  const rows = await deps.repo.listBillingGuidance(filters, limit, offset);
+
+  return rows.map((r) => ({
+    guidanceId: r.guidanceId,
+    category: r.category,
+    title: r.title,
+    content: r.content,
+    applicableHscCodes: (r.applicableHscCodes ?? []) as string[],
+    applicableSpecialties: (r.applicableSpecialties ?? []) as string[],
+    sourceReference: r.sourceReference ?? null,
+    sourceUrl: r.sourceUrl ?? null,
+    sortOrder: r.sortOrder,
+  }));
+}
+
+/**
+ * Full-text search billing guidance content.
+ */
+export async function searchBillingGuidanceEntries(
+  deps: ReferenceServiceDeps,
+  query: string,
+  limit: number = 20,
+): Promise<BillingGuidanceResult[]> {
+  const rows = await deps.repo.searchBillingGuidance(query, limit);
+
+  return rows.map((r) => ({
+    guidanceId: r.guidanceId,
+    category: r.category,
+    title: r.title,
+    content: r.content,
+    applicableHscCodes: (r.applicableHscCodes ?? []) as string[],
+    applicableSpecialties: (r.applicableSpecialties ?? []) as string[],
+    sourceReference: r.sourceReference ?? null,
+    sourceUrl: r.sourceUrl ?? null,
+    sortOrder: r.sortOrder,
+  }));
+}
+
+/**
+ * Get a single billing guidance entry by ID.
+ */
+export async function getBillingGuidanceDetail(
+  deps: ReferenceServiceDeps,
+  guidanceId: string,
+): Promise<BillingGuidanceResult> {
+  const row = await deps.repo.getBillingGuidanceById(guidanceId);
+  if (!row) {
+    throw new NotFoundError('Billing guidance');
+  }
+
+  return {
+    guidanceId: row.guidanceId,
+    category: row.category,
+    title: row.title,
+    content: row.content,
+    applicableHscCodes: (row.applicableHscCodes ?? []) as string[],
+    applicableSpecialties: (row.applicableSpecialties ?? []) as string[],
+    sourceReference: row.sourceReference ?? null,
+    sourceUrl: row.sourceUrl ?? null,
+    sortOrder: row.sortOrder,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Provincial PHN Formats (FRD MVPADD-001 §B8)
+// ---------------------------------------------------------------------------
+
+export interface ProvincialPhnFormatResult {
+  formatId: string;
+  provinceCode: string;
+  provinceName: string;
+  formatPattern: string;
+  formatDescription: string;
+  examplePhn: string | null;
+  validationRegex: string | null;
+  phnLength: number | null;
+  isReciprocal: boolean;
+}
+
+/**
+ * List all provincial PHN format definitions, sorted by province code.
+ */
+export async function listProvincialPhnFormats(
+  deps: ReferenceServiceDeps,
+): Promise<ProvincialPhnFormatResult[]> {
+  const rows = await deps.repo.listProvincialPhnFormats();
+
+  return rows.map((r) => ({
+    formatId: r.formatId,
+    provinceCode: r.provinceCode,
+    provinceName: r.provinceName,
+    formatPattern: r.formatPattern,
+    formatDescription: r.formatDescription,
+    examplePhn: r.examplePhn ?? null,
+    validationRegex: r.validationRegex ?? null,
+    phnLength: r.phnLength ?? null,
+    isReciprocal: r.isReciprocal,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Reciprocal Billing Rules (FRD MVPADD-001 §B8)
+// ---------------------------------------------------------------------------
+
+export interface ReciprocalBillingRuleResult {
+  ruleId: string;
+  sourceProvince: string;
+  targetProvince: string;
+  billingMethod: string;
+  maxFeePercentage: string | null;
+  requiresPreApproval: boolean;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  notes: string | null;
+}
+
+/**
+ * Get active reciprocal billing rules for a given source province.
+ */
+export async function getReciprocalBillingRules(
+  deps: ReferenceServiceDeps,
+  sourceProvince: string,
+): Promise<ReciprocalBillingRuleResult[]> {
+  const rows = await deps.repo.getReciprocalRules(sourceProvince);
+
+  return rows.map((r) => ({
+    ruleId: r.ruleId,
+    sourceProvince: r.sourceProvince,
+    targetProvince: r.targetProvince,
+    billingMethod: r.billingMethod,
+    maxFeePercentage: r.maxFeePercentage ?? null,
+    requiresPreApproval: r.requiresPreApproval,
+    effectiveFrom: r.effectiveFrom ?? null,
+    effectiveTo: r.effectiveTo ?? null,
+    notes: r.notes ?? null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Anesthesia Rules (FRD MVPADD-001 §B7)
+// ---------------------------------------------------------------------------
+
+export interface AnesthesiaRuleResult {
+  ruleId: string;
+  scenarioCode: string;
+  scenarioName: string;
+  description: string;
+  baseUnits: number;
+  timeUnitMinutes: number;
+  calculationFormula: string;
+  modifierInteractions: Record<string, unknown>;
+  exampleCalculation: string | null;
+  sortOrder: number;
+}
+
+/**
+ * List all active anesthesia rules, sorted by sortOrder.
+ */
+export async function listAnesthesiaRulesEntries(
+  deps: ReferenceServiceDeps,
+): Promise<AnesthesiaRuleResult[]> {
+  const rows = await deps.repo.listAnesthesiaRules();
+
+  return rows.map((r) => ({
+    ruleId: r.ruleId,
+    scenarioCode: r.scenarioCode,
+    scenarioName: r.scenarioName,
+    description: r.description,
+    baseUnits: r.baseUnits,
+    timeUnitMinutes: r.timeUnitMinutes,
+    calculationFormula: r.calculationFormula,
+    modifierInteractions: (r.modifierInteractions ?? {}) as Record<string, unknown>,
+    exampleCalculation: r.exampleCalculation ?? null,
+    sortOrder: r.sortOrder,
+  }));
+}
+
+/**
+ * Get a single anesthesia rule by scenario code.
+ */
+export async function getAnesthesiaRuleByScenario(
+  deps: ReferenceServiceDeps,
+  scenarioCode: string,
+): Promise<AnesthesiaRuleResult> {
+  const row = await deps.repo.getAnesthesiaRuleByScenario(scenarioCode);
+  if (!row) {
+    throw new NotFoundError('Anesthesia rule');
+  }
+
+  return {
+    ruleId: row.ruleId,
+    scenarioCode: row.scenarioCode,
+    scenarioName: row.scenarioName,
+    description: row.description,
+    baseUnits: row.baseUnits,
+    timeUnitMinutes: row.timeUnitMinutes,
+    calculationFormula: row.calculationFormula,
+    modifierInteractions: (row.modifierInteractions ?? {}) as Record<string, unknown>,
+    exampleCalculation: row.exampleCalculation ?? null,
+    sortOrder: row.sortOrder,
+  };
+}
+
+/**
+ * Calculate anesthesia fee for a given scenario and duration.
+ * Returns the computed fee based on base units + time units.
+ */
+export async function calculateAnesthesiaFee(
+  deps: ReferenceServiceDeps,
+  scenarioCode: string,
+  durationMinutes: number,
+): Promise<{ scenarioCode: string; baseUnits: number; timeUnits: number; totalUnits: number; formula: string }> {
+  const rule = await deps.repo.getAnesthesiaRuleByScenario(scenarioCode);
+  if (!rule) {
+    throw new NotFoundError('Anesthesia rule');
+  }
+
+  const timeUnits = rule.timeUnitMinutes > 0
+    ? Math.ceil(durationMinutes / rule.timeUnitMinutes)
+    : 0;
+  const totalUnits = rule.baseUnits + timeUnits;
+
+  return {
+    scenarioCode: rule.scenarioCode,
+    baseUnits: rule.baseUnits,
+    timeUnits,
+    totalUnits,
+    formula: rule.calculationFormula,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Bundling Rules (FRD MVPADD-001 §B9)
+// ---------------------------------------------------------------------------
+
+export interface BundlingRuleResult {
+  ruleId: string;
+  codeA: string;
+  codeB: string;
+  relationship: string;
+  description: string;
+  resolution: string | null;
+  overrideAllowed: boolean;
+  sourceReference: string | null;
+}
+
+/**
+ * Get the bundling rule for a specific code pair.
+ * Applies canonical ordering (codeA < codeB) automatically.
+ */
+export async function getBundlingRuleForPair(
+  deps: ReferenceServiceDeps,
+  codeA: string,
+  codeB: string,
+): Promise<BundlingRuleResult | null> {
+  const row = await deps.repo.getBundlingRuleForPair(codeA, codeB);
+  if (!row) return null;
+
+  return {
+    ruleId: row.ruleId,
+    codeA: row.codeA,
+    codeB: row.codeB,
+    relationship: row.relationship,
+    description: row.description,
+    resolution: row.resolution ?? null,
+    overrideAllowed: row.overrideAllowed,
+    sourceReference: row.sourceReference ?? null,
+  };
+}
+
+/**
+ * Check a set of codes for bundling conflicts.
+ * Returns all active bundling rules where both codes appear in the set.
+ */
+export async function checkBundlingConflicts(
+  deps: ReferenceServiceDeps,
+  codes: string[],
+): Promise<BundlingRuleResult[]> {
+  const rows = await deps.repo.checkBundlingConflicts(codes);
+
+  return rows.map((r) => ({
+    ruleId: r.ruleId,
+    codeA: r.codeA,
+    codeB: r.codeB,
+    relationship: r.relationship,
+    description: r.description,
+    resolution: r.resolution ?? null,
+    overrideAllowed: r.overrideAllowed,
+    sourceReference: r.sourceReference ?? null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Justification Templates (FRD MVPADD-001 §B11)
+// ---------------------------------------------------------------------------
+
+export interface JustificationTemplateResult {
+  templateId: string;
+  scenario: string;
+  title: string;
+  templateText: string;
+  placeholders: string[];
+  sortOrder: number;
+}
+
+/**
+ * List justification templates, optionally filtered by scenario.
+ * Only active templates are returned, sorted by scenario then sortOrder.
+ */
+export async function listJustificationTemplatesEntries(
+  deps: ReferenceServiceDeps,
+  scenario?: string,
+): Promise<JustificationTemplateResult[]> {
+  const rows = await deps.repo.listJustificationTemplates(scenario);
+
+  return rows.map((r) => ({
+    templateId: r.templateId,
+    scenario: r.scenario,
+    title: r.title,
+    templateText: r.templateText,
+    placeholders: (r.placeholders ?? []) as string[],
+    sortOrder: r.sortOrder,
+  }));
+}
+
+/**
+ * Get a single justification template by ID.
+ */
+export async function getJustificationTemplateDetail(
+  deps: ReferenceServiceDeps,
+  templateId: string,
+): Promise<JustificationTemplateResult> {
+  const row = await deps.repo.getJustificationTemplate(templateId);
+  if (!row) {
+    throw new NotFoundError('Justification template');
+  }
+
+  return {
+    templateId: row.templateId,
+    scenario: row.scenario,
+    title: row.title,
+    templateText: row.templateText,
+    placeholders: (row.placeholders ?? []) as string[],
+    sortOrder: row.sortOrder,
+  };
+}

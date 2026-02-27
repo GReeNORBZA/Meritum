@@ -1,7 +1,7 @@
 // ============================================================================
 // Domain 10: ED Shift Routes
-// 6 endpoints for shift management: start, active, end, summary, list,
-// and patient logging within a shift.
+// Endpoints for shift management: start, active, end, summary, list,
+// patient logging, confirm-inferred, and encounter CRUD within a shift.
 // All require authentication. Physician role only (delegates cannot manage shifts).
 // ============================================================================
 
@@ -11,10 +11,15 @@ import {
   mobileShiftIdParamSchema,
   listShiftsQuerySchema,
   logPatientSchema,
+  logEncounterSchema,
+  encounterIdParamSchema,
+  scheduleIdParamSchema,
   type StartShift,
   type MobileShiftIdParam,
   type ListShiftsQuery,
   type LogPatient,
+  type LogEncounter,
+  type EncounterIdParam,
 } from '@meritum/shared/schemas/validation/mobile.validation.js';
 import { AppError } from '../../../lib/errors.js';
 import type { EdShiftServiceDeps } from '../services/ed-shift.service.js';
@@ -26,6 +31,16 @@ import {
   listShifts,
   logPatient as logPatientService,
 } from '../services/ed-shift.service.js';
+import type { ShiftScheduleServiceDeps } from '../services/shift-schedule.service.js';
+import { createInferredShift } from '../services/shift-schedule.service.js';
+import type { EncounterServiceDeps } from '../services/encounter.service.js';
+import {
+  logEncounter as logEncounterService,
+  listEncounters as listEncountersService,
+  deleteEncounter as deleteEncounterService,
+  PhnValidationError,
+} from '../services/encounter.service.js';
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +48,8 @@ import {
 
 export interface ShiftRouteDeps {
   serviceDeps: EdShiftServiceDeps;
+  scheduleDeps?: ShiftScheduleServiceDeps;
+  encounterDeps?: EncounterServiceDeps;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,4 +264,155 @@ export async function shiftRoutes(
       }
     },
   });
+
+  // =========================================================================
+  // GET /api/v1/shifts/:id — get shift details
+  // =========================================================================
+
+  app.get('/api/v1/shifts/:id', {
+    schema: { params: mobileShiftIdParamSchema },
+    preHandler: [app.authenticate, requireRole('PHYSICIAN'), app.authorize('CLAIM_VIEW')],
+    handler: async (
+      request: FastifyRequest<{ Params: MobileShiftIdParam }>,
+      reply: FastifyReply,
+    ) => {
+      const providerId = getProviderId(request);
+      const { id } = request.params;
+
+      try {
+        const summary = await getShiftSummary(serviceDeps, providerId, id);
+        return reply.code(200).send({ data: summary });
+      } catch (err) {
+        return handleAppError(err, reply);
+      }
+    },
+  });
+
+  // =========================================================================
+  // POST /api/v1/shifts/:id/confirm-inferred — confirm an inferred shift
+  // =========================================================================
+
+  if (opts.deps.scheduleDeps) {
+    const schedDeps = opts.deps.scheduleDeps;
+
+    app.post('/api/v1/shifts/confirm-inferred', {
+      schema: { body: z.object({ schedule_id: z.string().uuid() }) },
+      preHandler: [app.authenticate, requireRole('PHYSICIAN'), app.authorize('CLAIM_CREATE')],
+      handler: async (
+        request: FastifyRequest<{ Body: { schedule_id: string } }>,
+        reply: FastifyReply,
+      ) => {
+        const providerId = getProviderId(request);
+        const { schedule_id } = request.body;
+
+        try {
+          const result = await createInferredShift(schedDeps, providerId, schedule_id);
+          return reply.code(201).send({ data: result });
+        } catch (err) {
+          return handleAppError(err, reply);
+        }
+      },
+    });
+  }
+
+  // =========================================================================
+  // Encounter routes within shifts (MOB-002 §8.3)
+  // =========================================================================
+
+  if (opts.deps.encounterDeps) {
+    const encDeps = opts.deps.encounterDeps;
+
+    // POST /api/v1/shifts/:shiftId/encounters — log encounter
+    app.post('/api/v1/shifts/:id/encounters', {
+      schema: {
+        params: mobileShiftIdParamSchema,
+        body: logEncounterSchema,
+      },
+      preHandler: [app.authenticate, requireRole('PHYSICIAN'), app.authorize('CLAIM_CREATE')],
+      handler: async (
+        request: FastifyRequest<{
+          Params: MobileShiftIdParam;
+          Body: LogEncounter;
+        }>,
+        reply: FastifyReply,
+      ) => {
+        const providerId = getProviderId(request);
+        const { id: shiftId } = request.params;
+        const body = request.body;
+
+        try {
+          const encounter = await logEncounterService(
+            encDeps,
+            providerId,
+            shiftId,
+            {
+              phn: body.phn,
+              phnCaptureMethod: body.phn_capture_method,
+              phnIsPartial: body.phn_is_partial,
+              healthServiceCode: body.health_service_code,
+              modifiers: body.modifiers,
+              diCode: body.di_code,
+              freeTextTag: body.free_text_tag,
+              encounterTimestamp: body.encounter_timestamp,
+            },
+          );
+          return reply.code(201).send({ data: encounter });
+        } catch (err) {
+          if (err instanceof PhnValidationError) {
+            return reply.code(422).send({
+              error: { code: 'PHN_VALIDATION_ERROR', message: err.message },
+            });
+          }
+          return handleAppError(err, reply);
+        }
+      },
+    });
+
+    // GET /api/v1/shifts/:shiftId/encounters — list encounters
+    app.get('/api/v1/shifts/:id/encounters', {
+      schema: { params: mobileShiftIdParamSchema },
+      preHandler: [app.authenticate, requireRole('PHYSICIAN'), app.authorize('CLAIM_VIEW')],
+      handler: async (
+        request: FastifyRequest<{ Params: MobileShiftIdParam }>,
+        reply: FastifyReply,
+      ) => {
+        const providerId = getProviderId(request);
+        const { id: shiftId } = request.params;
+
+        const encounters = await listEncountersService(
+          encDeps,
+          providerId,
+          shiftId,
+        );
+        return reply.code(200).send({ data: encounters });
+      },
+    });
+
+    // DELETE /api/v1/shifts/:shiftId/encounters/:encounterId
+    app.delete('/api/v1/shifts/:id/encounters/:encounterId', {
+      schema: {
+        params: z.object({
+          id: z.string().uuid(),
+          encounterId: z.string().uuid(),
+        }),
+      },
+      preHandler: [app.authenticate, requireRole('PHYSICIAN'), app.authorize('CLAIM_CREATE')],
+      handler: async (
+        request: FastifyRequest<{
+          Params: { id: string; encounterId: string };
+        }>,
+        reply: FastifyReply,
+      ) => {
+        const providerId = getProviderId(request);
+        const { id: shiftId, encounterId } = request.params;
+
+        try {
+          await deleteEncounterService(encDeps, providerId, shiftId, encounterId);
+          return reply.code(204).send();
+        } catch (err) {
+          return handleAppError(err, reply);
+        }
+      },
+    });
+  }
 }

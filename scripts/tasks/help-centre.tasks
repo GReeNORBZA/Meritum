@@ -1,0 +1,78 @@
+# ============================================================================
+# Domain HC: Help Centre Content — Build Tasks
+# Run: ./scripts/task-runner.sh tasks/help-centre.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-02-25
+# ============================================================================
+
+## Tier 1: Getting Started
+
+HC-001 | Setting up your professional profile | tasks/prompts/hc/HC-001.md | node scripts/validate-article.js help-centre/getting-started/setting-up-your-professional-profile.md
+HC-002 | Adding your business arrangement numbers | tasks/prompts/hc/HC-002.md | node scripts/validate-article.js help-centre/getting-started/adding-your-business-arrangement-numbers.md
+HC-003 | Configuring your practice locations | tasks/prompts/hc/HC-003.md | node scripts/validate-article.js help-centre/getting-started/configuring-your-practice-locations.md
+HC-004 | Setting up WCB billing | tasks/prompts/hc/HC-004.md | node scripts/validate-article.js help-centre/getting-started/setting-up-wcb-billing.md
+HC-005 | Inviting a delegate | tasks/prompts/hc/HC-005.md | node scripts/validate-article.js help-centre/getting-started/inviting-a-delegate.md
+HC-006 | Choosing your submission preferences | tasks/prompts/hc/HC-006.md | node scripts/validate-article.js help-centre/getting-started/choosing-your-submission-preferences.md
+HC-007 | Your first Thursday submission: what to expect | tasks/prompts/hc/HC-007.md | node scripts/validate-article.js help-centre/getting-started/your-first-thursday-submission.md
+
+## Tier 1: Submitting Claims Core
+
+HC-008 | Importing encounters from your EMR | tasks/prompts/hc/HC-008.md | node scripts/validate-article.js help-centre/submitting-claims/importing-encounters-from-your-emr.md
+HC-009 | Using mobile claim entry | tasks/prompts/hc/HC-009.md | node scripts/validate-article.js help-centre/submitting-claims/using-mobile-claim-entry.md
+HC-010 | Creating claims manually | tasks/prompts/hc/HC-010.md | node scripts/validate-article.js help-centre/submitting-claims/creating-claims-manually.md
+HC-011 | Understanding flags and suggestions on your claims | tasks/prompts/hc/HC-011.md | node scripts/validate-article.js help-centre/submitting-claims/understanding-flags-and-suggestions-on-your-claims.md
+HC-012 | How the rules engine works | tasks/prompts/hc/HC-012.md | node scripts/validate-article.js help-centre/submitting-claims/how-the-rules-engine-works.md
+HC-013 | How the advice engine works | tasks/prompts/hc/HC-013.md | node scripts/validate-article.js help-centre/submitting-claims/how-the-advice-engine-works.md
+
+## Tier 1: Submission Cycle
+
+HC-014 | How the Thursday submission cycle works | tasks/prompts/hc/HC-014.md | node scripts/validate-article.js help-centre/submitting-claims/how-the-thursday-submission-cycle-works.md
+
+## Tier 2: Submitting Claims Remaining
+
+HC-015 | Submission preferences explained | tasks/prompts/hc/HC-015.md | node scripts/validate-article.js help-centre/submitting-claims/submission-preferences-explained.md
+HC-016 | Submitting WCB claims | tasks/prompts/hc/HC-016.md | node scripts/validate-article.js help-centre/submitting-claims/submitting-wcb-claims.md
+
+## Tier 2: After Submission
+
+HC-017 | Understanding your assessment results | tasks/prompts/hc/HC-017.md | node scripts/validate-article.js help-centre/after-submission/understanding-your-assessment-results.md
+HC-018 | Reading rejection codes | tasks/prompts/hc/HC-018.md | node scripts/validate-article.js help-centre/after-submission/reading-rejection-codes.md
+HC-019 | Correcting and resubmitting refused claims | tasks/prompts/hc/HC-019.md | node scripts/validate-article.js help-centre/after-submission/correcting-and-resubmitting-refused-claims.md
+HC-020 | Tracking rejection patterns | tasks/prompts/hc/HC-020.md | node scripts/validate-article.js help-centre/after-submission/tracking-rejection-patterns.md
+
+## Tier 2: Your Account
+
+HC-021 | Understanding your subscription | tasks/prompts/hc/HC-021.md | node scripts/validate-article.js help-centre/your-account/understanding-your-subscription.md
+HC-022 | Switching between monthly and annual billing | tasks/prompts/hc/HC-022.md | node scripts/validate-article.js help-centre/your-account/switching-between-monthly-and-annual-billing.md
+HC-023 | Managing your practice account | tasks/prompts/hc/HC-023.md | node scripts/validate-article.js help-centre/your-account/managing-your-practice-account.md
+HC-024 | The referral program | tasks/prompts/hc/HC-024.md | node scripts/validate-article.js help-centre/your-account/the-referral-program.md
+HC-025 | Cancelling your subscription | tasks/prompts/hc/HC-025.md | node scripts/validate-article.js help-centre/your-account/cancelling-your-subscription.md
+HC-026 | Exporting your data | tasks/prompts/hc/HC-026.md | node scripts/validate-article.js help-centre/your-account/exporting-your-data.md
+HC-027 | Updating your profile | tasks/prompts/hc/HC-027.md | node scripts/validate-article.js help-centre/your-account/updating-your-profile.md
+HC-028 | Managing delegates | tasks/prompts/hc/HC-028.md | node scripts/validate-article.js help-centre/your-account/managing-delegates.md
+
+## Tier 3: Alberta Billing Reference
+
+HC-029 | AHCIP fee-for-service billing: how the system works | tasks/prompts/hc/HC-029.md | node scripts/validate-article.js help-centre/billing-reference/ahcip-fee-for-service-billing-how-the-system-works.md
+HC-030 | The Thursday submission cycle explained | tasks/prompts/hc/HC-030.md | node scripts/validate-article.js help-centre/billing-reference/the-thursday-submission-cycle-explained.md
+HC-031 | Understanding the Schedule of Medical Benefits | tasks/prompts/hc/HC-031.md | node scripts/validate-article.js help-centre/billing-reference/understanding-the-schedule-of-medical-benefits.md
+HC-032 | RRNP: Rural and Remote Northern Program | tasks/prompts/hc/HC-032.md | node scripts/validate-article.js help-centre/billing-reference/rrnp-rural-and-remote-northern-program.md
+HC-033 | PCPCM: Primary Care Panel and Continuity Model | tasks/prompts/hc/HC-033.md | node scripts/validate-article.js help-centre/billing-reference/pcpcm-primary-care-panel-and-continuity-model.md
+HC-034 | WCB Alberta billing for physicians | tasks/prompts/hc/HC-034.md | node scripts/validate-article.js help-centre/billing-reference/wcb-alberta-billing-for-physicians.md
+HC-035 | After-hours billing and time premiums | tasks/prompts/hc/HC-035.md | node scripts/validate-article.js help-centre/billing-reference/after-hours-billing-and-time-premiums.md
+HC-036 | Common AHCIP explanatory codes and what they mean | tasks/prompts/hc/HC-036.md | node scripts/validate-article.js help-centre/billing-reference/common-ahcip-explanatory-codes-and-what-they-mean.md
+HC-037 | Business arrangements in Alberta | tasks/prompts/hc/HC-037.md | node scripts/validate-article.js help-centre/billing-reference/business-arrangements-in-alberta.md
+HC-038 | H-Link: what it is and how electronic claims submission works | tasks/prompts/hc/HC-038.md | node scripts/validate-article.js help-centre/billing-reference/h-link-what-it-is-and-how-electronic-claims-submission-works.md
+
+## Tier 3: Security & Compliance
+
+HC-039 | How Meritum protects your data | tasks/prompts/hc/HC-039.md | node scripts/validate-article.js help-centre/security-compliance/how-meritum-protects-your-data.md
+HC-040 | HIA compliance and the Information Manager Agreement | tasks/prompts/hc/HC-040.md | node scripts/validate-article.js help-centre/security-compliance/hia-compliance-and-the-information-manager-agreement.md
+HC-041 | Canadian data residency | tasks/prompts/hc/HC-041.md | node scripts/validate-article.js help-centre/security-compliance/canadian-data-residency.md
+HC-042 | Delegate access and data separation | tasks/prompts/hc/HC-042.md | node scripts/validate-article.js help-centre/security-compliance/delegate-access-and-data-separation.md
+HC-043 | Practice admin access boundaries | tasks/prompts/hc/HC-043.md | node scripts/validate-article.js help-centre/security-compliance/practice-admin-access-boundaries.md
+
+## Final Validation
+
+HC-099 | Validate all help centre articles: existence, cross-links, and total count | tasks/prompts/hc/HC-099.md | node scripts/validate-article.js help-centre/getting-started/setting-up-your-professional-profile.md

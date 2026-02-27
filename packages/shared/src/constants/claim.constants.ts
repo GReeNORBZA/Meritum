@@ -71,10 +71,47 @@ export const ClaimImportSource = {
   MANUAL: 'MANUAL',
   EMR_IMPORT: 'EMR_IMPORT',
   ED_SHIFT: 'ED_SHIFT',
+  CONNECT_CARE_CSV: 'CONNECT_CARE_CSV',
+  CONNECT_CARE_SFTP: 'CONNECT_CARE_SFTP',
+  EMR_GENERIC: 'EMR_GENERIC',
 } as const;
 
 export type ClaimImportSource =
   (typeof ClaimImportSource)[keyof typeof ClaimImportSource];
+
+// --- Justification Scenarios ---
+
+export const JustificationScenario = {
+  UNLISTED_PROCEDURE: 'UNLISTED_PROCEDURE',
+  ADDITIONAL_COMPENSATION: 'ADDITIONAL_COMPENSATION',
+  PRE_OP_CONSERVATIVE: 'PRE_OP_CONSERVATIVE',
+  POST_OP_COMPLICATION: 'POST_OP_COMPLICATION',
+  WCB_NARRATIVE: 'WCB_NARRATIVE',
+} as const;
+
+export type JustificationScenario =
+  (typeof JustificationScenario)[keyof typeof JustificationScenario];
+
+// --- Bundling Relationships ---
+
+export const BundlingRelationship = {
+  BUNDLED: 'BUNDLED',
+  INDEPENDENT: 'INDEPENDENT',
+  INTRINSICALLY_LINKED: 'INTRINSICALLY_LINKED',
+} as const;
+
+export type BundlingRelationship =
+  (typeof BundlingRelationship)[keyof typeof BundlingRelationship];
+
+// --- Claim Template Types ---
+
+export const ClaimTemplateType = {
+  CUSTOM: 'CUSTOM',
+  SPECIALTY_STARTER: 'SPECIALTY_STARTER',
+} as const;
+
+export type ClaimTemplateType =
+  (typeof ClaimTemplateType)[keyof typeof ClaimTemplateType];
 
 // --- Auto-Submission Mode ---
 // Physician preference for how claims are included in batches.
@@ -125,6 +162,14 @@ export const ClaimAuditAction = {
   DUPLICATE_ACKNOWLEDGED: 'claim.duplicate_acknowledged',
   SHIFT_CREATED: 'shift.created',
   SHIFT_COMPLETED: 'shift.completed',
+  TEMPLATE_CREATED: 'claim.template_created',
+  TEMPLATE_UPDATED: 'claim.template_updated',
+  TEMPLATE_DELETED: 'claim.template_deleted',
+  JUSTIFICATION_CREATED: 'claim.justification_created',
+  JUSTIFICATION_UPDATED: 'claim.justification_updated',
+  BUNDLING_OVERRIDE: 'claim.bundling_override',
+  ANESTHESIA_OVERRIDE: 'claim.anesthesia_override',
+  ROUTING_OVERRIDE: 'claim.routing_override',
 } as const;
 
 export type ClaimAuditAction =

@@ -34,6 +34,30 @@ export const BAType = {
 
 export type BAType = (typeof BAType)[keyof typeof BAType];
 
+// --- ARP Business Arrangement Subtypes (FRD B5) ---
+
+export const BASubtype = {
+  ANNUALISED: 'ANNUALISED',
+  SESSIONAL: 'SESSIONAL',
+  BCM: 'BCM',
+} as const;
+
+export type BASubtype = (typeof BASubtype)[keyof typeof BASubtype];
+
+// --- Smart Routing Reason (FRD B10) ---
+
+export const RoutingReason = {
+  ARP_SERVICE_CODE: 'ARP_SERVICE_CODE',
+  BA_FACILITY_MATCH: 'BA_FACILITY_MATCH',
+  BA_SCHEDULE_MATCH: 'BA_SCHEDULE_MATCH',
+  PRIMARY_BA_FALLBACK: 'PRIMARY_BA_FALLBACK',
+  SINGLE_BA_DEFAULT: 'SINGLE_BA_DEFAULT',
+  USER_OVERRIDE: 'USER_OVERRIDE',
+} as const;
+
+export type RoutingReason =
+  (typeof RoutingReason)[keyof typeof RoutingReason];
+
 // --- Business Arrangement Status ---
 
 export const BAStatus = {
@@ -223,6 +247,13 @@ export const ProviderAuditAction = {
 
   // H-Link (1)
   HLINK_CONFIG_UPDATED: 'hlink_config.updated',
+
+  // Routing Config (2)
+  ROUTING_CONFIG_UPDATED: 'routing_config.updated',
+  ROUTING_RESOLVED: 'routing.resolved',
+
+  // Connect Care (1)
+  CONNECT_CARE_TOGGLED: 'connect_care.toggled',
 } as const;
 
 export type ProviderAuditAction =

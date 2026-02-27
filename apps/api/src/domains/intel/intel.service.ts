@@ -4,7 +4,7 @@
 // ============================================================================
 
 import type { Condition, CrossClaimQuery, SuggestionTemplate, SelectAiRule, SelectAiProviderLearning } from '@meritum/shared/schemas/db/intelligence.schema.js';
-import { SuggestionPriority, SuggestionEventType, SuggestionCategory, SuggestionStatus, PRIORITY_THRESHOLD_DEFAULTS, SUPPRESSION_THRESHOLD, MIN_COHORT_SIZE, IntelAuditAction } from '@meritum/shared/constants/intelligence.constants.js';
+import { SuggestionPriority, SuggestionEventType, SuggestionCategory, SuggestionStatus, PRIORITY_THRESHOLD_DEFAULTS, SUPPRESSION_THRESHOLD, MIN_COHORT_SIZE, IntelAuditAction, ConfidenceTier } from '@meritum/shared/constants/intelligence.constants.js';
 import type { Tier2Deps } from './intel.llm.js';
 import { analyseTier2 } from './intel.llm.js';
 
@@ -683,6 +683,12 @@ export interface Suggestion {
   resolvedAt?: string | null;
   resolvedBy?: string | null;
   dismissedReason?: string | null;
+  /** Confidence tier for bedside-contingent rules (A/B/C/SUPPRESS) */
+  confidenceTier?: ConfidenceTier;
+  /** True when TIER_A auto-applied the suggestion without user interaction */
+  autoApplied?: boolean;
+  /** True when TIER_B pre-applied the suggestion (user can opt-out) */
+  preApplied?: boolean;
 }
 
 /** Dependencies for Tier 1 rule execution (repository calls). */
@@ -701,6 +707,10 @@ export interface Tier1Deps {
     revenueImpact?: string | null;
     dismissedReason?: string | null;
   }) => Promise<unknown>;
+  /** Increment auto_applied_count for bedside-contingent Tier A rules */
+  recordAutoApplied?: (providerId: string, ruleId: string) => Promise<void>;
+  /** Increment pre_applied_count for bedside-contingent Tier B rules */
+  recordPreApplied?: (providerId: string, ruleId: string) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -873,6 +883,81 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 };
 
 // ---------------------------------------------------------------------------
+// Bedside-Contingent Confidence Tiers (MVPADD-001 §5.2.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect Tier A signals from the claim context.
+ *
+ * Tier A signals indicate high confidence that a bedside-contingent rule
+ * applies without user verification:
+ * - Import source is Connect Care CSV or ED Shift (structured data import)
+ * - Weekend or holiday date-of-service (dayOfWeek 0=Sunday, 6=Saturday)
+ * - Multi-row encounter in the same import batch
+ */
+export function detectBedsideSignals(context: ClaimContext): string[] {
+  const signals: string[] = [];
+  const source = context.claim.importSource;
+
+  // Signal: structured import from Connect Care or ED shift
+  if (source === 'CONNECT_CARE_CSV' || source === 'CONNECT_CARE_SFTP') {
+    signals.push('CONNECT_CARE_IMPORT');
+  }
+  if (source === 'ED_SHIFT') {
+    signals.push('ED_SHIFT_IMPORT');
+  }
+
+  // Signal: weekend date-of-service
+  const dow = context.claim.dayOfWeek;
+  if (dow === 0 || dow === 6) {
+    signals.push('DOS_WEEKEND');
+  }
+
+  // Signal: after-hours flag set (from AHCIP data)
+  if (context.ahcip?.afterHoursFlag) {
+    signals.push('AFTER_HOURS');
+  }
+
+  return signals;
+}
+
+/**
+ * Resolve the confidence tier for a bedside-contingent rule.
+ *
+ * Decision flow (FRD §5.2.2):
+ * 1. If any Tier A signal is present → TIER_A (auto-apply)
+ * 2. Else, check provider's learning state for this rule:
+ *    a. acceptance_rate > 0.70 AND times_shown >= 5 → TIER_B (pre-apply)
+ *    b. acceptance_rate < 0.30 AND times_shown >= 10 → SUPPRESS
+ *    c. Otherwise → TIER_C (standard suggestion)
+ */
+export function resolveConfidenceTier(
+  signals: string[],
+  learning: SelectAiProviderLearning | undefined,
+): ConfidenceTier {
+  // Tier A: any strong contextual signal present
+  if (signals.length > 0) {
+    return ConfidenceTier.TIER_A;
+  }
+
+  // No Tier A signal — use learning state
+  if (learning && learning.timesShown >= 5) {
+    const acceptanceRate = learning.timesAccepted / learning.timesShown;
+
+    if (acceptanceRate > 0.70) {
+      return ConfidenceTier.TIER_B;
+    }
+
+    if (learning.timesShown >= 10 && acceptanceRate < 0.30) {
+      return ConfidenceTier.SUPPRESS;
+    }
+  }
+
+  // Default: standard suggestion
+  return ConfidenceTier.TIER_C;
+}
+
+// ---------------------------------------------------------------------------
 // Tier 1 Rule Execution
 // ---------------------------------------------------------------------------
 
@@ -885,6 +970,7 @@ const PRIORITY_WEIGHT: Record<string, number> = {
  * 4. Batch-fetch learning states for provider + all candidate rules.
  * 5. For each rule: check suppression, evaluate condition, render suggestion,
  *    record GENERATED event, increment times_shown.
+ *    For bedside-contingent rules: resolve confidence tier and tag accordingly.
  * 6. Deduplicate same-field suggestions (keep highest priority).
  * 7. Sort by priority (HIGH first), then revenue_impact descending.
  *
@@ -928,6 +1014,9 @@ export async function evaluateTier1Rules(
     );
   }
 
+  // 5. Detect bedside signals once (reused for all bedside-contingent rules)
+  const bedsideSignals = detectBedsideSignals(context);
+
   // 5. Evaluate each rule
   const suggestions: Suggestion[] = [];
 
@@ -936,7 +1025,54 @@ export async function evaluateTier1Rules(
     const learning = learningMap.get(rule.ruleId);
     if (learning?.isSuppressed) continue;
 
-    // 5b. Evaluate condition tree
+    // 5a'. Bedside-contingent rules: resolve confidence tier and possibly suppress
+    if (rule.isBedsideContingent) {
+      const tier = resolveConfidenceTier(bedsideSignals, learning);
+      if (tier === ConfidenceTier.SUPPRESS) continue;
+
+      // 5b. Evaluate condition tree
+      const condition = rule.conditions as Condition;
+      if (!evaluateCondition(condition, context)) continue;
+
+      // 5c. Render suggestion with confidence tier metadata
+      const template = rule.suggestionTemplate as SuggestionTemplate;
+      const priorityAdjustment = learning?.priorityAdjustment ?? 0;
+      const suggestion = renderSuggestion(rule, template, context, priorityAdjustment);
+      suggestion.confidenceTier = tier;
+
+      if (tier === ConfidenceTier.TIER_A) {
+        suggestion.autoApplied = true;
+        tier1Deps.recordAutoApplied?.(providerId, rule.ruleId);
+      } else if (tier === ConfidenceTier.TIER_B) {
+        suggestion.preApplied = true;
+        tier1Deps.recordPreApplied?.(providerId, rule.ruleId);
+      }
+
+      suggestions.push(suggestion);
+
+      // Record GENERATED event
+      tier1Deps.appendSuggestionEvent({
+        claimId,
+        suggestionId: suggestion.suggestionId,
+        ruleId: rule.ruleId,
+        providerId,
+        eventType: SuggestionEventType.GENERATED,
+        tier: 1,
+        category: rule.category,
+        revenueImpact: suggestion.revenueImpact !== null
+          ? suggestion.revenueImpact.toFixed(2)
+          : null,
+      });
+
+      // Tier A auto-applies don't count as "shown" for acceptance rate purposes
+      if (tier !== ConfidenceTier.TIER_A) {
+        tier1Deps.incrementShown(providerId, rule.ruleId);
+      }
+
+      continue;
+    }
+
+    // 5b. Evaluate condition tree (non-bedside rules)
     const condition = rule.conditions as Condition;
     if (!evaluateCondition(condition, context)) continue;
 
@@ -1673,6 +1809,59 @@ export async function getDefaultPriorityForNewProvider(
 }
 
 // ---------------------------------------------------------------------------
+// Learning Loop: Bedside-Contingent Tier B Removal (MVPADD-001 §5.2.4)
+// ---------------------------------------------------------------------------
+
+export interface BedsideLearningDeps {
+  getLearningState: (providerId: string, ruleId: string) => Promise<SelectAiProviderLearning | null>;
+  updatePriorityAdjustment: (providerId: string, ruleId: string, adjustment: -1 | 0 | 1) => Promise<SelectAiProviderLearning | undefined>;
+  recordPreAppliedRemoval: (providerId: string, ruleId: string) => Promise<SelectAiProviderLearning>;
+  recordDismissal: (providerId: string, ruleId: string) => Promise<SelectAiProviderLearning>;
+}
+
+/**
+ * Process a Tier B pre-applied suggestion that the user removes (opts out).
+ *
+ * Per FRD §5.2.4:
+ * - Increment pre_applied_removed_count AND times_dismissed
+ * - Check removal rate over last 10 pre-applied instances
+ * - If removal rate > 50% → demote to TIER_C (priority_adjustment = -1)
+ *
+ * Note: Tier A auto-applications are tracked (autoAppliedCount) but do NOT
+ * affect acceptance rate or tier calculations.
+ *
+ * Tier B keeps (user accepts pre-applied suggestion) → increment times_accepted
+ * via the standard acceptSuggestion flow.
+ */
+export async function processBedsideTierBRemoval(
+  providerId: string,
+  ruleId: string,
+  deps: BedsideLearningDeps,
+): Promise<{ demotedToC: boolean }> {
+  // 1. Record the removal (increments pre_applied_removed_count + times_dismissed)
+  const updatedState = await deps.recordPreAppliedRemoval(providerId, ruleId);
+
+  // 2. Check removal rate: pre_applied_removed_count / pre_applied_count
+  const preAppliedCount = updatedState.preAppliedCount ?? 0;
+  const preAppliedRemovedCount = updatedState.preAppliedRemovedCount ?? 0;
+
+  // Need at least 10 pre-applied instances to evaluate removal rate
+  if (preAppliedCount < 10) {
+    return { demotedToC: false };
+  }
+
+  const removalRate = preAppliedRemovedCount / preAppliedCount;
+
+  // 3. If removal rate > 50%, demote to Tier C via priority adjustment
+  if (removalRate > 0.50) {
+    await deps.updatePriorityAdjustment(providerId, ruleId, -1);
+    return { demotedToC: true };
+  }
+
+  return { demotedToC: false };
+}
+
+// ---------------------------------------------------------------------------
 // SOMB Change Analysis Dependencies
 // ---------------------------------------------------------------------------
 
@@ -2169,6 +2358,13 @@ export function createIntelService(deps: ClaimContextDeps, tier1Deps?: Tier1Deps
     getDefaultPriorityForNewProvider: (specialtyCode: string, ruleId: string) => {
       if (!learningLoopDeps) throw new Error('LearningLoopDeps not provided to createIntelService');
       return getDefaultPriorityForNewProvider(specialtyCode, ruleId, learningLoopDeps);
+    },
+
+    detectBedsideSignals,
+    resolveConfidenceTier,
+    processBedsideTierBRemoval: (providerId: string, ruleId: string) => {
+      if (!learningLoopDeps) throw new Error('LearningLoopDeps not provided to createIntelService');
+      return processBedsideTierBRemoval(providerId, ruleId, learningLoopDeps as any);
     },
 
     extractCrossClaimQueries,

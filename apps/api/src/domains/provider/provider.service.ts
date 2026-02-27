@@ -1,6 +1,6 @@
 import type { ProviderRepository, OnboardingStatus } from './provider.repository.js';
 import { OnboardingIncompleteError } from './provider.repository.js';
-import { ProviderAuditAction, BAType, BAStatus, PcpcmEnrolmentStatus, DelegatePermission, DelegateRelationshipStatus, SubmissionMode, HLinkAccreditationStatus, ProviderStatus, DEFAULT_SUBMISSION_PREFERENCES } from '@meritum/shared/constants/provider.constants.js';
+import { ProviderAuditAction, BAType, BAStatus, BASubtype, PcpcmEnrolmentStatus, DelegatePermission, DelegateRelationshipStatus, SubmissionMode, HLinkAccreditationStatus, ProviderStatus, RoutingReason, DEFAULT_SUBMISSION_PREFERENCES } from '@meritum/shared/constants/provider.constants.js';
 import { NotFoundError, BusinessRuleError, ConflictError } from '../../lib/errors.js';
 import type { SelectProvider, SelectBa, SelectLocation, SelectWcbConfig, SelectDelegateRelationship } from '@meritum/shared/schemas/db/provider.schema.js';
 import { createHash, randomBytes } from 'node:crypto';
@@ -2363,4 +2363,308 @@ export async function isSubmissionAllowed(
     allowed: reasons.length === 0,
     reasons,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Smart Routing (FRD MVPADD-001 §6.2.3)
+// ---------------------------------------------------------------------------
+
+export interface SmartRoutingResult {
+  baId: string;
+  baNumber: string;
+  baType: string;
+  baSubtype: string | null;
+  routingReason: RoutingReason;
+  conflict: boolean;
+  conflictDetail?: string;
+}
+
+/**
+ * Resolve the correct BA for a claim using the 4-level priority chain:
+ * 1. ARP service code → ARP BA
+ * 2. Facility mapping → BA matched by functional centre
+ * 3. Schedule mapping → BA matched by day/time
+ * 4. Primary BA fallback
+ */
+export async function resolveRoutingBa(
+  deps: ProviderServiceDeps,
+  providerId: string,
+  serviceCode: string,
+  facilityCode?: string,
+  dateOfService?: string,
+): Promise<SmartRoutingResult> {
+  // Get all active BAs for this provider
+  const bas = await deps.repo.listActiveBasForProvider(providerId);
+  if (bas.length === 0) {
+    throw new NotFoundError('Active business arrangement');
+  }
+
+  // Single BA: no routing needed
+  if (bas.length === 1) {
+    return {
+      baId: bas[0].baId,
+      baNumber: bas[0].baNumber,
+      baType: bas[0].baType,
+      baSubtype: bas[0].baSubtype ?? null,
+      routingReason: RoutingReason.SINGLE_BA_DEFAULT,
+      conflict: false,
+    };
+  }
+
+  // Level 1: ARP service code match
+  // ARP BAs have ba_type = 'ARP' and specific subtypes (ANNUALISED, SESSIONAL, BCM)
+  const arpBa = bas.find((ba) => ba.baType === BAType.ARP);
+  if (arpBa) {
+    // If there's an ARP BA and the service code warrants it,
+    // ARP BAs capture all claims by default when present.
+    // The caller decides via service code whether this is an ARP context.
+    // For now, ARP BAs are matched when an ARP BA exists and the service
+    // code is in the ARP-relevant range (prefix '03.' or specific codes).
+    const isArpServiceCode = serviceCode.startsWith('03.') || serviceCode.startsWith('08.');
+    if (isArpServiceCode) {
+      return {
+        baId: arpBa.baId,
+        baNumber: arpBa.baNumber,
+        baType: arpBa.baType,
+        baSubtype: arpBa.baSubtype ?? null,
+        routingReason: RoutingReason.ARP_SERVICE_CODE,
+        conflict: false,
+      };
+    }
+  }
+
+  // Level 2: Facility mapping match
+  if (facilityCode) {
+    const facilityMapping = await deps.repo.findFacilityMappingByFc(providerId, facilityCode);
+    if (facilityMapping) {
+      const matchedBa = bas.find((ba) => ba.baId === facilityMapping.baId);
+      if (matchedBa) {
+        return {
+          baId: matchedBa.baId,
+          baNumber: matchedBa.baNumber,
+          baType: matchedBa.baType,
+          baSubtype: matchedBa.baSubtype ?? null,
+          routingReason: RoutingReason.BA_FACILITY_MATCH,
+          conflict: false,
+        };
+      }
+    }
+  }
+
+  // Level 3: Schedule mapping match
+  if (dateOfService) {
+    const serviceDate = new Date(dateOfService);
+    const dayOfWeek = serviceDate.getDay(); // 0=Sun, 6=Sat
+    const timeStr = serviceDate.toISOString().slice(11, 16); // HH:MM
+    const scheduleMapping = await deps.repo.findScheduleMappingByTime(providerId, dayOfWeek, timeStr);
+    if (scheduleMapping) {
+      const matchedBa = bas.find((ba) => ba.baId === scheduleMapping.baId);
+      if (matchedBa) {
+        return {
+          baId: matchedBa.baId,
+          baNumber: matchedBa.baNumber,
+          baType: matchedBa.baType,
+          baSubtype: matchedBa.baSubtype ?? null,
+          routingReason: RoutingReason.BA_SCHEDULE_MATCH,
+          conflict: false,
+        };
+      }
+    }
+  }
+
+  // Level 4: Primary BA fallback
+  const primaryBa = bas.find((ba) => ba.isPrimary) ?? bas[0];
+  return {
+    baId: primaryBa.baId,
+    baNumber: primaryBa.baNumber,
+    baType: primaryBa.baType,
+    baSubtype: primaryBa.baSubtype ?? null,
+    routingReason: RoutingReason.PRIMARY_BA_FALLBACK,
+    conflict: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Routing Conflict Detection (FRD MVPADD-001 §6.2.4)
+// ---------------------------------------------------------------------------
+
+export interface RoutingConflictResult {
+  hasConflict: boolean;
+  resolvedBaId: string;
+  resolvedBaNumber: string;
+  resolvedReason: string;
+  selectedBaId: string;
+}
+
+/**
+ * Detect if a manual BA override conflicts with the auto-resolved routing.
+ */
+export async function detectRoutingConflict(
+  deps: ProviderServiceDeps,
+  providerId: string,
+  selectedBaId: string,
+  serviceCode: string,
+  facilityCode?: string,
+  dateOfService?: string,
+): Promise<RoutingConflictResult> {
+  const resolved = await resolveRoutingBa(deps, providerId, serviceCode, facilityCode, dateOfService);
+
+  return {
+    hasConflict: resolved.baId !== selectedBaId,
+    resolvedBaId: resolved.baId,
+    resolvedBaNumber: resolved.baNumber,
+    resolvedReason: resolved.routingReason,
+    selectedBaId,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Connect Care Status (FRD MOB-002 §6.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the Connect Care status for a provider.
+ */
+export async function getConnectCareStatus(
+  deps: ProviderServiceDeps,
+  providerId: string,
+): Promise<{ isConnectCareUser: boolean; connectCareEnabledAt: Date | null }> {
+  const status = await deps.repo.getConnectCareStatus(providerId);
+  if (!status) {
+    throw new NotFoundError('Provider');
+  }
+  return status;
+}
+
+/**
+ * Enable or disable Connect Care for a provider.
+ */
+export async function setConnectCareStatus(
+  deps: ProviderServiceDeps,
+  providerId: string,
+  isConnectCare: boolean,
+  actorId: string,
+): Promise<{ isConnectCareUser: boolean; connectCareEnabledAt: Date | null }> {
+  const updated = await deps.repo.setConnectCareUser(providerId, isConnectCare);
+  if (!updated) {
+    throw new NotFoundError('Provider');
+  }
+
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: ProviderAuditAction.CONNECT_CARE_TOGGLED,
+    category: 'provider',
+    resourceType: 'provider',
+    resourceId: providerId,
+    detail: { is_connect_care: isConnectCare },
+  });
+
+  deps.events.emit('provider.connect_care_toggled', {
+    providerId,
+    isConnectCare,
+    actorId,
+  });
+
+  return {
+    isConnectCareUser: updated.isConnectCareUser,
+    connectCareEnabledAt: updated.connectCareEnabledAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: Routing Config Management (FRD MVPADD-001 §6.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the full routing configuration for a provider
+ * (facility mappings + schedule mappings).
+ */
+export async function getRoutingConfig(
+  deps: ProviderServiceDeps,
+  providerId: string,
+): Promise<{
+  facilityMappings: Awaited<ReturnType<typeof deps.repo.getFacilityMappings>>;
+  scheduleMappings: Awaited<ReturnType<typeof deps.repo.getScheduleMappings>>;
+}> {
+  const [facilityMappings, scheduleMappings] = await Promise.all([
+    deps.repo.getFacilityMappings(providerId),
+    deps.repo.getScheduleMappings(providerId),
+  ]);
+  return { facilityMappings, scheduleMappings };
+}
+
+/**
+ * Replace all facility mappings for a provider.
+ */
+export async function updateFacilityMappings(
+  deps: ProviderServiceDeps,
+  providerId: string,
+  mappings: Array<{ baId: string; functionalCentre: string; priority?: number }>,
+  actorId: string,
+): Promise<Awaited<ReturnType<typeof deps.repo.getFacilityMappings>>> {
+  // Deactivate old mappings, then upsert new ones
+  await deps.repo.deactivateAllFacilityMappings(providerId);
+
+  const result = await deps.repo.upsertFacilityMappings(
+    providerId,
+    mappings.map((m) => ({
+      baId: m.baId,
+      functionalCentre: m.functionalCentre,
+      priority: m.priority ?? 0,
+      isActive: true,
+    })),
+  );
+
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: ProviderAuditAction.ROUTING_CONFIG_UPDATED,
+    category: 'provider',
+    resourceType: 'facility_mappings',
+    resourceId: providerId,
+    detail: { mapping_count: mappings.length, type: 'facility' },
+  });
+
+  return result;
+}
+
+/**
+ * Replace all schedule mappings for a provider.
+ */
+export async function updateScheduleMappings(
+  deps: ProviderServiceDeps,
+  providerId: string,
+  mappings: Array<{
+    baId: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    priority?: number;
+  }>,
+  actorId: string,
+): Promise<Awaited<ReturnType<typeof deps.repo.getScheduleMappings>>> {
+  // Deactivate old mappings, then insert new ones
+  await deps.repo.deactivateAllScheduleMappings(providerId);
+
+  const result = await deps.repo.upsertScheduleMappings(
+    providerId,
+    mappings.map((m) => ({
+      baId: m.baId,
+      dayOfWeek: m.dayOfWeek,
+      startTime: m.startTime,
+      endTime: m.endTime,
+      priority: m.priority ?? 0,
+      isActive: true,
+    })),
+  );
+
+  await deps.auditRepo.appendAuditLog({
+    userId: actorId,
+    action: ProviderAuditAction.ROUTING_CONFIG_UPDATED,
+    category: 'provider',
+    resourceType: 'schedule_mappings',
+    resourceId: providerId,
+    detail: { mapping_count: mappings.length, type: 'schedule' },
+  });
+
+  return result;
 }

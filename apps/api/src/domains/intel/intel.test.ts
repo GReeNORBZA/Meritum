@@ -23,6 +23,9 @@ import {
   getFieldHelp,
   getGoverningRuleSummary,
   getCodeHelp,
+  detectBedsideSignals,
+  resolveConfidenceTier,
+  processBedsideTierBRemoval,
   type ClaimContext,
   type ClaimContextDeps,
   type Tier1Deps,
@@ -32,6 +35,7 @@ import {
   type SombChangeDeps,
   type ContextualHelpDeps,
   type Suggestion,
+  type BedsideLearningDeps,
 } from './intel.service.js';
 import {
   createLlmClient,
@@ -53,7 +57,8 @@ import {
 } from './intel.seed.js';
 import type { SelectAiRule } from '@meritum/shared/schemas/db/intelligence.schema.js';
 import type { Condition, SuggestionTemplate } from '@meritum/shared/schemas/db/intelligence.schema.js';
-import { SuggestionPriority, SuggestionEventType, SuggestionCategory, SuggestionStatus, SUPPRESSION_THRESHOLD, IntelAuditAction } from '@meritum/shared/constants/intelligence.constants.js';
+import { SuggestionPriority, SuggestionEventType, SuggestionCategory, SuggestionStatus, SUPPRESSION_THRESHOLD, IntelAuditAction, ConfidenceTier } from '@meritum/shared/constants/intelligence.constants.js';
+import { computeProviderDigest, generateWeeklyDigests, type DigestDeps, type DigestEventRow } from './intel.digest.service.js';
 
 // ---------------------------------------------------------------------------
 // In-memory stores
@@ -6273,10 +6278,10 @@ describe('Intel Seed — seedMvpRules', () => {
 
     const result = await seedMvpRules(deps);
 
-    expect(result.total).toBe(105);
-    expect(result.inserted).toBe(105);
+    expect(result.total).toBe(106);
+    expect(result.inserted).toBe(106);
     expect(result.skipped).toBe(0);
-    expect(inserted).toHaveLength(105);
+    expect(inserted).toHaveLength(106);
   });
 
   it('is idempotent — second run inserts 0', async () => {
@@ -6295,7 +6300,7 @@ describe('Intel Seed — seedMvpRules', () => {
     };
 
     const first = await seedMvpRules(depsFirst);
-    expect(first.inserted).toBe(105);
+    expect(first.inserted).toBe(106);
 
     // Second run: all already exist
     const depsSecond: SeedDeps = {
@@ -6312,8 +6317,8 @@ describe('Intel Seed — seedMvpRules', () => {
 
     const second = await seedMvpRules(depsSecond);
     expect(second.inserted).toBe(0);
-    expect(second.skipped).toBe(105);
-    expect(second.total).toBe(105);
+    expect(second.skipped).toBe(106);
+    expect(second.total).toBe(106);
   });
 
   it('CMGP rule conditions parse and evaluate correctly', () => {
@@ -7430,5 +7435,566 @@ describe('Intelligence WebSocket', () => {
     notifyWsClients('test-claim-id', 'tier2_complete', { suggestions: [] });
     // No error thrown, no messages sent (no subscribers)
     expect(messages).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// Phase 8: Confidence Tiers for Bedside-Contingent Rules (MVPADD-001 §5.2.2)
+// ============================================================================
+
+describe('Intel Service — detectBedsideSignals', () => {
+  function makeContext(overrides?: Partial<ClaimContext['claim']> & { afterHoursFlag?: boolean }): ClaimContext {
+    const { afterHoursFlag, ...claimOverrides } = overrides ?? {};
+    return {
+      claim: {
+        claimId: 'claim-1',
+        claimType: 'AHCIP',
+        state: 'DRAFT',
+        dateOfService: '2026-02-15',
+        dayOfWeek: 0,  // Sunday
+        importSource: 'MANUAL',
+        ...claimOverrides,
+      },
+      ahcip: {
+        healthServiceCode: '03.04A',
+        modifier1: null, modifier2: null, modifier3: null,
+        diagnosticCode: '401',
+        functionalCentre: 'XXAA01',
+        baNumber: '12345',
+        encounterType: 'OFFICE',
+        calls: 1, timeSpent: 15,
+        facilityNumber: null,
+        referralPractitioner: null,
+        shadowBillingFlag: false,
+        pcpcmBasketFlag: false,
+        afterHoursFlag: afterHoursFlag ?? false,
+        afterHoursType: null,
+        submittedFee: '45.00',
+      },
+      wcb: null,
+      patient: { age: 45, gender: 'M' },
+      provider: { specialtyCode: 'GP', physicianType: 'GENERAL', defaultLocation: null },
+      reference: { hscCode: null, modifiers: [], diagnosticCode: null, sets: {} },
+      crossClaim: {},
+    };
+  }
+
+  it('detects ED_SHIFT import source as a Tier A signal', () => {
+    const ctx = makeContext({ importSource: 'ED_SHIFT', dayOfWeek: 2 });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toContain('ED_SHIFT_IMPORT');
+  });
+
+  it('detects Connect Care import source as a Tier A signal', () => {
+    const ctx = makeContext({ importSource: 'CONNECT_CARE_CSV', dayOfWeek: 2 });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toContain('CONNECT_CARE_IMPORT');
+  });
+
+  it('detects weekend date-of-service (Sunday)', () => {
+    const ctx = makeContext({ dayOfWeek: 0, importSource: 'MANUAL' });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toContain('DOS_WEEKEND');
+  });
+
+  it('detects weekend date-of-service (Saturday)', () => {
+    const ctx = makeContext({ dayOfWeek: 6, importSource: 'MANUAL' });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toContain('DOS_WEEKEND');
+  });
+
+  it('detects after-hours flag', () => {
+    const ctx = makeContext({ dayOfWeek: 2, importSource: 'MANUAL', afterHoursFlag: true });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toContain('AFTER_HOURS');
+  });
+
+  it('returns empty for weekday MANUAL import without signals', () => {
+    const ctx = makeContext({ dayOfWeek: 2, importSource: 'MANUAL' });
+    const signals = detectBedsideSignals(ctx);
+    expect(signals).toHaveLength(0);
+  });
+});
+
+describe('Intel Service — resolveConfidenceTier', () => {
+  it('assigns TIER_A when Tier A signals are present', () => {
+    const tier = resolveConfidenceTier(['ED_SHIFT_IMPORT'], undefined);
+    expect(tier).toBe(ConfidenceTier.TIER_A);
+  });
+
+  it('assigns TIER_A even with poor learning state if signals present', () => {
+    const learning = makeLearning({
+      timesShown: 20, timesAccepted: 2, timesDismissed: 18,
+    }) as any;
+    const tier = resolveConfidenceTier(['DOS_WEEKEND'], learning);
+    expect(tier).toBe(ConfidenceTier.TIER_A);
+  });
+
+  it('assigns TIER_B when acceptance > 70% with 5+ showings (no signals)', () => {
+    const learning = makeLearning({
+      timesShown: 10, timesAccepted: 8, timesDismissed: 2,
+    }) as any;
+    const tier = resolveConfidenceTier([], learning);
+    expect(tier).toBe(ConfidenceTier.TIER_B);
+  });
+
+  it('assigns TIER_C when acceptance is 30–70% (no signals)', () => {
+    const learning = makeLearning({
+      timesShown: 10, timesAccepted: 5, timesDismissed: 5,
+    }) as any;
+    const tier = resolveConfidenceTier([], learning);
+    expect(tier).toBe(ConfidenceTier.TIER_C);
+  });
+
+  it('assigns SUPPRESS when acceptance < 30% with 10+ showings', () => {
+    const learning = makeLearning({
+      timesShown: 10, timesAccepted: 2, timesDismissed: 8,
+    }) as any;
+    const tier = resolveConfidenceTier([], learning);
+    expect(tier).toBe(ConfidenceTier.SUPPRESS);
+  });
+
+  it('assigns TIER_C when fewer than 5 showings regardless of rate', () => {
+    const learning = makeLearning({
+      timesShown: 3, timesAccepted: 0, timesDismissed: 3,
+    }) as any;
+    const tier = resolveConfidenceTier([], learning);
+    expect(tier).toBe(ConfidenceTier.TIER_C);
+  });
+
+  it('assigns TIER_C when no learning state exists', () => {
+    const tier = resolveConfidenceTier([], undefined);
+    expect(tier).toBe(ConfidenceTier.TIER_C);
+  });
+});
+
+describe('Intel Service — evaluateTier1Rules with bedside-contingent rules', () => {
+  const providerId = 'provider-bedside';
+  const claimId = 'claim-bedside';
+
+  function makeTier1DepsWithTracking(overrides?: {
+    rules?: Record<string, any>[];
+    learningStates?: Record<string, any>[];
+  }) {
+    const generatedEvents: any[] = [];
+    const shownIncrements: string[] = [];
+    const autoApplied: string[] = [];
+    const preApplied: string[] = [];
+    const rules = overrides?.rules ?? [];
+    const learningStates = overrides?.learningStates ?? [];
+
+    const deps: Tier1Deps = {
+      getActiveRulesForClaim: async () => rules as unknown as SelectAiRule[],
+      getProviderLearningForRules: async (_pid: string, ruleIds: string[]) =>
+        learningStates.filter((ls: any) => ruleIds.includes(ls.ruleId)) as any[],
+      incrementShown: async (_pid: string, ruleId: string) => {
+        shownIncrements.push(ruleId);
+        return {} as any;
+      },
+      appendSuggestionEvent: async (event: any) => {
+        generatedEvents.push(event);
+        return {} as any;
+      },
+      recordAutoApplied: async (_pid: string, ruleId: string) => {
+        autoApplied.push(ruleId);
+      },
+      recordPreApplied: async (_pid: string, ruleId: string) => {
+        preApplied.push(ruleId);
+      },
+    };
+
+    return { deps, generatedEvents, shownIncrements, autoApplied, preApplied };
+  }
+
+  it('auto-applies bedside rule (TIER_A) for ED shift encounter', async () => {
+    const rule = makeRule({
+      ruleId: 'bedside-rule-1',
+      claimType: 'AHCIP',
+      isBedsideContingent: true,
+      conditions: { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+      suggestionTemplate: makeTemplate({ title: 'Add after-hours modifier' }),
+      priorityFormula: 'fixed:HIGH',
+    });
+
+    const contextDeps = makeMockDeps({
+      getClaim: async () => ({
+        claimId, claimType: 'AHCIP', state: 'DRAFT',
+        dateOfService: '2026-02-15', importSource: 'ED_SHIFT', patientId: 'p1',
+      }),
+    });
+    const { deps, autoApplied, shownIncrements } = makeTier1DepsWithTracking({ rules: [rule] });
+
+    const suggestions = await evaluateTier1Rules(claimId, providerId, contextDeps, deps);
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].confidenceTier).toBe(ConfidenceTier.TIER_A);
+    expect(suggestions[0].autoApplied).toBe(true);
+    expect(autoApplied).toContain('bedside-rule-1');
+    // Tier A should NOT increment times_shown
+    expect(shownIncrements).not.toContain('bedside-rule-1');
+  });
+
+  it('auto-applies bedside rule (TIER_A) for weekend encounter', async () => {
+    const rule = makeRule({
+      ruleId: 'bedside-weekend',
+      claimType: 'AHCIP',
+      isBedsideContingent: true,
+      conditions: { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+      suggestionTemplate: makeTemplate(),
+      priorityFormula: 'fixed:HIGH',
+    });
+
+    // 2026-02-15 is a Sunday (dayOfWeek = 0)
+    const contextDeps = makeMockDeps({
+      getClaim: async () => ({
+        claimId, claimType: 'AHCIP', state: 'DRAFT',
+        dateOfService: '2026-02-15', importSource: 'MANUAL', patientId: 'p1',
+      }),
+    });
+    const { deps, autoApplied } = makeTier1DepsWithTracking({ rules: [rule] });
+
+    const suggestions = await evaluateTier1Rules(claimId, providerId, contextDeps, deps);
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].confidenceTier).toBe(ConfidenceTier.TIER_A);
+    expect(suggestions[0].autoApplied).toBe(true);
+    expect(autoApplied).toContain('bedside-weekend');
+  });
+
+  it('pre-applies bedside rule (TIER_B) when acceptance > 70% with 5+ showings', async () => {
+    const ruleId = 'bedside-tierb';
+    const rule = makeRule({
+      ruleId,
+      claimType: 'AHCIP',
+      isBedsideContingent: true,
+      conditions: { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+      suggestionTemplate: makeTemplate(),
+      priorityFormula: 'fixed:MEDIUM',
+    });
+
+    const learning = makeLearning({
+      providerId,
+      ruleId,
+      timesShown: 10,
+      timesAccepted: 8,
+      timesDismissed: 2,
+    });
+
+    // Weekday + MANUAL = no Tier A signals
+    const contextDeps = makeMockDeps({
+      getClaim: async () => ({
+        claimId, claimType: 'AHCIP', state: 'DRAFT',
+        dateOfService: '2026-02-16', importSource: 'MANUAL', patientId: 'p1',
+      }),
+    });
+    const { deps, preApplied, shownIncrements } = makeTier1DepsWithTracking({
+      rules: [rule],
+      learningStates: [learning],
+    });
+
+    const suggestions = await evaluateTier1Rules(claimId, providerId, contextDeps, deps);
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].confidenceTier).toBe(ConfidenceTier.TIER_B);
+    expect(suggestions[0].preApplied).toBe(true);
+    expect(preApplied).toContain(ruleId);
+    // Tier B DOES increment times_shown
+    expect(shownIncrements).toContain(ruleId);
+  });
+
+  it('shows as standard suggestion (TIER_C) when acceptance is 30–70%', async () => {
+    const ruleId = 'bedside-tierc';
+    const rule = makeRule({
+      ruleId,
+      claimType: 'AHCIP',
+      isBedsideContingent: true,
+      conditions: { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+      suggestionTemplate: makeTemplate(),
+      priorityFormula: 'fixed:LOW',
+    });
+
+    const learning = makeLearning({
+      providerId,
+      ruleId,
+      timesShown: 10,
+      timesAccepted: 5,
+      timesDismissed: 5,
+    });
+
+    const contextDeps = makeMockDeps({
+      getClaim: async () => ({
+        claimId, claimType: 'AHCIP', state: 'DRAFT',
+        dateOfService: '2026-02-16', importSource: 'MANUAL', patientId: 'p1',
+      }),
+    });
+    const { deps, autoApplied, preApplied } = makeTier1DepsWithTracking({
+      rules: [rule],
+      learningStates: [learning],
+    });
+
+    const suggestions = await evaluateTier1Rules(claimId, providerId, contextDeps, deps);
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].confidenceTier).toBe(ConfidenceTier.TIER_C);
+    expect(suggestions[0].autoApplied).toBeUndefined();
+    expect(suggestions[0].preApplied).toBeUndefined();
+    expect(autoApplied).toHaveLength(0);
+    expect(preApplied).toHaveLength(0);
+  });
+
+  it('suppresses bedside rule when acceptance < 30% with 10+ showings', async () => {
+    const ruleId = 'bedside-suppress';
+    const rule = makeRule({
+      ruleId,
+      claimType: 'AHCIP',
+      isBedsideContingent: true,
+      conditions: { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+      suggestionTemplate: makeTemplate(),
+      priorityFormula: 'fixed:LOW',
+    });
+
+    const learning = makeLearning({
+      providerId,
+      ruleId,
+      timesShown: 15,
+      timesAccepted: 3,
+      timesDismissed: 12,
+    });
+
+    const contextDeps = makeMockDeps({
+      getClaim: async () => ({
+        claimId, claimType: 'AHCIP', state: 'DRAFT',
+        dateOfService: '2026-02-16', importSource: 'MANUAL', patientId: 'p1',
+      }),
+    });
+    const { deps } = makeTier1DepsWithTracking({
+      rules: [rule],
+      learningStates: [learning],
+    });
+
+    const suggestions = await evaluateTier1Rules(claimId, providerId, contextDeps, deps);
+
+    // Suppressed — no suggestion generated
+    expect(suggestions).toHaveLength(0);
+  });
+});
+
+describe('Intel Service — processBedsideTierBRemoval', () => {
+  it('increments removal count without demotion when < 10 pre-applied', async () => {
+    const deps: BedsideLearningDeps = {
+      getLearningState: async () => makeLearning({
+        preAppliedCount: 5,
+        preAppliedRemovedCount: 3,
+      }) as any,
+      updatePriorityAdjustment: async () => ({} as any),
+      recordPreAppliedRemoval: async () => makeLearning({
+        preAppliedCount: 5,
+        preAppliedRemovedCount: 4,
+      }) as any,
+      recordDismissal: async () => ({} as any),
+    };
+
+    const result = await processBedsideTierBRemoval('prov-1', 'rule-1', deps);
+    expect(result.demotedToC).toBe(false);
+  });
+
+  it('demotes to TIER_C when removal rate exceeds 50% over 10+ pre-applies', async () => {
+    let adjustmentCalled = false;
+
+    const deps: BedsideLearningDeps = {
+      getLearningState: async () => makeLearning({
+        preAppliedCount: 12,
+        preAppliedRemovedCount: 7,
+      }) as any,
+      updatePriorityAdjustment: async () => {
+        adjustmentCalled = true;
+        return {} as any;
+      },
+      recordPreAppliedRemoval: async () => makeLearning({
+        preAppliedCount: 12,
+        preAppliedRemovedCount: 7,
+      }) as any,
+      recordDismissal: async () => ({} as any),
+    };
+
+    const result = await processBedsideTierBRemoval('prov-1', 'rule-1', deps);
+    expect(result.demotedToC).toBe(true);
+    expect(adjustmentCalled).toBe(true);
+  });
+
+  it('does not demote when removal rate is exactly 50% (requires > 50%)', async () => {
+    const deps: BedsideLearningDeps = {
+      getLearningState: async () => null,
+      updatePriorityAdjustment: async () => ({} as any),
+      recordPreAppliedRemoval: async () => makeLearning({
+        preAppliedCount: 10,
+        preAppliedRemovedCount: 5,
+      }) as any,
+      recordDismissal: async () => ({} as any),
+    };
+
+    const result = await processBedsideTierBRemoval('prov-1', 'rule-1', deps);
+    expect(result.demotedToC).toBe(false);
+  });
+});
+
+// ============================================================================
+// Phase 8: WCB Opportunity Rule
+// ============================================================================
+
+describe('Intel Seed — UNBILLED_WCB_OPPORTUNITY rule', () => {
+  it('is included in MVP_RULES', () => {
+    const wcbOpp = MVP_RULES.find((r) => r.name === 'UNBILLED_WCB_OPPORTUNITY');
+    expect(wcbOpp).toBeDefined();
+    expect(wcbOpp!.category).toBe('MISSED_BILLING');
+    expect(wcbOpp!.claimType).toBe('AHCIP');
+    expect(wcbOpp!.priorityFormula).toBe('fixed:HIGH');
+  });
+
+  it('has a cross_claim condition checking for active WCB claims', () => {
+    const wcbOpp = MVP_RULES.find((r) => r.name === 'UNBILLED_WCB_OPPORTUNITY')!;
+    const conditions = wcbOpp.conditions;
+    expect(conditions.type).toBe('and');
+    expect(conditions.children).toBeDefined();
+
+    const crossClaimCond = conditions.children!.find((c) => c.type === 'cross_claim');
+    expect(crossClaimCond).toBeDefined();
+    expect(crossClaimCond!.query!.aggregation).toBe('exists');
+  });
+});
+
+// ============================================================================
+// Phase 8: Periodic Summary Digest
+// ============================================================================
+
+describe('Intel Digest — computeProviderDigest', () => {
+  const periodStart = new Date('2026-02-01');
+  const periodEnd = new Date('2026-02-08');
+
+  function makeDigestEvent(overrides?: Partial<DigestEventRow>): DigestEventRow {
+    return {
+      eventId: crypto.randomUUID(),
+      claimId: crypto.randomUUID(),
+      suggestionId: crypto.randomUUID(),
+      ruleId: crypto.randomUUID(),
+      providerId: 'prov-1',
+      eventType: 'GENERATED',
+      tier: 1,
+      category: 'MODIFIER_ADD',
+      revenueImpact: null,
+      createdAt: new Date('2026-02-05'),
+      ...overrides,
+    };
+  }
+
+  it('computes totals for generated, accepted, and dismissed events', () => {
+    const events: DigestEventRow[] = [
+      makeDigestEvent({ eventType: 'GENERATED' }),
+      makeDigestEvent({ eventType: 'GENERATED' }),
+      makeDigestEvent({ eventType: 'ACCEPTED', revenueImpact: '15.00' }),
+      makeDigestEvent({ eventType: 'DISMISSED' }),
+    ];
+
+    const digest = computeProviderDigest('prov-1', events, periodStart, periodEnd);
+
+    expect(digest.totalGenerated).toBe(2);
+    expect(digest.totalAccepted).toBe(1);
+    expect(digest.totalDismissed).toBe(1);
+    expect(digest.estimatedRevenueImpact).toBe(15.00);
+    expect(digest.acceptanceRate).toBe(0.5);
+  });
+
+  it('groups events by category and returns top 5', () => {
+    const events: DigestEventRow[] = [
+      makeDigestEvent({ eventType: 'GENERATED', category: 'MODIFIER_ADD' }),
+      makeDigestEvent({ eventType: 'GENERATED', category: 'MODIFIER_ADD' }),
+      makeDigestEvent({ eventType: 'GENERATED', category: 'REJECTION_RISK' }),
+    ];
+
+    const digest = computeProviderDigest('prov-1', events, periodStart, periodEnd);
+
+    expect(digest.topCategories).toHaveLength(2);
+    expect(digest.topCategories[0].category).toBe('MODIFIER_ADD');
+    expect(digest.topCategories[0].generated).toBe(2);
+    expect(digest.topCategories[1].category).toBe('REJECTION_RISK');
+  });
+
+  it('computes correct acceptance rate', () => {
+    const events: DigestEventRow[] = [
+      makeDigestEvent({ eventType: 'GENERATED' }),
+      makeDigestEvent({ eventType: 'GENERATED' }),
+      makeDigestEvent({ eventType: 'GENERATED' }),
+      makeDigestEvent({ eventType: 'ACCEPTED', revenueImpact: '10.00' }),
+    ];
+
+    const digest = computeProviderDigest('prov-1', events, periodStart, periodEnd);
+
+    // 1 accepted / 3 generated = 0.3333
+    expect(digest.acceptanceRate).toBe(0.3333);
+  });
+
+  it('returns zero acceptance rate for empty events', () => {
+    const digest = computeProviderDigest('prov-1', [], periodStart, periodEnd);
+    expect(digest.acceptanceRate).toBe(0);
+    expect(digest.totalGenerated).toBe(0);
+  });
+
+  it('includes correct period dates', () => {
+    const digest = computeProviderDigest('prov-1', [], periodStart, periodEnd);
+    expect(digest.periodStart).toBe('2026-02-01');
+    expect(digest.periodEnd).toBe('2026-02-08');
+  });
+});
+
+describe('Intel Digest — generateWeeklyDigests', () => {
+  it('generates digests for active providers with events', async () => {
+    const notifications: any[] = [];
+
+    const deps: DigestDeps = {
+      getActiveProviderIds: async () => ['prov-1', 'prov-2'],
+      getSuggestionEventsForPeriod: async (providerId) => {
+        if (providerId === 'prov-1') {
+          return [
+            {
+              eventId: '1', claimId: 'c1', suggestionId: 's1', ruleId: 'r1',
+              providerId: 'prov-1', eventType: 'GENERATED', tier: 1,
+              category: 'MODIFIER_ADD', revenueImpact: null, createdAt: new Date(),
+            },
+            {
+              eventId: '2', claimId: 'c1', suggestionId: 's1', ruleId: 'r1',
+              providerId: 'prov-1', eventType: 'ACCEPTED', tier: 1,
+              category: 'MODIFIER_ADD', revenueImpact: '20.00', createdAt: new Date(),
+            },
+          ];
+        }
+        return []; // prov-2 has no activity
+      },
+      emitNotification: async (event) => {
+        notifications.push(event);
+      },
+    };
+
+    const start = new Date('2026-02-01');
+    const end = new Date('2026-02-08');
+    const digests = await generateWeeklyDigests(deps, start, end);
+
+    expect(digests).toHaveLength(1);
+    expect(digests[0].providerId).toBe('prov-1');
+    expect(digests[0].totalGenerated).toBe(1);
+    expect(digests[0].totalAccepted).toBe(1);
+    expect(digests[0].estimatedRevenueImpact).toBe(20.00);
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].type).toBe('INTEL_WEEKLY_DIGEST');
+  });
+
+  it('skips providers with no events', async () => {
+    const deps: DigestDeps = {
+      getActiveProviderIds: async () => ['prov-inactive'],
+      getSuggestionEventsForPeriod: async () => [],
+      emitNotification: async () => {},
+    };
+
+    const digests = await generateWeeklyDigests(deps, new Date(), new Date());
+    expect(digests).toHaveLength(0);
   });
 });

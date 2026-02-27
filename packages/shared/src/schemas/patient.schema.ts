@@ -201,3 +201,70 @@ export const validatePhnParamSchema = z.object({
 });
 
 export type ValidatePhnParam = z.infer<typeof validatePhnParamSchema>;
+
+// ============================================================================
+// Eligibility Verification (FRD MVPADD-001 §B2)
+// ============================================================================
+
+// --- Check Eligibility ---
+
+export const checkEligibilitySchema = z.object({
+  phn: z.string().length(9).regex(/^\d{9}$/, 'PHN must be exactly 9 digits'),
+  date_of_service: z.string().date().optional(),
+});
+
+export type CheckEligibility = z.infer<typeof checkEligibilitySchema>;
+
+// --- Eligibility Result ---
+
+export const eligibilityResultSchema = z.object({
+  phn_masked: z.string(),
+  is_eligible: z.boolean(),
+  eligibility_details: z.object({
+    coverage_type: z.string().optional(),
+    effective_date: z.string().date().optional(),
+    expiry_date: z.string().date().optional(),
+    out_of_province: z.boolean().optional(),
+  }).optional(),
+  verified_at: z.string().datetime(),
+  cached: z.boolean(),
+});
+
+export type EligibilityResult = z.infer<typeof eligibilityResultSchema>;
+
+// --- Override Eligibility ---
+
+export const overrideEligibilitySchema = z.object({
+  phn: z.string().length(9).regex(/^\d{9}$/, 'PHN must be exactly 9 digits'),
+  reason: z.string().min(1).max(500),
+});
+
+export type OverrideEligibility = z.infer<typeof overrideEligibilitySchema>;
+
+// --- Bulk Eligibility Check ---
+
+export const bulkCheckEligibilitySchema = z.object({
+  entries: z
+    .array(
+      z.object({
+        phn: z.string().length(9).regex(/^\d{9}$/, 'PHN must be exactly 9 digits'),
+        date_of_service: z.string().date().optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
+});
+
+export type BulkCheckEligibility = z.infer<typeof bulkCheckEligibilitySchema>;
+
+// ============================================================================
+// Province Detection (FRD MVPADD-001 §3.2)
+// ============================================================================
+
+// --- Detect Province ---
+
+export const detectProvinceSchema = z.object({
+  health_number: z.string().min(1).max(12),
+});
+
+export type DetectProvince = z.infer<typeof detectProvinceSchema>;

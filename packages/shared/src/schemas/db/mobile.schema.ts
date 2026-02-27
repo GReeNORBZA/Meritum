@@ -6,8 +6,10 @@ import {
   pgTable,
   uuid,
   varchar,
+  boolean,
   integer,
   decimal,
+  text,
   jsonb,
   timestamp,
   index,
@@ -16,6 +18,43 @@ import {
 import { sql } from 'drizzle-orm';
 import { providers } from './provider.schema.js';
 import { practiceLocations } from './provider.schema.js';
+import { claims } from './claim.schema.js';
+
+// --- Shift Schedules Table (FRD MOB-002 §3.1) ---
+// Stores recurring shift schedules using iCal RRULE format.
+// Physician-scoped via provider_id (HIA custodian boundary).
+// Shifts are auto-expanded up to 90 days ahead.
+
+export const shiftSchedules = pgTable(
+  'shift_schedules',
+  {
+    scheduleId: uuid('schedule_id').primaryKey().defaultRandom(),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    locationId: uuid('location_id')
+      .notNull()
+      .references(() => practiceLocations.locationId),
+    name: varchar('name', { length: 100 }).notNull(),
+    rrule: text('rrule').notNull(),
+    shiftStartTime: varchar('shift_start_time', { length: 5 }).notNull(),
+    shiftDurationMinutes: integer('shift_duration_minutes').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    lastExpandedAt: timestamp('last_expanded_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('shift_schedules_provider_active_idx').on(
+      table.providerId,
+      table.isActive,
+    ),
+  ],
+);
 
 // --- ED Shifts Table ---
 // Tracks emergency department shift sessions for the Mobile Companion.
@@ -40,6 +79,11 @@ export const edShifts = pgTable(
       .notNull()
       .default('0'),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
+    shiftSource: varchar('shift_source', { length: 20 }).notNull().default('MANUAL'),
+    inferredConfirmed: boolean('inferred_confirmed').default(false),
+    scheduleId: uuid('schedule_id').references(
+      () => shiftSchedules.scheduleId,
+    ),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -58,6 +102,9 @@ export const edShifts = pgTable(
       table.providerId,
       table.createdAt,
     ),
+
+    // Schedule-based lookups
+    index('ed_shifts_schedule_idx').on(table.scheduleId),
   ],
 );
 
@@ -96,10 +143,57 @@ export const favouriteCodes = pgTable(
   ],
 );
 
+// --- ED Shift Encounters Table (FRD MOB-002 §4.1) ---
+// Individual patient encounters logged during a shift session.
+// Physician-scoped via provider_id (HIA custodian boundary).
+// Supports 4 PHN capture methods: barcode, search, manual, last-4.
+
+export const edShiftEncounters = pgTable(
+  'ed_shift_encounters',
+  {
+    encounterId: uuid('encounter_id').primaryKey().defaultRandom(),
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => edShifts.shiftId),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    phn: varchar('phn', { length: 9 }),
+    phnCaptureMethod: varchar('phn_capture_method', { length: 20 }).notNull(),
+    phnIsPartial: boolean('phn_is_partial').notNull().default(false),
+    healthServiceCode: varchar('health_service_code', { length: 10 }),
+    modifiers: jsonb('modifiers').$type<string[]>(),
+    diCode: varchar('di_code', { length: 10 }),
+    freeTextTag: varchar('free_text_tag', { length: 100 }),
+    matchedClaimId: uuid('matched_claim_id').references(() => claims.claimId),
+    encounterTimestamp: timestamp('encounter_timestamp', {
+      withTimezone: true,
+    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('ed_shift_encounters_shift_idx').on(table.shiftId),
+    index('ed_shift_encounters_provider_created_idx').on(
+      table.providerId,
+      table.createdAt,
+    ),
+    index('ed_shift_encounters_phn_idx').on(table.phn),
+    index('ed_shift_encounters_matched_claim_idx').on(table.matchedClaimId),
+  ],
+);
+
 // --- Inferred Types ---
+
+export type InsertShiftSchedule = typeof shiftSchedules.$inferInsert;
+export type SelectShiftSchedule = typeof shiftSchedules.$inferSelect;
 
 export type InsertEdShift = typeof edShifts.$inferInsert;
 export type SelectEdShift = typeof edShifts.$inferSelect;
+
+export type InsertEdShiftEncounter = typeof edShiftEncounters.$inferInsert;
+export type SelectEdShiftEncounter = typeof edShiftEncounters.$inferSelect;
 
 export type InsertFavouriteCode = typeof favouriteCodes.$inferInsert;
 export type SelectFavouriteCode = typeof favouriteCodes.$inferSelect;

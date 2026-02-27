@@ -227,6 +227,101 @@ export const dryRunParamSchema = z.object({
 
 export type DryRunParam = z.infer<typeof dryRunParamSchema>;
 
+// ============================================================================
+// Provider Registry Search (FRD MVPADD-001 §B1)
+// ============================================================================
+
+export const providerRegistrySearchSchema = z.object({
+  q: z.string().min(2).max(100),
+  specialty: z.string().max(10).optional(),
+  city: z.string().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+export type ProviderRegistrySearch = z.infer<typeof providerRegistrySearchSchema>;
+
+export const providerRegistryParamSchema = z.object({
+  cpsa: z.string().max(10),
+});
+
+export type ProviderRegistryParam = z.infer<typeof providerRegistryParamSchema>;
+
+// ============================================================================
+// Billing Guidance (FRD MVPADD-001 §B6)
+// ============================================================================
+
+const GUIDANCE_CATEGORIES = [
+  'SOMB_INTERPRETATION',
+  'MODIFIER_GUIDANCE',
+  'WCB_GUIDANCE',
+  'CODING_TIPS',
+  'REGULATORY_UPDATE',
+  'BEST_PRACTICE',
+] as const;
+
+export const billingGuidanceSearchSchema = z.object({
+  category: z.enum(GUIDANCE_CATEGORIES).optional(),
+  specialty: z.string().max(10).optional(),
+  hsc: z.string().max(10).optional(),
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export type BillingGuidanceSearch = z.infer<typeof billingGuidanceSearchSchema>;
+
+export const billingGuidanceParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type BillingGuidanceParam = z.infer<typeof billingGuidanceParamSchema>;
+
+// ============================================================================
+// Anesthesia Calculator (FRD MVPADD-001 §B7)
+// ============================================================================
+
+export const anesthesiaCalculateSchema = z.object({
+  scenario_code: z.string().max(30),
+  base_units: z.number().int().min(0).optional(),
+  time_minutes: z.number().int().min(0),
+  modifiers: z.array(z.string().max(4)).optional(),
+});
+
+export type AnesthesiaCalculate = z.infer<typeof anesthesiaCalculateSchema>;
+
+export const anesthesiaScenarioParamSchema = z.object({
+  code: z.string().max(30),
+});
+
+export type AnesthesiaScenarioParam = z.infer<typeof anesthesiaScenarioParamSchema>;
+
+// ============================================================================
+// Bundling Matrix (FRD MVPADD-001 §B9)
+// ============================================================================
+
+export const bundlingCheckSchema = z.object({
+  codes: z.array(z.string().max(10)).min(2).max(10),
+});
+
+export type BundlingCheck = z.infer<typeof bundlingCheckSchema>;
+
+export const bundlingPairParamSchema = z.object({
+  code_a: z.string().max(10),
+  code_b: z.string().max(10),
+});
+
+export type BundlingPairParam = z.infer<typeof bundlingPairParamSchema>;
+
+// ============================================================================
+// Reciprocal Billing (FRD MVPADD-001 §B8)
+// ============================================================================
+
+export const reciprocalBillingParamSchema = z.object({
+  province: z.string().length(2),
+});
+
+export type ReciprocalBillingParam = z.infer<typeof reciprocalBillingParamSchema>;
+
 // --- Internal Validation: Validate Context ---
 
 // Query strings may send a single value or repeated values for array params.

@@ -125,6 +125,48 @@ export const QuickEntryClaimType = {
 export type QuickEntryClaimType =
   (typeof QuickEntryClaimType)[keyof typeof QuickEntryClaimType];
 
+// --- Shift Source (FRD MOB-002 §3.1) ---
+
+export const ShiftSource = {
+  MANUAL: 'MANUAL',
+  INFERRED: 'INFERRED',
+} as const;
+
+export type ShiftSource = (typeof ShiftSource)[keyof typeof ShiftSource];
+
+// --- PHN Capture Method (FRD MOB-002 §4.1) ---
+
+export const PhnCaptureMethod = {
+  BARCODE: 'BARCODE',
+  SEARCH: 'SEARCH',
+  MANUAL: 'MANUAL',
+  LAST_FOUR: 'LAST_FOUR',
+} as const;
+
+export type PhnCaptureMethod =
+  (typeof PhnCaptureMethod)[keyof typeof PhnCaptureMethod];
+
+// --- Reconciliation Match Category (FRD MOB-002 §5.1) ---
+
+export const ReconciliationMatchCategory = {
+  FULL_MATCH: 'FULL_MATCH',
+  UNMATCHED_SCC: 'UNMATCHED_SCC',
+  UNMATCHED_ENCOUNTER: 'UNMATCHED_ENCOUNTER',
+  SHIFT_ONLY: 'SHIFT_ONLY',
+} as const;
+
+export type ReconciliationMatchCategory =
+  (typeof ReconciliationMatchCategory)[keyof typeof ReconciliationMatchCategory];
+
+// --- Shift Recurrence Constraints (FRD MOB-002 §3.1) ---
+
+export const SHIFT_SCHEDULE_HORIZON_DAYS = 90;
+export const SHIFT_SCHEDULE_MAX_ACTIVE = 20;
+
+// --- Shift Reminder Defaults ---
+
+export const SHIFT_REMINDER_BEFORE_MINUTES = 15;
+
 /** Quick claims start as DRAFT — no validation on mobile */
 export const QUICK_ENTRY_INITIAL_STATE = 'DRAFT' as const;
 

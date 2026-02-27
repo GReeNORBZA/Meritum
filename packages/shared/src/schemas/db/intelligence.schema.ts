@@ -103,6 +103,8 @@ export const aiRules = pgTable(
     specialtyFilter: jsonb('specialty_filter').$type<string[] | null>(),
     priorityFormula: varchar('priority_formula', { length: 100 }).notNull(),
     isActive: boolean('is_active').notNull().default(true),
+    isBedsideContingent: boolean('is_bedside_contingent').notNull().default(false),
+    confidenceTierOverrides: jsonb('confidence_tier_overrides').$type<Record<string, string>>(),
     sombVersion: varchar('somb_version', { length: 20 }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -142,6 +144,9 @@ export const aiProviderLearning = pgTable(
     timesAccepted: integer('times_accepted').notNull().default(0),
     timesDismissed: integer('times_dismissed').notNull().default(0),
     consecutiveDismissals: integer('consecutive_dismissals').notNull().default(0),
+    autoAppliedCount: integer('auto_applied_count').notNull().default(0),
+    preAppliedCount: integer('pre_applied_count').notNull().default(0),
+    preAppliedRemovedCount: integer('pre_applied_removed_count').notNull().default(0),
     isSuppressed: boolean('is_suppressed').notNull().default(false),
     priorityAdjustment: integer('priority_adjustment').notNull().default(0),
     lastShownAt: timestamp('last_shown_at', { withTimezone: true }),

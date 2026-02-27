@@ -3,7 +3,13 @@
 // ============================================================================
 
 import { z } from 'zod';
-import { MobileShiftStatus, MAX_FAVOURITES } from '../../constants/mobile.constants.js';
+import {
+  MobileShiftStatus,
+  MAX_FAVOURITES,
+  ShiftSource,
+  PhnCaptureMethod,
+  ReconciliationMatchCategory,
+} from '../../constants/mobile.constants.js';
 import { Gender } from '../../constants/patient.constants.js';
 
 // --- Enum Value Arrays ---
@@ -179,3 +185,110 @@ export const mobilePatientSchema = z.object({
 });
 
 export type MobilePatient = z.infer<typeof mobilePatientSchema>;
+
+// ============================================================================
+// Shift Scheduling (FRD MOB-002 §3.1)
+// ============================================================================
+
+const SHIFT_SOURCES = [ShiftSource.MANUAL, ShiftSource.INFERRED] as const;
+
+// --- Create Shift Schedule ---
+
+export const createShiftScheduleSchema = z.object({
+  location_id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  rrule: z.string().min(1).max(500),
+  shift_start_time: z.string().regex(
+    /^([01]\d|2[0-3]):[0-5]\d$/,
+    'Must be HH:mm format',
+  ),
+  shift_duration_minutes: z.number().int().min(30).max(1440),
+});
+
+export type CreateShiftSchedule = z.infer<typeof createShiftScheduleSchema>;
+
+// --- Update Shift Schedule ---
+
+export const updateShiftScheduleSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  rrule: z.string().min(1).max(500).optional(),
+  shift_start_time: z.string().regex(
+    /^([01]\d|2[0-3]):[0-5]\d$/,
+    'Must be HH:mm format',
+  ).optional(),
+  shift_duration_minutes: z.number().int().min(30).max(1440).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export type UpdateShiftSchedule = z.infer<typeof updateShiftScheduleSchema>;
+
+// --- Schedule ID Parameter ---
+
+export const scheduleIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type ScheduleIdParam = z.infer<typeof scheduleIdParamSchema>;
+
+// ============================================================================
+// Encounter Logging (FRD MOB-002 §4.1)
+// ============================================================================
+
+const PHN_CAPTURE_METHODS = [
+  PhnCaptureMethod.BARCODE,
+  PhnCaptureMethod.SEARCH,
+  PhnCaptureMethod.MANUAL,
+  PhnCaptureMethod.LAST_FOUR,
+] as const;
+
+// --- Log Encounter (enhanced from logPatientSchema) ---
+
+export const logEncounterSchema = z.object({
+  phn: z.string().max(9).optional(),
+  phn_capture_method: z.enum(PHN_CAPTURE_METHODS),
+  phn_is_partial: z.boolean().default(false),
+  health_service_code: z.string().min(1).max(10).optional(),
+  modifiers: z.array(z.string().max(4)).optional(),
+  di_code: z.string().max(10).optional(),
+  free_text_tag: z.string().max(100).optional(),
+  encounter_timestamp: z.string().datetime().optional(),
+});
+
+export type LogEncounter = z.infer<typeof logEncounterSchema>;
+
+// --- Encounter ID Parameter ---
+
+export const encounterIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type EncounterIdParam = z.infer<typeof encounterIdParamSchema>;
+
+// ============================================================================
+// Reconciliation (FRD MOB-002 §5.1)
+// ============================================================================
+
+const RECONCILIATION_CATEGORIES = [
+  ReconciliationMatchCategory.FULL_MATCH,
+  ReconciliationMatchCategory.UNMATCHED_SCC,
+  ReconciliationMatchCategory.UNMATCHED_ENCOUNTER,
+  ReconciliationMatchCategory.SHIFT_ONLY,
+] as const;
+
+// --- Reconciliation Query ---
+
+export const reconciliationQuerySchema = z.object({
+  shift_id: z.string().uuid(),
+  category: z.enum(RECONCILIATION_CATEGORIES).optional(),
+});
+
+export type ReconciliationQuery = z.infer<typeof reconciliationQuerySchema>;
+
+// --- Manual Match ---
+
+export const manualMatchSchema = z.object({
+  encounter_id: z.string().uuid(),
+  claim_id: z.string().uuid(),
+});
+
+export type ManualMatch = z.infer<typeof manualMatchSchema>;

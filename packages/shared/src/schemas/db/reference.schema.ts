@@ -482,6 +482,278 @@ export const referenceDataStaging = pgTable(
   ],
 );
 
+// --- ICD Crosswalk Table (FRD CC-001 §A4) ---
+// Maps ICD-10-CA codes to ICD-9-CM equivalents for AHCIP claims.
+// Each row belongs to a versioned data set. Multiple ICD-9 mappings
+// per ICD-10 code are possible (one preferred per ICD-10 code).
+
+export const icdCrosswalk = pgTable(
+  'icd_crosswalk',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    icd10Code: varchar('icd10_code', { length: 10 }).notNull(),
+    icd10Description: text('icd10_description').notNull(),
+    icd9Code: varchar('icd9_code', { length: 10 }).notNull(),
+    icd9Description: text('icd9_description').notNull(),
+    matchQuality: varchar('match_quality', { length: 20 }).notNull(),
+    isPreferred: boolean('is_preferred').notNull().default(false),
+    notes: text('notes'),
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => referenceDataVersions.versionId),
+    effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'string' }),
+  },
+  (table) => [
+    index('icd_crosswalk_icd10_code_version_idx').on(
+      table.icd10Code,
+      table.versionId,
+    ),
+    index('icd_crosswalk_icd9_code_version_idx').on(
+      table.icd9Code,
+      table.versionId,
+    ),
+    index('icd_crosswalk_version_id_idx').on(table.versionId),
+  ],
+);
+
+// --- Provider Registry Table (FRD MVPADD-001 §B1) ---
+// Public directory of Alberta physicians for referral lookups.
+// NOT physician-scoped — system-wide reference data.
+// pg_trgm index on name for fuzzy/prefix search.
+
+export const providerRegistry = pgTable(
+  'provider_registry',
+  {
+    registryId: uuid('registry_id').primaryKey().defaultRandom(),
+    cpsa: varchar('cpsa', { length: 10 }).notNull(),
+    firstName: varchar('first_name', { length: 50 }).notNull(),
+    lastName: varchar('last_name', { length: 50 }).notNull(),
+    specialtyCode: varchar('specialty_code', { length: 10 }).notNull(),
+    specialtyDescription: varchar('specialty_description', { length: 100 }),
+    city: varchar('city', { length: 100 }),
+    facilityName: varchar('facility_name', { length: 200 }),
+    phone: varchar('phone', { length: 24 }),
+    fax: varchar('fax', { length: 24 }),
+    isActive: boolean('is_active').notNull().default(true),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('provider_registry_cpsa_unique_idx').on(table.cpsa),
+    index('provider_registry_specialty_idx').on(table.specialtyCode),
+    index('provider_registry_city_idx').on(table.city),
+    index('provider_registry_name_trgm_idx').using(
+      'gin',
+      sql`(last_name || ' ' || first_name) gin_trgm_ops`,
+    ),
+  ],
+);
+
+// --- Billing Guidance Table (FRD MVPADD-001 §B6) ---
+// Curated billing guidance entries organized by category.
+// NOT physician-scoped — system-wide reference data.
+
+export const billingGuidance = pgTable(
+  'billing_guidance',
+  {
+    guidanceId: uuid('guidance_id').primaryKey().defaultRandom(),
+    category: varchar('category', { length: 30 }).notNull(),
+    title: varchar('title', { length: 200 }).notNull(),
+    content: text('content').notNull(),
+    applicableSpecialties: jsonb('applicable_specialties')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    applicableHscCodes: jsonb('applicable_hsc_codes')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    sourceReference: varchar('source_reference', { length: 200 }),
+    sourceUrl: text('source_url'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('billing_guidance_category_active_idx').on(
+      table.category,
+      table.isActive,
+    ),
+    index('billing_guidance_content_gin_idx').using(
+      'gin',
+      sql`to_tsvector('english', ${table.content})`,
+    ),
+  ],
+);
+
+// --- Provincial PHN Formats Table (FRD MVPADD-001 §B8) ---
+// PHN format definitions for all 11 Canadian province/territory codes.
+// Used for reciprocal billing province detection.
+
+export const provincialPhnFormats = pgTable(
+  'provincial_phn_formats',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    provinceCode: varchar('province_code', { length: 2 }).notNull(),
+    provinceName: varchar('province_name', { length: 50 }).notNull(),
+    phnLength: integer('phn_length').notNull(),
+    phnRegex: varchar('phn_regex', { length: 100 }).notNull(),
+    validationAlgorithm: varchar('validation_algorithm', { length: 30 }),
+    notes: text('notes'),
+  },
+  (table) => [
+    uniqueIndex('provincial_phn_formats_province_unique_idx').on(
+      table.provinceCode,
+    ),
+  ],
+);
+
+// --- Reciprocal Billing Rules Table (FRD MVPADD-001 §B8) ---
+// Province-specific reciprocal billing rules, fees, and submission requirements.
+
+export const reciprocalBillingRules = pgTable(
+  'reciprocal_billing_rules',
+  {
+    ruleId: uuid('rule_id').primaryKey().defaultRandom(),
+    sourceProvince: varchar('source_province', { length: 2 }).notNull(),
+    claimType: varchar('claim_type', { length: 10 }).notNull(),
+    submissionMethod: varchar('submission_method', { length: 30 }).notNull(),
+    feeScheduleSource: varchar('fee_schedule_source', { length: 30 }).notNull(),
+    deadlineDays: integer('deadline_days').notNull(),
+    notes: text('notes'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('reciprocal_billing_rules_province_type_idx').on(
+      table.sourceProvince,
+      table.claimType,
+    ),
+  ],
+);
+
+// --- Anesthesia Rules Table (FRD MVPADD-001 §B7) ---
+// Anesthesia calculation rules (GR 12), 10 scenarios.
+// NOT physician-scoped — system-wide reference data.
+
+export const anesthesiaRules = pgTable(
+  'anesthesia_rules',
+  {
+    ruleId: uuid('rule_id').primaryKey().defaultRandom(),
+    scenarioCode: varchar('scenario_code', { length: 30 }).notNull(),
+    scenarioLabel: varchar('scenario_label', { length: 100 }).notNull(),
+    description: text('description').notNull(),
+    baseUnits: integer('base_units'),
+    timeUnitMinutes: integer('time_unit_minutes'),
+    calculationFormula: text('calculation_formula').notNull(),
+    applicableModifiers: jsonb('applicable_modifiers')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    sourceReference: varchar('source_reference', { length: 100 }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('anesthesia_rules_scenario_unique_idx').on(table.scenarioCode),
+    index('anesthesia_rules_active_sort_idx').on(
+      table.isActive,
+      table.sortOrder,
+    ),
+  ],
+);
+
+// --- Bundling Rules Table (FRD MVPADD-001 §B9) ---
+// Defines code-pair bundling relationships for AHCIP claims.
+// Constraint: code_a < code_b (canonical ordering, avoids duplicate pairs).
+
+export const bundlingRules = pgTable(
+  'bundling_rules',
+  {
+    ruleId: uuid('rule_id').primaryKey().defaultRandom(),
+    codeA: varchar('code_a', { length: 10 }).notNull(),
+    codeB: varchar('code_b', { length: 10 }).notNull(),
+    relationship: varchar('relationship', { length: 30 }).notNull(),
+    description: text('description'),
+    overrideAllowed: boolean('override_allowed').notNull().default(false),
+    sourceReference: varchar('source_reference', { length: 100 }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Canonical pair constraint: code_a < code_b
+    uniqueIndex('bundling_rules_code_pair_unique_idx').on(
+      table.codeA,
+      table.codeB,
+    ),
+    index('bundling_rules_code_a_active_idx').on(table.codeA, table.isActive),
+    index('bundling_rules_code_b_active_idx').on(table.codeB, table.isActive),
+  ],
+);
+
+// --- Justification Templates Table (FRD MVPADD-001 §B11) ---
+// Reusable justification text templates for specific scenarios.
+// NOT physician-scoped — system-wide reference data.
+
+export const justificationTemplates = pgTable(
+  'justification_templates',
+  {
+    templateId: uuid('template_id').primaryKey().defaultRandom(),
+    scenario: varchar('scenario', { length: 40 }).notNull(),
+    name: varchar('name', { length: 200 }).notNull(),
+    templateText: text('template_text').notNull(),
+    placeholders: jsonb('placeholders')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    applicableSpecialties: jsonb('applicable_specialties')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('justification_templates_scenario_active_idx').on(
+      table.scenario,
+      table.isActive,
+    ),
+  ],
+);
+
 // --- Inferred Types ---
 
 export type InsertVersion = typeof referenceDataVersions.$inferInsert;
@@ -519,3 +791,27 @@ export type SelectExplanatoryCode = typeof explanatoryCodes.$inferSelect;
 
 export type InsertReferenceDataStaging = typeof referenceDataStaging.$inferInsert;
 export type SelectReferenceDataStaging = typeof referenceDataStaging.$inferSelect;
+
+export type InsertIcdCrosswalk = typeof icdCrosswalk.$inferInsert;
+export type SelectIcdCrosswalk = typeof icdCrosswalk.$inferSelect;
+
+export type InsertProviderRegistry = typeof providerRegistry.$inferInsert;
+export type SelectProviderRegistry = typeof providerRegistry.$inferSelect;
+
+export type InsertBillingGuidance = typeof billingGuidance.$inferInsert;
+export type SelectBillingGuidance = typeof billingGuidance.$inferSelect;
+
+export type InsertProvincialPhnFormat = typeof provincialPhnFormats.$inferInsert;
+export type SelectProvincialPhnFormat = typeof provincialPhnFormats.$inferSelect;
+
+export type InsertReciprocalBillingRule = typeof reciprocalBillingRules.$inferInsert;
+export type SelectReciprocalBillingRule = typeof reciprocalBillingRules.$inferSelect;
+
+export type InsertAnesthesiaRule = typeof anesthesiaRules.$inferInsert;
+export type SelectAnesthesiaRule = typeof anesthesiaRules.$inferSelect;
+
+export type InsertBundlingRule = typeof bundlingRules.$inferInsert;
+export type SelectBundlingRule = typeof bundlingRules.$inferSelect;
+
+export type InsertJustificationTemplate = typeof justificationTemplates.$inferInsert;
+export type SelectJustificationTemplate = typeof justificationTemplates.$inferSelect;

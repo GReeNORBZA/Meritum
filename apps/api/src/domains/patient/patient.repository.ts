@@ -4,11 +4,14 @@ import {
   patients,
   patientImportBatches,
   patientMergeHistory,
+  eligibilityCache,
   type InsertPatient,
   type SelectPatient,
   type InsertPatientImportBatch,
   type SelectPatientImportBatch,
   type SelectPatientMergeHistory,
+  type InsertEligibilityCache,
+  type SelectEligibilityCache,
 } from '@meritum/shared/schemas/db/patient.schema.js';
 import { validateAlbertaPhn } from '@meritum/shared/utils/phn.utils.js';
 
@@ -1062,6 +1065,66 @@ export function createPatientRepository(db: NodePgDatabase) {
         return { valid: true, exists: true, patientId: rows[0].patientId };
       }
       return { valid: true, exists: false };
+    },
+
+    // -----------------------------------------------------------------------
+    // Eligibility Cache (FRD MVPADD-001 §3.1.3)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Look up a cached eligibility result by provider + PHN hash.
+     * Only returns non-expired entries.
+     */
+    async getCachedEligibility(
+      providerId: string,
+      phnHash: string,
+    ): Promise<SelectEligibilityCache | undefined> {
+      const rows = await db
+        .select()
+        .from(eligibilityCache)
+        .where(
+          and(
+            eq(eligibilityCache.providerId, providerId),
+            eq(eligibilityCache.phnHash, phnHash),
+            sql`${eligibilityCache.expiresAt} > now()`,
+          ),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Insert or update an eligibility cache entry.
+     * Uses upsert on (provider_id, phn_hash) to avoid duplicates.
+     */
+    async setCachedEligibility(
+      entry: InsertEligibilityCache,
+    ): Promise<SelectEligibilityCache> {
+      const rows = await db
+        .insert(eligibilityCache)
+        .values(entry)
+        .onConflictDoUpdate({
+          target: [eligibilityCache.providerId, eligibilityCache.phnHash],
+          set: {
+            isEligible: sql`excluded.is_eligible`,
+            eligibilityDetails: sql`excluded.eligibility_details`,
+            verifiedAt: sql`excluded.verified_at`,
+            expiresAt: sql`excluded.expires_at`,
+          },
+        })
+        .returning();
+      return rows[0];
+    },
+
+    /**
+     * Purge all expired eligibility cache entries.
+     * Returns the number of rows deleted.
+     */
+    async purgeExpiredEligibilityCache(): Promise<number> {
+      const result = await db
+        .delete(eligibilityCache)
+        .where(sql`${eligibilityCache.expiresAt} <= now()`);
+      return (result as any).rowCount ?? 0;
     },
   };
 }

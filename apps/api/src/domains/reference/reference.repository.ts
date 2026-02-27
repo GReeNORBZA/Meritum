@@ -13,6 +13,14 @@ import {
   statutoryHolidays,
   explanatoryCodes,
   referenceDataStaging,
+  icdCrosswalk,
+  providerRegistry,
+  billingGuidance,
+  provincialPhnFormats,
+  reciprocalBillingRules,
+  anesthesiaRules,
+  bundlingRules,
+  justificationTemplates,
   type InsertVersion,
   type SelectVersion,
   type SelectHscCode,
@@ -36,6 +44,16 @@ import {
   type SelectExplanatoryCode,
   type InsertExplanatoryCode,
   type SelectReferenceDataStaging,
+  type InsertIcdCrosswalk,
+  type SelectIcdCrosswalk,
+  type SelectProviderRegistry,
+  type SelectBillingGuidance,
+  type SelectProvincialPhnFormat,
+  type SelectReciprocalBillingRule,
+  type SelectAnesthesiaRule,
+  type SelectBundlingRule,
+  type SelectJustificationTemplate,
+  type InsertProviderRegistry,
 } from '@meritum/shared/schemas/db/reference.schema.js';
 
 // ---------------------------------------------------------------------------
@@ -1074,6 +1092,377 @@ export function createReferenceRepository(db: NodePgDatabase) {
           await tx.insert(explanatoryCodes).values(chunk);
         }
       });
+    },
+
+    // -----------------------------------------------------------------------
+    // ICD Crosswalk (FRD CC-001 §A4)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Look up ICD-9 mappings for a given ICD-10 code.
+     * Returns all mappings sorted by is_preferred DESC, match_quality ASC.
+     */
+    async getIcdCrosswalkByIcd10(
+      icd10Code: string,
+      versionId: string,
+    ): Promise<SelectIcdCrosswalk[]> {
+      return db
+        .select()
+        .from(icdCrosswalk)
+        .where(
+          and(
+            eq(icdCrosswalk.icd10Code, icd10Code.toUpperCase()),
+            eq(icdCrosswalk.versionId, versionId),
+          ),
+        )
+        .orderBy(desc(icdCrosswalk.isPreferred), asc(icdCrosswalk.matchQuality));
+    },
+
+    /**
+     * Search ICD crosswalk by ICD-10 or ICD-9 code prefix or description text.
+     */
+    async searchIcdCrosswalk(
+      query: string,
+      versionId: string,
+      limit: number = 10,
+    ): Promise<SelectIcdCrosswalk[]> {
+      const pattern = `%${query.toUpperCase()}%`;
+      return db
+        .select()
+        .from(icdCrosswalk)
+        .where(
+          and(
+            eq(icdCrosswalk.versionId, versionId),
+            or(
+              sql`${icdCrosswalk.icd10Code} ILIKE ${pattern}`,
+              sql`${icdCrosswalk.icd9Code} ILIKE ${pattern}`,
+              sql`${icdCrosswalk.icd10Description} ILIKE ${pattern}`,
+            ),
+          ),
+        )
+        .orderBy(desc(icdCrosswalk.isPreferred))
+        .limit(limit);
+    },
+
+    /**
+     * Bulk insert ICD crosswalk records. Set version_id on all records.
+     */
+    async bulkInsertIcdCrosswalk(
+      records: InsertIcdCrosswalk[],
+      versionId: string,
+    ): Promise<void> {
+      const tagged = records.map((r) => ({ ...r, versionId }));
+      await db.transaction(async (tx) => {
+        for (let i = 0; i < tagged.length; i += BULK_CHUNK_SIZE) {
+          const chunk = tagged.slice(i, i + BULK_CHUNK_SIZE);
+          await tx.insert(icdCrosswalk).values(chunk);
+        }
+      });
+    },
+
+    // -----------------------------------------------------------------------
+    // Provider Registry (FRD MVPADD-001 §B1)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Search provider registry by name (trigram fuzzy match), specialty, city.
+     */
+    async searchProviderRegistry(
+      query: string,
+      filters: { specialty?: string; city?: string },
+      limit: number = 10,
+    ): Promise<SelectProviderRegistry[]> {
+      const conditions = [
+        eq(providerRegistry.isActive, true),
+        sql`(${providerRegistry.lastName} || ' ' || ${providerRegistry.firstName}) % ${query}`,
+      ];
+
+      if (filters.specialty) {
+        conditions.push(eq(providerRegistry.specialtyCode, filters.specialty));
+      }
+      if (filters.city) {
+        conditions.push(eq(providerRegistry.city, filters.city));
+      }
+
+      return db
+        .select()
+        .from(providerRegistry)
+        .where(and(...conditions))
+        .orderBy(
+          sql`similarity(${providerRegistry.lastName} || ' ' || ${providerRegistry.firstName}, ${query}) DESC`,
+        )
+        .limit(limit);
+    },
+
+    /**
+     * Get a single provider by CPSA registration number.
+     */
+    async getProviderByCpsa(
+      cpsa: string,
+    ): Promise<SelectProviderRegistry | undefined> {
+      const rows = await db
+        .select()
+        .from(providerRegistry)
+        .where(eq(providerRegistry.cpsa, cpsa))
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Bulk upsert provider registry records (for periodic data refresh).
+     */
+    async bulkUpsertProviderRegistry(
+      records: InsertProviderRegistry[],
+    ): Promise<void> {
+      await db.transaction(async (tx) => {
+        for (let i = 0; i < records.length; i += BULK_CHUNK_SIZE) {
+          const chunk = records.slice(i, i + BULK_CHUNK_SIZE);
+          await tx
+            .insert(providerRegistry)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: providerRegistry.cpsa,
+              set: {
+                firstName: sql`excluded.first_name`,
+                lastName: sql`excluded.last_name`,
+                specialtyCode: sql`excluded.specialty_code`,
+                specialtyDescription: sql`excluded.specialty_description`,
+                city: sql`excluded.city`,
+                facilityName: sql`excluded.facility_name`,
+                phone: sql`excluded.phone`,
+                fax: sql`excluded.fax`,
+                isActive: sql`excluded.is_active`,
+                lastSyncedAt: sql`now()`,
+                updatedAt: sql`now()`,
+              },
+            });
+        }
+      });
+    },
+
+    // -----------------------------------------------------------------------
+    // Billing Guidance (FRD MVPADD-001 §B6)
+    // -----------------------------------------------------------------------
+
+    /**
+     * List billing guidance entries with optional filtering.
+     */
+    async listBillingGuidance(
+      filters: {
+        category?: string;
+        specialty?: string;
+        hsc?: string;
+      },
+      limit: number = 20,
+      offset: number = 0,
+    ): Promise<SelectBillingGuidance[]> {
+      const conditions = [eq(billingGuidance.isActive, true)];
+
+      if (filters.category) {
+        conditions.push(eq(billingGuidance.category, filters.category));
+      }
+      if (filters.specialty) {
+        conditions.push(
+          sql`${billingGuidance.applicableSpecialties} @> ${JSON.stringify([filters.specialty])}::jsonb`,
+        );
+      }
+      if (filters.hsc) {
+        conditions.push(
+          sql`${billingGuidance.applicableHscCodes} @> ${JSON.stringify([filters.hsc])}::jsonb`,
+        );
+      }
+
+      return db
+        .select()
+        .from(billingGuidance)
+        .where(and(...conditions))
+        .orderBy(asc(billingGuidance.sortOrder))
+        .limit(limit)
+        .offset(offset);
+    },
+
+    /**
+     * Full-text search billing guidance content.
+     */
+    async searchBillingGuidance(
+      query: string,
+      limit: number = 20,
+    ): Promise<SelectBillingGuidance[]> {
+      return db
+        .select()
+        .from(billingGuidance)
+        .where(
+          and(
+            eq(billingGuidance.isActive, true),
+            sql`to_tsvector('english', ${billingGuidance.content}) @@ plainto_tsquery('english', ${query})`,
+          ),
+        )
+        .orderBy(
+          sql`ts_rank(to_tsvector('english', ${billingGuidance.content}), plainto_tsquery('english', ${query})) DESC`,
+        )
+        .limit(limit);
+    },
+
+    /**
+     * Get a single billing guidance entry by ID.
+     */
+    async getBillingGuidanceById(
+      guidanceId: string,
+    ): Promise<SelectBillingGuidance | undefined> {
+      const rows = await db
+        .select()
+        .from(billingGuidance)
+        .where(eq(billingGuidance.guidanceId, guidanceId))
+        .limit(1);
+      return rows[0];
+    },
+
+    // -----------------------------------------------------------------------
+    // Provincial PHN Formats & Reciprocal Rules (FRD MVPADD-001 §B8)
+    // -----------------------------------------------------------------------
+
+    /**
+     * List all provincial PHN format definitions.
+     */
+    async listProvincialPhnFormats(): Promise<SelectProvincialPhnFormat[]> {
+      return db
+        .select()
+        .from(provincialPhnFormats)
+        .orderBy(asc(provincialPhnFormats.provinceCode));
+    },
+
+    /**
+     * Get reciprocal billing rules for a province.
+     */
+    async getReciprocalRules(
+      sourceProvince: string,
+    ): Promise<SelectReciprocalBillingRule[]> {
+      return db
+        .select()
+        .from(reciprocalBillingRules)
+        .where(
+          and(
+            eq(reciprocalBillingRules.sourceProvince, sourceProvince.toUpperCase()),
+            eq(reciprocalBillingRules.isActive, true),
+          ),
+        );
+    },
+
+    // -----------------------------------------------------------------------
+    // Anesthesia Rules (FRD MVPADD-001 §B7)
+    // -----------------------------------------------------------------------
+
+    /**
+     * List all active anesthesia rules, ordered by sortOrder.
+     */
+    async listAnesthesiaRules(): Promise<SelectAnesthesiaRule[]> {
+      return db
+        .select()
+        .from(anesthesiaRules)
+        .where(eq(anesthesiaRules.isActive, true))
+        .orderBy(asc(anesthesiaRules.sortOrder));
+    },
+
+    /**
+     * Get a single anesthesia rule by scenario code.
+     */
+    async getAnesthesiaRuleByScenario(
+      scenarioCode: string,
+    ): Promise<SelectAnesthesiaRule | undefined> {
+      const rows = await db
+        .select()
+        .from(anesthesiaRules)
+        .where(eq(anesthesiaRules.scenarioCode, scenarioCode))
+        .limit(1);
+      return rows[0];
+    },
+
+    // -----------------------------------------------------------------------
+    // Bundling Rules (FRD MVPADD-001 §B9)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Get the bundling rule for a code pair (canonical order: codeA < codeB).
+     */
+    async getBundlingRuleForPair(
+      codeA: string,
+      codeB: string,
+    ): Promise<SelectBundlingRule | undefined> {
+      // Enforce canonical ordering
+      const [first, second] = codeA < codeB ? [codeA, codeB] : [codeB, codeA];
+      const rows = await db
+        .select()
+        .from(bundlingRules)
+        .where(
+          and(
+            eq(bundlingRules.codeA, first),
+            eq(bundlingRules.codeB, second),
+            eq(bundlingRules.isActive, true),
+          ),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    /**
+     * Check bundling conflicts for a set of codes.
+     * Returns all active bundling rules where both codes appear in the set.
+     */
+    async checkBundlingConflicts(
+      codes: string[],
+    ): Promise<SelectBundlingRule[]> {
+      if (codes.length < 2) return [];
+
+      return db
+        .select()
+        .from(bundlingRules)
+        .where(
+          and(
+            eq(bundlingRules.isActive, true),
+            sql`${bundlingRules.codeA} = ANY(${codes})`,
+            sql`${bundlingRules.codeB} = ANY(${codes})`,
+          ),
+        );
+    },
+
+    // -----------------------------------------------------------------------
+    // Justification Templates (FRD MVPADD-001 §B11)
+    // -----------------------------------------------------------------------
+
+    /**
+     * List justification templates, optionally filtered by scenario.
+     */
+    async listJustificationTemplates(
+      scenario?: string,
+    ): Promise<SelectJustificationTemplate[]> {
+      const conditions = [eq(justificationTemplates.isActive, true)];
+
+      if (scenario) {
+        conditions.push(eq(justificationTemplates.scenario, scenario));
+      }
+
+      return db
+        .select()
+        .from(justificationTemplates)
+        .where(and(...conditions))
+        .orderBy(
+          asc(justificationTemplates.scenario),
+          asc(justificationTemplates.sortOrder),
+        );
+    },
+
+    /**
+     * Get a single justification template by ID.
+     */
+    async getJustificationTemplate(
+      templateId: string,
+    ): Promise<SelectJustificationTemplate | undefined> {
+      const rows = await db
+        .select()
+        .from(justificationTemplates)
+        .where(eq(justificationTemplates.templateId, templateId))
+        .limit(1);
+      return rows[0];
     },
   };
 }

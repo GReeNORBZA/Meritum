@@ -82,6 +82,9 @@ export const PatientAuditAction = {
   CORRECTION_APPLIED: 'patient.correction_applied',
   ACCESS_EXPORT_REQUESTED: 'export.patient_access_requested',
   ACCESS_EXPORT_READY: 'export.patient_access_ready',
+  ELIGIBILITY_CHECKED: 'patient.eligibility_checked',
+  ELIGIBILITY_OVERRIDDEN: 'patient.eligibility_overridden',
+  PROVINCE_DETECTED: 'patient.province_detected',
 } as const;
 
 export type PatientAuditAction =

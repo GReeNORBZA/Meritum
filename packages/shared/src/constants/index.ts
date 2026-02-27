@@ -94,6 +94,7 @@ export {
   ProviderStatus,
   PhysicianType,
   BAType,
+  BASubtype,
   BAStatus,
   PcpcmEnrolmentStatus,
   DelegateRelationshipStatus,
@@ -105,6 +106,7 @@ export {
   ProviderAuditAction,
   DEFAULT_SUBMISSION_PREFERENCES,
   PcpcmPaymentStatus,
+  RoutingReason,
 } from './provider.constants.js';
 
 export {
@@ -135,6 +137,9 @@ export {
   VALIDATION_CHECKS,
   ExportStatus,
   ClaimNotificationEvent,
+  JustificationScenario,
+  BundlingRelationship,
+  ClaimTemplateType,
 } from './claim.constants.js';
 
 export {
@@ -218,6 +223,9 @@ export {
   MVP_RULE_CATEGORIES,
   MVP_TOTAL_RULE_COUNT,
   IntelAuditAction,
+  ConfidenceTier,
+  CONFIDENCE_TIER_CONFIGS,
+  BedsideContingentSignal,
 } from './intelligence.constants.js';
 
 export {
@@ -266,6 +274,12 @@ export {
   MAX_TAPS_SHIFT_LOG,
   MobileAuditAction,
   SYNC_ENDPOINT,
+  ShiftSource,
+  PhnCaptureMethod,
+  ReconciliationMatchCategory,
+  SHIFT_SCHEDULE_HORIZON_DAYS,
+  SHIFT_SCHEDULE_MAX_ACTIVE,
+  SHIFT_REMINDER_BEFORE_MINUTES,
 } from './mobile.constants.js';
 
 export {
@@ -285,3 +299,25 @@ export {
   AI_CHAT_CONFIDENCE_THRESHOLD,
   AI_CHAT_ENABLED,
 } from './support.constants.js';
+
+export {
+  SCC_SPEC_VERSIONS,
+  CURRENT_SCC_SPEC_VERSION,
+  SccExtractType,
+  SccChargeStatus,
+  SccRowClassification,
+  SccValidationSeverity,
+  ConnectCareImportSource,
+  ConnectCareImportStatus,
+  IcdMatchQuality,
+  WCB_DETECTION_HEADERS,
+  SCC_MAX_FILE_SIZE_BYTES,
+  SCC_MAX_ROWS,
+  SCC_ALLOWED_EXTENSIONS,
+  SCC_RAW_FILE_RETENTION_MONTHS,
+  SCC_DUPLICATE_KEY_FIELDS,
+  ConnectCareAuditAction,
+} from './scc.constants.js';
+export type {
+  SccSpecVersion,
+} from './scc.constants.js';

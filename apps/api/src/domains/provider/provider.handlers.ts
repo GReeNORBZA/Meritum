@@ -21,6 +21,11 @@ import {
   type ProviderIdParam,
   type BaForClaimQuery,
   type WcbConfigForFormQuery,
+  type ResolveRouting,
+  type UpdateFacilityMappings,
+  type UpdateScheduleMappings,
+  type DetectRoutingConflict,
+  type SetConnectCare,
 } from '@meritum/shared/schemas/provider.schema.js';
 import {
   getProviderProfile,
@@ -55,6 +60,13 @@ import {
   getProviderContext,
   getBaForClaim,
   getWcbConfigForFormOrThrow,
+  resolveRoutingBa,
+  detectRoutingConflict,
+  getConnectCareStatus,
+  setConnectCareStatus,
+  getRoutingConfig,
+  updateFacilityMappings,
+  updateScheduleMappings,
   type ProviderServiceDeps,
 } from './provider.service.js';
 
@@ -717,6 +729,179 @@ export function createProviderHandlers(deps: ProviderHandlerDeps) {
     });
   }
 
+  // =========================================================================
+  // Smart Routing Handlers (FRD MVPADD-001 §B10)
+  // =========================================================================
+
+  async function getRoutingConfigHandler(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const config = await getRoutingConfig(serviceDeps, providerId);
+
+    return reply.code(200).send({
+      data: {
+        facility_mappings: config.facilityMappings.map((m: any) => ({
+          mapping_id: m.mappingId,
+          ba_id: m.baId,
+          functional_centre: m.functionalCentre,
+          priority: m.priority,
+          is_active: m.isActive,
+        })),
+        schedule_mappings: config.scheduleMappings.map((m: any) => ({
+          mapping_id: m.mappingId,
+          ba_id: m.baId,
+          day_of_week: m.dayOfWeek,
+          start_time: m.startTime,
+          end_time: m.endTime,
+          priority: m.priority,
+          is_active: m.isActive,
+        })),
+      },
+    });
+  }
+
+  async function updateFacilityMappingsHandler(
+    request: FastifyRequest<{ Body: UpdateFacilityMappings }>,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const { mappings } = request.body;
+
+    const result = await updateFacilityMappings(
+      serviceDeps,
+      providerId,
+      mappings.map((m) => ({
+        baId: m.ba_id,
+        functionalCentre: m.functional_centre,
+        priority: m.priority,
+      })),
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({ data: { updated: result.length } });
+  }
+
+  async function updateScheduleMappingsHandler(
+    request: FastifyRequest<{ Body: UpdateScheduleMappings }>,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const { mappings } = request.body;
+
+    const result = await updateScheduleMappings(
+      serviceDeps,
+      providerId,
+      mappings.map((m) => ({
+        baId: m.ba_id,
+        dayOfWeek: m.day_of_week,
+        startTime: m.start_time,
+        endTime: m.end_time,
+        priority: m.priority,
+      })),
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({ data: { updated: result.length } });
+  }
+
+  async function resolveRoutingHandler(
+    request: FastifyRequest<{ Body: ResolveRouting }>,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const { service_code, facility_code, date_of_service } = request.body;
+
+    const result = await resolveRoutingBa(
+      serviceDeps,
+      providerId,
+      service_code,
+      facility_code,
+      date_of_service,
+    );
+
+    return reply.code(200).send({
+      data: {
+        ba_id: result.baId,
+        ba_number: result.baNumber,
+        ba_type: result.baType,
+        ba_subtype: result.baSubtype,
+        routing_reason: result.routingReason,
+        conflict: result.conflict,
+        conflict_detail: result.conflictDetail ?? null,
+      },
+    });
+  }
+
+  async function detectRoutingConflictHandler(
+    request: FastifyRequest<{ Body: DetectRoutingConflict }>,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const { selected_ba_id, service_code, facility_code, date_of_service } = request.body;
+
+    const result = await detectRoutingConflict(
+      serviceDeps,
+      providerId,
+      selected_ba_id,
+      service_code,
+      facility_code,
+      date_of_service,
+    );
+
+    return reply.code(200).send({
+      data: {
+        has_conflict: result.hasConflict,
+        resolved_ba_id: result.resolvedBaId,
+        resolved_ba_number: result.resolvedBaNumber,
+        resolved_reason: result.resolvedReason,
+        selected_ba_id: result.selectedBaId,
+      },
+    });
+  }
+
+  // =========================================================================
+  // Connect Care Handlers (FRD MOB-002 §6.1)
+  // =========================================================================
+
+  async function getConnectCareStatusHandler(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const status = await getConnectCareStatus(serviceDeps, providerId);
+
+    return reply.code(200).send({
+      data: {
+        is_connect_care_user: status.isConnectCareUser,
+        connect_care_enabled_at: status.connectCareEnabledAt?.toISOString() ?? null,
+      },
+    });
+  }
+
+  async function setConnectCareStatusHandler(
+    request: FastifyRequest<{ Body: SetConnectCare }>,
+    reply: FastifyReply,
+  ) {
+    const providerId = getProviderId(request);
+    const { is_connect_care } = request.body;
+
+    const result = await setConnectCareStatus(
+      serviceDeps,
+      providerId,
+      is_connect_care,
+      request.authContext.userId,
+    );
+
+    return reply.code(200).send({
+      data: {
+        is_connect_care_user: result.isConnectCareUser,
+        connect_care_enabled_at: result.connectCareEnabledAt?.toISOString() ?? null,
+      },
+    });
+  }
+
   return {
     // Profile
     getProfileHandler,
@@ -756,6 +941,15 @@ export function createProviderHandlers(deps: ProviderHandlerDeps) {
     switchContextHandler,
     // Invitation Acceptance (unauthenticated)
     acceptInvitationHandler,
+    // Smart Routing
+    getRoutingConfigHandler,
+    updateFacilityMappingsHandler,
+    updateScheduleMappingsHandler,
+    resolveRoutingHandler,
+    detectRoutingConflictHandler,
+    // Connect Care
+    getConnectCareStatusHandler,
+    setConnectCareStatusHandler,
   };
 }
 

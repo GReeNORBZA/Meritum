@@ -21,6 +21,11 @@ import {
   providerIdParamSchema,
   baForClaimQuerySchema,
   wcbConfigForFormQuerySchema,
+  resolveRoutingSchema,
+  updateFacilityMappingsSchema,
+  updateScheduleMappingsSchema,
+  detectRoutingConflictSchema,
+  setConnectCareSchema,
 } from '@meritum/shared/schemas/provider.schema.js';
 import {
   createProviderHandlers,
@@ -216,6 +221,57 @@ export async function providerRoutes(
     schema: { body: updateHlinkConfigSchema },
     preHandler: [app.authenticate, requireRole('PHYSICIAN')],
     handler: handlers.updateHlinkConfigHandler,
+  });
+
+  // =========================================================================
+  // Smart Routing Configuration Routes (FRD MVPADD-001 §B10)
+  // =========================================================================
+
+  app.get('/api/v1/providers/me/routing-config', {
+    config: { auditLog: true },
+    preHandler: [app.authenticate, app.authorize('PROVIDER_VIEW')],
+    handler: handlers.getRoutingConfigHandler,
+  });
+
+  app.put('/api/v1/providers/me/routing-config/facilities', {
+    schema: { body: updateFacilityMappingsSchema },
+    preHandler: [app.authenticate, app.authorize('PREFERENCE_EDIT')],
+    handler: handlers.updateFacilityMappingsHandler,
+  });
+
+  app.put('/api/v1/providers/me/routing-config/schedule', {
+    schema: { body: updateScheduleMappingsSchema },
+    preHandler: [app.authenticate, app.authorize('PREFERENCE_EDIT')],
+    handler: handlers.updateScheduleMappingsHandler,
+  });
+
+  app.post('/api/v1/claims/routing/resolve', {
+    config: { auditLog: true },
+    schema: { body: resolveRoutingSchema },
+    preHandler: [app.authenticate, app.authorize('CLAIM_VIEW')],
+    handler: handlers.resolveRoutingHandler,
+  });
+
+  app.post('/api/v1/claims/routing/conflict', {
+    schema: { body: detectRoutingConflictSchema },
+    preHandler: [app.authenticate, app.authorize('CLAIM_VIEW')],
+    handler: handlers.detectRoutingConflictHandler,
+  });
+
+  // =========================================================================
+  // Connect Care Routes (FRD MOB-002 §6.1)
+  // =========================================================================
+
+  app.get('/api/v1/providers/me/connect-care', {
+    config: { auditLog: true },
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.getConnectCareStatusHandler,
+  });
+
+  app.put('/api/v1/providers/me/connect-care', {
+    schema: { body: setConnectCareSchema },
+    preHandler: [app.authenticate, requireRole('PHYSICIAN')],
+    handler: handlers.setConnectCareStatusHandler,
   });
 
   // =========================================================================

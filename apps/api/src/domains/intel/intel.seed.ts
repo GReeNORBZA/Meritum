@@ -20,6 +20,7 @@ export interface MvpRuleDefinition {
   specialtyFilter: string[] | null;
   priorityFormula: string;
   sombVersion: string;
+  isBedsideContingent?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -2261,6 +2262,49 @@ const wcbSpecificRules: MvpRuleDefinition[] = [
     priorityFormula: 'fixed:MEDIUM',
     sombVersion: '2026.1',
   },
+
+  // --- Unbilled WCB Opportunity (MVPADD-001 §5.1.1) ---
+  {
+    name: 'UNBILLED_WCB_OPPORTUNITY',
+    category: 'MISSED_BILLING',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        // Current claim is an AHCIP claim being submitted
+        { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'AHCIP' },
+        // Patient has an active WCB claim (cross-claim lookup)
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 365,
+            field: 'wcb.wcbClaimNumber',
+            aggregation: 'exists',
+            filter: {
+              type: 'and',
+              children: [
+                { type: 'field_compare', field: 'claim.claimType', operator: '==', value: 'WCB' },
+                { type: 'set_membership', field: 'claim.state', operator: 'IN', value: ['DRAFT', 'VALIDATED', 'QUEUED', 'SUBMITTED'] },
+              ],
+            },
+          },
+          field: 'crossClaim.patient_active_wcb',
+          operator: '>',
+          value: 0,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'This service may be billable to WCB',
+      description: 'This patient has an active WCB claim. If this AHCIP service is related to the work injury, it should be billed to WCB instead for higher reimbursement.',
+      revenue_impact_formula: 'fixed:40.00',
+      source_reference: 'WCB Alberta — Billing Guidelines for Treating Physicians',
+      source_url: 'https://www.wcb.ab.ca/health-care-providers/billing.html',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -2764,6 +2808,7 @@ export async function seedMvpRules(
       specialtyFilter: rule.specialtyFilter,
       priorityFormula: rule.priorityFormula,
       isActive: true,
+      isBedsideContingent: rule.isBedsideContingent ?? false,
       sombVersion: rule.sombVersion,
     });
     inserted++;

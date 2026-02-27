@@ -32,6 +32,15 @@ import {
   type ChangeList,
   type ChangeDetailParam,
   type ChangeDetailQuery,
+  type ProviderRegistrySearch,
+  type ProviderRegistryParam,
+  type BillingGuidanceSearch,
+  type BillingGuidanceParam,
+  type AnesthesiaCalculate,
+  type AnesthesiaScenarioParam,
+  type BundlingCheck,
+  type BundlingPairParam,
+  type ReciprocalBillingParam,
 } from '@meritum/shared/schemas/reference.schema.js';
 import {
   searchHscCodes,
@@ -61,6 +70,22 @@ import {
   getChangeSummaries,
   getChangeDetail,
   getPhysicianImpact,
+  getIcdCrosswalk,
+  searchIcdCrosswalkEntries,
+  searchProviderRegistryEntries,
+  getProviderByCpsa,
+  listBillingGuidanceEntries,
+  searchBillingGuidanceEntries,
+  getBillingGuidanceDetail,
+  listProvincialPhnFormats,
+  getReciprocalBillingRules,
+  listAnesthesiaRulesEntries,
+  getAnesthesiaRuleByScenario,
+  calculateAnesthesiaFee,
+  getBundlingRuleForPair,
+  checkBundlingConflicts,
+  listJustificationTemplatesEntries,
+  getJustificationTemplateDetail,
   type ReferenceServiceDeps,
 } from './reference.service.js';
 import { type ReferenceRepository } from './reference.repository.js';
@@ -625,6 +650,231 @@ export function createReferenceHandlers(deps: ReferenceHandlerDeps) {
     return reply.send({ data: result });
   }
 
+  // =========================================================================
+  // New Reference Data Handlers (Phase 2)
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/icd-crosswalk/:icd10Code
+  // -------------------------------------------------------------------------
+
+  async function icdCrosswalkHandler(
+    request: FastifyRequest<{ Params: { icd10_code: string }; Querystring: { date?: string } }>,
+    reply: FastifyReply,
+  ) {
+    const { icd10_code } = request.params;
+    const { date } = request.query;
+    const results = await getIcdCrosswalk(
+      serviceDeps,
+      icd10_code,
+      date ? new Date(date) : undefined,
+    );
+    return reply.send({ data: { results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/icd-crosswalk
+  // -------------------------------------------------------------------------
+
+  async function searchIcdCrosswalkHandler(
+    request: FastifyRequest<{ Querystring: { q: string; limit?: number; date?: string } }>,
+    reply: FastifyReply,
+  ) {
+    const { q, limit, date } = request.query;
+    const results = await searchIcdCrosswalkEntries(
+      serviceDeps,
+      q,
+      limit ?? 20,
+      date ? new Date(date) : undefined,
+    );
+    return reply.send({ data: { results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/providers/search
+  // -------------------------------------------------------------------------
+
+  async function providerRegistrySearchHandler(
+    request: FastifyRequest<{ Querystring: ProviderRegistrySearch }>,
+    reply: FastifyReply,
+  ) {
+    const { q, specialty, city, limit } = request.query;
+    const results = await searchProviderRegistryEntries(
+      serviceDeps,
+      q,
+      { specialty, city },
+      limit,
+    );
+    return reply.send({ data: { results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/providers/:cpsa
+  // -------------------------------------------------------------------------
+
+  async function providerRegistryDetailHandler(
+    request: FastifyRequest<{ Params: ProviderRegistryParam }>,
+    reply: FastifyReply,
+  ) {
+    const { cpsa } = request.params;
+    const result = await getProviderByCpsa(serviceDeps, cpsa);
+    return reply.send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/guidance
+  // -------------------------------------------------------------------------
+
+  async function billingGuidanceListHandler(
+    request: FastifyRequest<{ Querystring: BillingGuidanceSearch }>,
+    reply: FastifyReply,
+  ) {
+    const { category, specialty, hsc, q, page, page_size } = request.query;
+
+    // If full-text search query provided, use search endpoint
+    if (q) {
+      const results = await searchBillingGuidanceEntries(serviceDeps, q, page_size);
+      return reply.send({ data: { results } });
+    }
+
+    const offset = (page - 1) * page_size;
+    const results = await listBillingGuidanceEntries(
+      serviceDeps,
+      { category, specialty, hsc },
+      page_size,
+      offset,
+    );
+    return reply.send({ data: { results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/guidance/:id
+  // -------------------------------------------------------------------------
+
+  async function billingGuidanceDetailHandler(
+    request: FastifyRequest<{ Params: BillingGuidanceParam }>,
+    reply: FastifyReply,
+  ) {
+    const { id } = request.params;
+    const result = await getBillingGuidanceDetail(serviceDeps, id);
+    return reply.send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/provincial-phn-formats
+  // -------------------------------------------------------------------------
+
+  async function provincialPhnFormatsHandler(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const results = await listProvincialPhnFormats(serviceDeps);
+    return reply.send({ data: { formats: results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/reciprocal-rules/:province
+  // -------------------------------------------------------------------------
+
+  async function reciprocalRulesHandler(
+    request: FastifyRequest<{ Params: ReciprocalBillingParam }>,
+    reply: FastifyReply,
+  ) {
+    const { province } = request.params;
+    const results = await getReciprocalBillingRules(serviceDeps, province);
+    return reply.send({ data: { rules: results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/anesthesia-rules
+  // -------------------------------------------------------------------------
+
+  async function anesthesiaRulesListHandler(
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const results = await listAnesthesiaRulesEntries(serviceDeps);
+    return reply.send({ data: { rules: results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/anesthesia-rules/:code
+  // -------------------------------------------------------------------------
+
+  async function anesthesiaRuleDetailHandler(
+    request: FastifyRequest<{ Params: AnesthesiaScenarioParam }>,
+    reply: FastifyReply,
+  ) {
+    const { code } = request.params;
+    const result = await getAnesthesiaRuleByScenario(serviceDeps, code);
+    return reply.send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/ref/anesthesia-rules/calculate
+  // -------------------------------------------------------------------------
+
+  async function anesthesiaCalculateHandler(
+    request: FastifyRequest<{ Body: AnesthesiaCalculate }>,
+    reply: FastifyReply,
+  ) {
+    const { scenario_code, time_minutes } = request.body;
+    const result = await calculateAnesthesiaFee(serviceDeps, scenario_code, time_minutes);
+    return reply.send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/bundling-rules/pair/:code_a/:code_b
+  // -------------------------------------------------------------------------
+
+  async function bundlingPairHandler(
+    request: FastifyRequest<{ Params: BundlingPairParam }>,
+    reply: FastifyReply,
+  ) {
+    const { code_a, code_b } = request.params;
+    const result = await getBundlingRuleForPair(serviceDeps, code_a, code_b);
+    return reply.send({ data: result });
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/ref/bundling-rules/check
+  // -------------------------------------------------------------------------
+
+  async function bundlingCheckHandler(
+    request: FastifyRequest<{ Body: BundlingCheck }>,
+    reply: FastifyReply,
+  ) {
+    const { codes } = request.body;
+    const conflicts = await checkBundlingConflicts(serviceDeps, codes);
+    return reply.send({ data: { conflicts } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/justification-templates
+  // -------------------------------------------------------------------------
+
+  async function justificationTemplatesListHandler(
+    request: FastifyRequest<{ Querystring: { scenario?: string } }>,
+    reply: FastifyReply,
+  ) {
+    const { scenario } = request.query;
+    const results = await listJustificationTemplatesEntries(serviceDeps, scenario);
+    return reply.send({ data: { templates: results } });
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ref/justification-templates/:id
+  // -------------------------------------------------------------------------
+
+  async function justificationTemplateDetailHandler(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ) {
+    const { id } = request.params;
+    const result = await getJustificationTemplateDetail(serviceDeps, id);
+    return reply.send({ data: result });
+  }
+
   return {
     searchHscHandler,
     hscFavouritesHandler,
@@ -658,5 +908,21 @@ export function createReferenceHandlers(deps: ReferenceHandlerDeps) {
     updateHolidayHandler,
     deleteHolidayHandler,
     dryRunHandler,
+    // New reference data handlers (Phase 2)
+    icdCrosswalkHandler,
+    searchIcdCrosswalkHandler,
+    providerRegistrySearchHandler,
+    providerRegistryDetailHandler,
+    billingGuidanceListHandler,
+    billingGuidanceDetailHandler,
+    provincialPhnFormatsHandler,
+    reciprocalRulesHandler,
+    anesthesiaRulesListHandler,
+    anesthesiaRuleDetailHandler,
+    anesthesiaCalculateHandler,
+    bundlingPairHandler,
+    bundlingCheckHandler,
+    justificationTemplatesListHandler,
+    justificationTemplateDetailHandler,
   };
 }

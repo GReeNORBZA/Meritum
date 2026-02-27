@@ -33,6 +33,15 @@ import {
   changeListSchema,
   changeDetailParamSchema,
   changeDetailQuerySchema,
+  providerRegistrySearchSchema,
+  providerRegistryParamSchema,
+  billingGuidanceSearchSchema,
+  billingGuidanceParamSchema,
+  anesthesiaCalculateSchema,
+  anesthesiaScenarioParamSchema,
+  bundlingCheckSchema,
+  bundlingPairParamSchema,
+  reciprocalBillingParamSchema,
 } from '@meritum/shared/schemas/reference.schema.js';
 import {
   createReferenceHandlers,
@@ -211,6 +220,137 @@ export async function referenceRoutes(
     schema: { params: changeDetailParamSchema },
     preHandler: [app.authenticate, checkReadAccess],
     handler: handlers.physicianImpactHandler,
+  });
+
+  // =========================================================================
+  // ICD Crosswalk (FRD CC-001)
+  // =========================================================================
+
+  app.get('/api/v1/ref/icd-crosswalk', {
+    schema: {
+      querystring: hscSearchSchema.pick({ q: true }).extend({
+        limit: hscSearchSchema.shape.limit,
+        date: hscDetailQuerySchema.shape.date,
+      }),
+    },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.searchIcdCrosswalkHandler,
+  });
+
+  app.get('/api/v1/ref/icd-crosswalk/:icd10_code', {
+    schema: {
+      params: hscDetailParamSchema.omit({ code: true }).extend({
+        icd10_code: hscDetailParamSchema.shape.code,
+      }),
+      querystring: hscDetailQuerySchema,
+    },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.icdCrosswalkHandler,
+  });
+
+  // =========================================================================
+  // Provider Registry (FRD MVPADD-001 §B1)
+  // =========================================================================
+
+  app.get('/api/v1/ref/providers/search', {
+    schema: { querystring: providerRegistrySearchSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.providerRegistrySearchHandler,
+  });
+
+  app.get('/api/v1/ref/providers/:cpsa', {
+    schema: { params: providerRegistryParamSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.providerRegistryDetailHandler,
+  });
+
+  // =========================================================================
+  // Billing Guidance (FRD MVPADD-001 §B6)
+  // =========================================================================
+
+  app.get('/api/v1/ref/guidance', {
+    schema: { querystring: billingGuidanceSearchSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.billingGuidanceListHandler,
+  });
+
+  app.get('/api/v1/ref/guidance/:id', {
+    schema: { params: billingGuidanceParamSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.billingGuidanceDetailHandler,
+  });
+
+  // =========================================================================
+  // Provincial PHN Formats (FRD MVPADD-001 §B8)
+  // =========================================================================
+
+  app.get('/api/v1/ref/provincial-phn-formats', {
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.provincialPhnFormatsHandler,
+  });
+
+  // =========================================================================
+  // Reciprocal Billing Rules (FRD MVPADD-001 §B8)
+  // =========================================================================
+
+  app.get('/api/v1/ref/reciprocal-rules/:province', {
+    schema: { params: reciprocalBillingParamSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.reciprocalRulesHandler,
+  });
+
+  // =========================================================================
+  // Anesthesia Rules (FRD MVPADD-001 §B7)
+  // =========================================================================
+
+  app.get('/api/v1/ref/anesthesia-rules', {
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.anesthesiaRulesListHandler,
+  });
+
+  app.get('/api/v1/ref/anesthesia-rules/:code', {
+    schema: { params: anesthesiaScenarioParamSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.anesthesiaRuleDetailHandler,
+  });
+
+  app.post('/api/v1/ref/anesthesia-rules/calculate', {
+    schema: { body: anesthesiaCalculateSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.anesthesiaCalculateHandler,
+  });
+
+  // =========================================================================
+  // Bundling Rules (FRD MVPADD-001 §B9)
+  // =========================================================================
+
+  app.get('/api/v1/ref/bundling-rules/pair/:code_a/:code_b', {
+    schema: { params: bundlingPairParamSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.bundlingPairHandler,
+  });
+
+  app.post('/api/v1/ref/bundling-rules/check', {
+    schema: { body: bundlingCheckSchema },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.bundlingCheckHandler,
+  });
+
+  // =========================================================================
+  // Justification Templates (FRD MVPADD-001 §B11)
+  // =========================================================================
+
+  app.get('/api/v1/ref/justification-templates', {
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.justificationTemplatesListHandler,
+  });
+
+  app.get('/api/v1/ref/justification-templates/:id', {
+    schema: {
+      params: holidayParamSchema, // reuse: { id: z.string().uuid() }
+    },
+    preHandler: [app.authenticate, checkReadAccess, app.authorize('CLAIM_VIEW')],
+    handler: handlers.justificationTemplateDetailHandler,
   });
 
   // =========================================================================

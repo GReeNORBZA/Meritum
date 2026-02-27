@@ -40,6 +40,10 @@ export const providers = pgTable(
     physicianType: varchar('physician_type', { length: 20 }).notNull(),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
     onboardingCompleted: boolean('onboarding_completed').notNull().default(false),
+    isConnectCareUser: boolean('is_connect_care_user').notNull().default(false),
+    connectCareEnabledAt: timestamp('connect_care_enabled_at', {
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -70,6 +74,7 @@ export const businessArrangements = pgTable(
       .references(() => providers.providerId),
     baNumber: varchar('ba_number', { length: 10 }).notNull(),
     baType: varchar('ba_type', { length: 10 }).notNull(),
+    baSubtype: varchar('ba_subtype', { length: 20 }),
     isPrimary: boolean('is_primary').notNull(),
     status: varchar('status', { length: 20 }).notNull().default('PENDING'),
     effectiveDate: date('effective_date', { mode: 'string' }),
@@ -380,6 +385,80 @@ export const pcpcmPanelEstimates = pgTable(
   ],
 );
 
+// --- BA Facility Mappings Table (FRD MVPADD-001 §B10) ---
+// Maps business arrangements to facility/functional centre codes.
+// Used by smart routing to match claims to the correct BA based on location.
+
+export const baFacilityMappings = pgTable(
+  'ba_facility_mappings',
+  {
+    mappingId: uuid('mapping_id').primaryKey().defaultRandom(),
+    baId: uuid('ba_id')
+      .notNull()
+      .references(() => businessArrangements.baId),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    functionalCentre: varchar('functional_centre', { length: 10 }).notNull(),
+    priority: integer('priority').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('ba_facility_mappings_ba_fc_unique_idx').on(
+      table.baId,
+      table.functionalCentre,
+    ),
+    index('ba_facility_mappings_provider_active_idx').on(
+      table.providerId,
+      table.isActive,
+    ),
+  ],
+);
+
+// --- BA Schedule Mappings Table (FRD MVPADD-001 §B10) ---
+// Maps business arrangements to time-of-day/day-of-week windows.
+// Used by smart routing for schedule-based BA selection.
+
+export const baScheduleMappings = pgTable(
+  'ba_schedule_mappings',
+  {
+    mappingId: uuid('mapping_id').primaryKey().defaultRandom(),
+    baId: uuid('ba_id')
+      .notNull()
+      .references(() => businessArrangements.baId),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    dayOfWeek: integer('day_of_week').notNull(),
+    startTime: varchar('start_time', { length: 5 }).notNull(),
+    endTime: varchar('end_time', { length: 5 }).notNull(),
+    priority: integer('priority').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('ba_schedule_mappings_provider_active_idx').on(
+      table.providerId,
+      table.isActive,
+    ),
+    index('ba_schedule_mappings_ba_day_idx').on(
+      table.baId,
+      table.dayOfWeek,
+    ),
+  ],
+);
+
 // --- Inferred Types ---
 
 export type InsertProvider = typeof providers.$inferInsert;
@@ -411,3 +490,9 @@ export type SelectPcpcmPayment = typeof pcpcmPayments.$inferSelect;
 
 export type InsertPcpcmPanelEstimate = typeof pcpcmPanelEstimates.$inferInsert;
 export type SelectPcpcmPanelEstimate = typeof pcpcmPanelEstimates.$inferSelect;
+
+export type InsertBaFacilityMapping = typeof baFacilityMappings.$inferInsert;
+export type SelectBaFacilityMapping = typeof baFacilityMappings.$inferSelect;
+
+export type InsertBaScheduleMapping = typeof baScheduleMappings.$inferInsert;
+export type SelectBaScheduleMapping = typeof baScheduleMappings.$inferSelect;

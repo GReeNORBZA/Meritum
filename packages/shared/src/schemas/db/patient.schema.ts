@@ -178,6 +178,36 @@ export const patientMergeHistory = pgTable(
   ],
 );
 
+// --- Eligibility Cache Table (FRD MVPADD-001 §B2) ---
+// Caches PHN eligibility verification results. PHN stored as SHA-256 hash
+// (never plaintext outside of the verification call). 24-hour TTL.
+// Physician-scoped via provider_id (HIA custodian boundary).
+
+export const eligibilityCache = pgTable(
+  'eligibility_cache',
+  {
+    cacheId: uuid('cache_id').primaryKey().defaultRandom(),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => providers.providerId),
+    phnHash: varchar('phn_hash', { length: 64 }).notNull(),
+    isEligible: boolean('is_eligible').notNull(),
+    eligibilityDetails: jsonb('eligibility_details').$type<Record<string, unknown>>(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('eligibility_cache_provider_phn_hash_idx').on(
+      table.providerId,
+      table.phnHash,
+    ),
+    index('eligibility_cache_expires_at_idx').on(table.expiresAt),
+  ],
+);
+
 // --- Inferred Types ---
 
 export type InsertPatient = typeof patients.$inferInsert;
@@ -188,3 +218,6 @@ export type SelectPatientImportBatch = typeof patientImportBatches.$inferSelect;
 
 export type InsertPatientMergeHistory = typeof patientMergeHistory.$inferInsert;
 export type SelectPatientMergeHistory = typeof patientMergeHistory.$inferSelect;
+
+export type InsertEligibilityCache = typeof eligibilityCache.$inferInsert;
+export type SelectEligibilityCache = typeof eligibilityCache.$inferSelect;

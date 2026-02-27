@@ -384,3 +384,68 @@ export const updatePanelSizeSchema = z.object({
 });
 
 export type UpdatePanelSize = z.infer<typeof updatePanelSizeSchema>;
+
+// ============================================================================
+// Smart Routing (FRD MVPADD-001 §B10)
+// ============================================================================
+
+// --- Resolve Routing ---
+
+export const resolveRoutingSchema = z.object({
+  service_code: z.string().min(1).max(10),
+  facility_code: z.string().max(10).optional(),
+  date_of_service: z.string().datetime().optional(),
+});
+
+export type ResolveRouting = z.infer<typeof resolveRoutingSchema>;
+
+// --- Update Facility Mappings ---
+
+export const updateFacilityMappingsSchema = z.object({
+  mappings: z.array(
+    z.object({
+      ba_id: z.string().uuid(),
+      functional_centre: z.string().min(1).max(10),
+      priority: z.number().int().min(0).default(0),
+    }),
+  ),
+});
+
+export type UpdateFacilityMappings = z.infer<typeof updateFacilityMappingsSchema>;
+
+// --- Update Schedule Mappings ---
+
+export const updateScheduleMappingsSchema = z.object({
+  mappings: z.array(
+    z.object({
+      ba_id: z.string().uuid(),
+      day_of_week: z.number().int().min(0).max(6),
+      start_time: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format'),
+      end_time: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format'),
+      priority: z.number().int().min(0).default(0),
+    }),
+  ),
+});
+
+export type UpdateScheduleMappings = z.infer<typeof updateScheduleMappingsSchema>;
+
+// --- Detect Routing Conflict ---
+
+export const detectRoutingConflictSchema = z.object({
+  selected_ba_id: z.string().uuid(),
+  service_code: z.string().min(1).max(10),
+  facility_code: z.string().max(10).optional(),
+  date_of_service: z.string().datetime().optional(),
+});
+
+export type DetectRoutingConflict = z.infer<typeof detectRoutingConflictSchema>;
+
+// ============================================================================
+// Connect Care (FRD MOB-002 §6.1)
+// ============================================================================
+
+export const setConnectCareSchema = z.object({
+  is_connect_care: z.boolean(),
+});
+
+export type SetConnectCare = z.infer<typeof setConnectCareSchema>;

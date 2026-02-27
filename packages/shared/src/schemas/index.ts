@@ -192,6 +192,15 @@ export {
   holidayParamSchema,
   dryRunSchema,
   dryRunParamSchema,
+  providerRegistrySearchSchema,
+  providerRegistryParamSchema,
+  billingGuidanceSearchSchema,
+  billingGuidanceParamSchema,
+  anesthesiaCalculateSchema,
+  anesthesiaScenarioParamSchema,
+  bundlingCheckSchema,
+  bundlingPairParamSchema,
+  reciprocalBillingParamSchema,
   validateContextSchema,
   evaluateBatchSchema,
   ruleDetailSchema,
@@ -226,6 +235,15 @@ export type {
   HolidayParam,
   DryRun,
   DryRunParam,
+  ProviderRegistrySearch,
+  ProviderRegistryParam,
+  BillingGuidanceSearch,
+  BillingGuidanceParam,
+  AnesthesiaCalculate,
+  AnesthesiaScenarioParam,
+  BundlingCheck,
+  BundlingPairParam,
+  ReciprocalBillingParam,
   ValidateContext,
   EvaluateBatch,
   RuleDetail,
@@ -247,6 +265,8 @@ export {
   patientAccessExportDownloadParamSchema,
   internalPatientIdParamSchema,
   validatePhnParamSchema,
+  checkEligibilitySchema,
+  eligibilityResultSchema,
 } from './patient.schema.js';
 export type {
   CreatePatient,
@@ -262,6 +282,8 @@ export type {
   PatientAccessExportDownloadParam,
   InternalPatientIdParam,
   ValidatePhnParam,
+  CheckEligibility,
+  EligibilityResult,
 } from './patient.schema.js';
 
 export {
@@ -286,6 +308,13 @@ export {
   createExportSchema,
   claimExportIdParamSchema,
   updateSubmissionModeSchema,
+  createClaimTemplateSchema,
+  updateClaimTemplateSchema,
+  claimTemplateIdParamSchema,
+  listClaimTemplatesQuerySchema,
+  createJustificationSchema,
+  updateJustificationSchema,
+  justificationIdParamSchema,
 } from './claim.schema.js';
 export type {
   CreateClaim,
@@ -309,6 +338,13 @@ export type {
   CreateExport,
   ClaimExportIdParam,
   UpdateSubmissionMode,
+  CreateClaimTemplate,
+  UpdateClaimTemplate,
+  ClaimTemplateIdParam,
+  ListClaimTemplatesQuery,
+  CreateJustification,
+  UpdateJustification,
+  JustificationIdParam,
 } from './claim.schema.js';
 
 export {
@@ -462,6 +498,13 @@ export {
   reorderFavouritesSchema,
   quickClaimSchema,
   mobilePatientSchema,
+  createShiftScheduleSchema,
+  updateShiftScheduleSchema,
+  scheduleIdParamSchema,
+  logEncounterSchema,
+  encounterIdParamSchema,
+  reconciliationQuerySchema,
+  manualMatchSchema,
 } from './validation/mobile.validation.js';
 export type {
   StartShift,
@@ -474,6 +517,13 @@ export type {
   ReorderFavourites,
   QuickClaim,
   MobilePatient,
+  CreateShiftSchedule,
+  UpdateShiftSchedule,
+  ScheduleIdParam,
+  LogEncounter,
+  EncounterIdParam,
+  ReconciliationQuery,
+  ManualMatch,
 } from './validation/mobile.validation.js';
 
 export {
@@ -550,3 +600,26 @@ export type {
   TicketRating,
   UpdateTicket,
 } from './validation/support.validation.js';
+
+export {
+  uploadSccExtractSchema,
+  sccImportIdParamSchema,
+  confirmSccImportSchema,
+  listSccImportsQuerySchema,
+  sccParsedRowSchema,
+  sccImportSummarySchema,
+  icdCrosswalkParamSchema,
+  icdCrosswalkSearchSchema,
+  icdCrosswalkResultSchema,
+} from './scc.schema.js';
+export type {
+  UploadSccExtract,
+  SccImportIdParam,
+  ConfirmSccImport,
+  ListSccImportsQuery,
+  SccParsedRow,
+  SccImportSummary,
+  IcdCrosswalkParam,
+  IcdCrosswalkSearch,
+  IcdCrosswalkResult,
+} from './scc.schema.js';
