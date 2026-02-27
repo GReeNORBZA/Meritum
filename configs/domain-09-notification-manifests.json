@@ -4,6 +4,7 @@
   "manifestFile": "domain-09-notification.tasks",
   "promptPrefix": "d09",
   "modulePath": "apps/api/src/domains/notification",
+  "prerequisites": ["domain-01-iam"],
   "sections": [
     {
       "title": "Domain 9: Notification Service — Shared Types & Constants",

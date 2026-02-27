@@ -4,6 +4,7 @@
   "manifestFile": "domain-05-provider.tasks",
   "promptPrefix": "d05",
   "modulePath": "apps/api/src/domains/provider",
+  "prerequisites": ["domain-01-iam", "domain-02-reference"],
   "sections": [
     {
       "title": "Domain 5: Provider Management — Shared Types & Constants",

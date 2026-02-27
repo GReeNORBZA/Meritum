@@ -4,6 +4,7 @@
   "manifestFile": "domain-07-intelligence.tasks",
   "promptPrefix": "d07",
   "modulePath": "apps/api/src/domains/intelligence",
+  "prerequisites": ["domain-04-claim-core", "domain-02-reference"],
   "sections": [
     {
       "title": "Domain 7: Intelligence Engine — Shared Types & Constants",

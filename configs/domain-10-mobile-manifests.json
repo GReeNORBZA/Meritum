@@ -4,6 +4,7 @@
   "manifestFile": "domain-10-mobile.tasks",
   "promptPrefix": "d10",
   "modulePath": "apps/api/src/domains/mobile",
+  "prerequisites": ["domain-01-iam", "domain-04-claim-core", "domain-05-provider"],
   "sections": [
     {
       "title": "Domain 10: Mobile Companion — Shared Types, Schemas & Migration",

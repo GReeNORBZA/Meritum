@@ -4,6 +4,7 @@
   "manifestFile": "domain-13-support.tasks",
   "promptPrefix": "d13",
   "modulePath": "apps/api/src/domains/support",
+  "prerequisites": ["domain-01-iam"],
   "sections": [
     {
       "title": "Domain 13: Support System — Shared Types, Schemas & Migration",

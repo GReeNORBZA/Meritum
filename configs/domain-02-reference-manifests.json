@@ -4,6 +4,7 @@
   "manifestFile": "domain-02-reference.tasks",
   "promptPrefix": "d02",
   "modulePath": "apps/api/src/domains/reference",
+  "prerequisites": ["domain-01-iam"],
   "sections": [
     {
       "title": "Domain 2: Reference Data — Shared Types & Constants",

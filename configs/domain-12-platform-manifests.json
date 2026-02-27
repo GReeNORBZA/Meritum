@@ -4,6 +4,7 @@
   "manifestFile": "domain-12-platform.tasks",
   "promptPrefix": "d12",
   "modulePath": "apps/api/src/domains/platform",
+  "prerequisites": ["domain-01-iam"],
   "sections": [
     {
       "title": "Domain 12: Platform Operations — Shared Types & Constants",

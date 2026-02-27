@@ -4,6 +4,7 @@
   "manifestFile": "domain-08-analytics.tasks",
   "promptPrefix": "d08",
   "modulePath": "apps/api/src/domains/analytics",
+  "prerequisites": ["domain-01-iam", "domain-04-claim-core"],
   "sections": [
     {
       "title": "Domain 8: Analytics & Reporting — Shared Types, Schemas & Migration",

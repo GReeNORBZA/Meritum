@@ -4,6 +4,7 @@
   "manifestFile": "domain-04-wcb.tasks",
   "promptPrefix": "d04w",
   "modulePath": "apps/api/src/domains/wcb",
+  "prerequisites": ["domain-04-claim-core", "domain-02-reference", "domain-05-provider"],
   "sections": [
     {
       "title": "Domain 4.2: WCB Claim Pathway — Shared Types & Constants",

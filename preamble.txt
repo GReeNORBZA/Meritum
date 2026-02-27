@@ -1,0 +1,6 @@
+Project: Meritum Health Technologies — Alberta physician billing platform (AHCIP + WCB).
+Regulatory: Health Information Act (Alberta). All PHI must stay in Canada. IMA required per physician.
+Security: Physician tenant isolation on every PHI query. No PHI in emails, errors, or logs. PHN masked as 123******.
+Stack: Fastify 5 + Drizzle + PostgreSQL 16 (DO Toronto) | Next.js 15 (App Router) | Vitest + Supertest
+Auth: Lucia sessions + custom IAM. Argon2id passwords. Mandatory TOTP MFA. 24h absolute / 60min idle session expiry.
+Refer to CLAUDE.md for all coding conventions, module structure, and security testing requirements.

@@ -4,6 +4,7 @@
   "manifestFile": "domain-04-claim-core.tasks",
   "promptPrefix": "d04",
   "modulePath": "apps/api/src/domains/claim",
+  "prerequisites": ["domain-01-iam", "domain-02-reference", "domain-05-provider", "domain-06-patient"],
   "sections": [
     {
       "title": "Domain 4.0: Claim Lifecycle Core — Shared Types & Constants",

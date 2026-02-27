@@ -4,6 +4,7 @@
   "manifestFile": "domain-06-patient.tasks",
   "promptPrefix": "d06",
   "modulePath": "apps/api/src/domains/patient",
+  "prerequisites": ["domain-01-iam"],
   "sections": [
     {
       "title": "Domain 6: Patient Registry — Shared Types & Constants",

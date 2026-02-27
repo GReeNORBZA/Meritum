@@ -4,6 +4,7 @@
   "manifestFile": "domain-01-iam.tasks",
   "promptPrefix": "d01",
   "modulePath": "apps/api/src/domains/iam",
+  "prerequisites": [],
   "sections": [
     {
       "title": "Domain 1: Identity & Access — Shared Types & Constants",

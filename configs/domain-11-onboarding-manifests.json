@@ -4,6 +4,7 @@
   "manifestFile": "domain-11-onboarding.tasks",
   "promptPrefix": "d11",
   "modulePath": "apps/api/src/domains/onboarding",
+  "prerequisites": ["domain-01-iam", "domain-05-provider"],
   "sections": [
     {
       "title": "Domain 11: Onboarding — Shared Types & Constants",

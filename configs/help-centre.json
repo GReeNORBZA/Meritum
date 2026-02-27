@@ -4,6 +4,7 @@
   "manifestFile": "help-centre.tasks",
   "promptPrefix": "hc",
   "modulePath": "help-centre",
+  "prerequisites": [],
   "sections": [
     {
       "title": "Tier 1: Getting Started",

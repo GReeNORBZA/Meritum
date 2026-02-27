@@ -4,6 +4,7 @@
   "manifestFile": "domain-04-ahcip.tasks",
   "promptPrefix": "d04a",
   "modulePath": "apps/api/src/domains/ahcip",
+  "prerequisites": ["domain-04-claim-core", "domain-02-reference"],
   "sections": [
     {
       "title": "Domain 4.1: AHCIP Claim Pathway — Shared Types & Constants",
