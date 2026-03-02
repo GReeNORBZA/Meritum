@@ -817,7 +817,7 @@ async function main() {
       ruleId: `GR-${r.ruleNumber}`,
       ruleName: r.title,
       ruleCategory: 'GENERAL',
-      description: r.fullText.slice(0, 10000), // Truncate very long rules
+      description: r.fullText,
       ruleLogic: { referencedHscCodes: r.referencedHscCodes },
       severity: 'ERROR',
       errorMessage: `Governing Rule ${r.ruleNumber} violation: ${r.title}`,

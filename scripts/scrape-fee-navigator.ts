@@ -164,10 +164,15 @@ function decodeHtmlEntities(xml: string): string {
     .replace(/&#x27;/g, "'");
 }
 
-/** Map category letter to fee type */
+/** Map category string to fee type */
 function categoryToFeeType(category: string | null): string {
   if (!category) return 'UNKNOWN';
-  const letter = category.trim().charAt(0).toUpperCase();
+  const cat = category.trim();
+
+  // Numeric-prefixed categories are Major Procedures (e.g. "14 Major Procedure ...")
+  if (/^\d+\s/.test(cat)) return 'PROCEDURE';
+
+  const letter = cat.charAt(0).toUpperCase();
   switch (letter) {
     case 'V':
       return 'VISIT';
@@ -176,11 +181,13 @@ function categoryToFeeType(category: string | null): string {
     case 'M':
       return 'FIXED';
     case 'C':
-      return 'CONSULTATION';
+      // "C Anaesthetic" is anesthesia, not consultation
+      return cat.startsWith('C Ana') ? 'ANESTHESIA' : 'CONSULTATION';
     case 'L':
       return 'LABORATORY';
     case 'R':
-      return 'RADIOLOGY';
+      // "R Surgical Assist" is procedural, not radiology
+      return cat.startsWith('R Surg') ? 'PROCEDURE' : 'RADIOLOGY';
     case 'A':
       return 'ANESTHESIA';
     case 'T':
@@ -381,7 +388,7 @@ function parseHscDetailHtml(
     });
 
     modifierCodes.add(type);
-    if (type === 'SURC' || modCode.includes('SURC')) {
+    if (type === 'SURC' || type === 'SURT' || modCode.includes('SURC')) {
       surchargeEligible = true;
     }
   });
