@@ -1,0 +1,28 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+---
+
+<PageLayout
+  title="Page Not Found — Meritum"
+  description="The page you're looking for doesn't exist."
+>
+  <Section>
+    <Container narrow>
+      <div class="flex flex-col items-center text-center py-12 lg:py-20">
+        <p class="font-body text-sm font-medium uppercase tracking-wider text-accent">404</p>
+        <h1 class="mt-4 font-display text-3xl font-bold text-primary lg:text-4xl">Page not found.</h1>
+        <p class="mt-4 font-body text-lg text-text-muted">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <a
+          href="/"
+          class="mt-8 inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          Back to homepage
+        </a>
+      </div>
+    </Container>
+  </Section>
+</PageLayout>

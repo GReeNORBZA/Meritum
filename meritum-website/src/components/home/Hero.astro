@@ -1,0 +1,24 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+---
+
+<Section>
+  <Container class="text-center">
+    <SectionHeading tag="h1" size="5xl" class="max-w-3xl mx-auto">
+      Billing agents charge like it's 1995.<br />Meritum doesn't.
+    </SectionHeading>
+    <p class="mt-6 text-lg lg:text-xl text-text-muted max-w-2xl mx-auto font-body">
+      Alberta's self-serve medical billing platform. Flat monthly rate, full control, built for physicians who are done overpaying.
+    </p>
+    <div class="mt-10">
+      <a
+        href="#calculator"
+        class="inline-flex items-center justify-center rounded-md bg-accent px-8 py-4 text-lg font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        See what you'd save
+      </a>
+    </div>
+  </Container>
+</Section>

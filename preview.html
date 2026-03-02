@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Meritum Wordmark Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; padding: 40px; background: #f0f0ec; color: #333; }
+  h1 { font-size: 24px; margin-bottom: 32px; font-weight: 600; }
+  h2 { font-size: 16px; margin-bottom: 16px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.1em; }
+  .variant { margin-bottom: 48px; }
+  .row { display: flex; gap: 32px; margin-bottom: 24px; flex-wrap: wrap; }
+  .card { border-radius: 12px; padding: 32px 48px; display: flex; align-items: center; justify-content: center; min-width: 300px; }
+  .card img { height: 48px; width: auto; }
+  .card.small img { height: 32px; }
+  .card.large img { height: 80px; }
+  .on-light { background: #FAFAF8; border: 1px solid #e0ddd8; }
+  .on-dark  { background: #1B2A4A; }
+  .label { font-size: 11px; color: #999; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .favicon-row { display: flex; gap: 24px; align-items: center; }
+  .favicon-row .card { padding: 16px 24px; min-width: auto; }
+  .favicon-row .card img { height: 32px; width: 32px; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 40px 0; }
+</style>
+</head>
+<body>
+<h1>Meritum Wordmark — Preview</h1>
+
+<div class="variant">
+  <h2>Variant A — Modified M (raised vertex notch)</h2>
+  <div class="row">
+    <div>
+      <div class="label">Primary on light</div>
+      <div class="card on-light large"><img src="variant-a-primary.svg" alt="Variant A primary"></div>
+    </div>
+    <div>
+      <div class="label">Reversed on dark</div>
+      <div class="card on-dark large"><img src="variant-a-reversed.svg" alt="Variant A reversed"></div>
+    </div>
+    <div>
+      <div class="label">Accent (brass M)</div>
+      <div class="card on-light large"><img src="variant-a-accent.svg" alt="Variant A accent"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <div class="label">Nav size (32px)</div>
+      <div class="card on-light small"><img src="variant-a-primary.svg" alt="Variant A nav"></div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<div class="variant">
+  <h2>Variant B — Custom ri ligature</h2>
+  <div class="row">
+    <div>
+      <div class="label">Primary on light</div>
+      <div class="card on-light large"><img src="variant-b-primary.svg" alt="Variant B primary"></div>
+    </div>
+    <div>
+      <div class="label">Reversed on dark</div>
+      <div class="card on-dark large"><img src="variant-b-reversed.svg" alt="Variant B reversed"></div>
+    </div>
+    <div>
+      <div class="label">Accent (brass r)</div>
+      <div class="card on-light large"><img src="variant-b-accent.svg" alt="Variant B accent"></div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<div class="variant">
+  <h2>Variant C — Extended t crossbar</h2>
+  <div class="row">
+    <div>
+      <div class="label">Primary on light</div>
+      <div class="card on-light large"><img src="variant-c-primary.svg" alt="Variant C primary"></div>
+    </div>
+    <div>
+      <div class="label">Reversed on dark</div>
+      <div class="card on-dark large"><img src="variant-c-reversed.svg" alt="Variant C reversed"></div>
+    </div>
+    <div>
+      <div class="label">Accent (brass t)</div>
+      <div class="card on-light large"><img src="variant-c-accent.svg" alt="Variant C accent"></div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<div class="variant">
+  <h2>Favicon M Glyph</h2>
+  <div class="favicon-row">
+    <div>
+      <div class="label">Notch M (navy)</div>
+      <div class="card on-light"><img src="favicon-m-notch-navy.svg" alt="Favicon notch navy"></div>
+    </div>
+    <div>
+      <div class="label">Notch M (offwhite)</div>
+      <div class="card on-dark"><img src="favicon-m-notch-offwhite.svg" alt="Favicon notch offwhite"></div>
+    </div>
+    <div>
+      <div class="label">Standard M (navy)</div>
+      <div class="card on-light"><img src="favicon-m-standard-navy.svg" alt="Favicon standard navy"></div>
+    </div>
+    <div>
+      <div class="label">Standard M (offwhite)</div>
+      <div class="card on-dark"><img src="favicon-m-standard-offwhite.svg" alt="Favicon standard offwhite"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

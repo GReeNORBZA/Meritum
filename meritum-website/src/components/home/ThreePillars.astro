@@ -1,0 +1,36 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+
+const pillars = [
+  {
+    title: 'The Money Argument',
+    subtitle: "You're losing thousands of dollars a year and you know it.",
+    body: "The billing agent model charges a percentage of your collections. That made sense twenty years ago, when someone was physically keying every claim into a terminal. It doesn't make sense now. A rural GP billing $400,000 annually is handing somewhere between $12,000 and $20,000 to a billing agent every year for a task that modern software handles in a fraction of the time, with better accuracy. Meritum is $199 a month for your first year. You don't need a calculator to see the gap, but we built one anyway.",
+  },
+  {
+    title: 'The Control Argument',
+    subtitle: "Your revenue data shouldn't live in someone else's head.",
+    body: "When your billing runs through an agent, you're operating on their timeline, their error rates, and their availability. You find out about a rejection pattern when they mention it; if they mention it at all. Meritum puts your claims, your assessments, your PCPCM panel status, your rejection analytics, and your revenue patterns in front of you in real time. Not at the end of the month in a PDF someone emails you, but on your dashboard, the moment it matters. And if you ever decide to leave, your data leaves with you: full export, no charge, no questions. It's your data, not a digital hostage.",
+  },
+  {
+    title: 'The Competence Argument',
+    subtitle: "We don't add provinces. We learn them.",
+    body: "Meritum isn't a US billing platform with a Canadian checkbox bolted on. It was built from the ground up for how Canadian physicians actually bill. For Alberta, that means AHCIP fee-for-service claims, WCB Alberta, RRNP auto-calculation, PCPCM eligibility tracking, the Thursday submission cycle, and every governing rule in the Schedule of Medical Benefits encoded into a pre-submission rules engine, backed by an advice engine that identifies missed codes and modifiers across your billing patterns. AHCIP and WCB billing both work for every physician on the platform, regardless of which EMR you're on or how your system happens to be configured. The specificity isn't a feature we're marketing; it's the reason we exist.",
+  },
+];
+---
+
+<Section>
+  <Container>
+    <div class="grid gap-12 lg:grid-cols-3 lg:gap-16">
+      {pillars.map(({ title, subtitle, body }) => (
+        <div>
+          <h2 class="font-display text-xl font-bold text-primary">{title}</h2>
+          <p class="mt-2 font-display text-lg font-medium text-accent">{subtitle}</p>
+          <p class="mt-4 text-base leading-relaxed text-text">{body}</p>
+        </div>
+      ))}
+    </div>
+  </Container>
+</Section>

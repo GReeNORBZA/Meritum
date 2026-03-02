@@ -1,0 +1,140 @@
+MERITUM HEALTH TECHNOLOGIES
+How It Works Page Copy
+February 2026 · Working Draft v1
+
+Production-ready copy for the Meritum How It Works page. Covers the onboarding flow, daily workflow, Thursday submission cycle, and post-submission tracking. Designed to sit between the homepage (broad pitch) and the pricing page (decision point).
+
+v1: Initial draft. Onboarding section derived from Domain 5 (Provider Management) user stories. Thursday cycle expands on homepage Section 4 without duplicating it. Advice engine and PCPCM included throughout. Delegate management referenced but not foregrounded.
+
+SECTION 1
+Page Header
+
+Implementation note: The How It Works reader has already seen the homepage pitch and is looking for specifics. This page answers: what does the actual experience look like? The tone is still confident and knowing, but the register shifts slightly toward practical detail. No repetition of the three pillars or the cost argument; those live on the homepage and pricing page respectively.
+
+Set up in ten minutes. Submit your first claims on Thursday.
+
+Meritum is built around the way Alberta physicians already work. You configure your billing profile once, capture claims during your clinical day, and the platform handles rules checking, submission, and reconciliation on the weekly Thursday cycle. Nothing about your clinical workflow needs to change.
+
+SECTION 2
+Onboarding
+
+Implementation note: This section maps to a guided wizard in the product (Domain 5, PRV-001 through PRV-004). The copy should feel fast and low-friction. Four steps, each described in one short paragraph. The page should convey that the setup process asks only for information the physician already has on hand; there is no learning curve, no training session, and no implementation project.
+
+Four steps. Ten minutes. Everything you need is already in your wallet or your head.
+
+Step 1: Professional profile
+Your AHCIP billing number, CPSA registration number, specialty, and physician type. The platform validates each field as you enter it, so if something doesn’t match the expected format, you’ll know before you move on. This is the information that configures your rules engine: your specialty determines which governing rules apply to your claims, and your physician type sets your billing context for fee schedule lookups.
+
+Step 2: Business arrangement(s)
+Your business arrangement number tells Alberta Health where to route your payments. Most physicians have one BA number; if you bill under PCPCM as well as fee-for-service, the setup walks you through adding both. The platform enforces the dual-BA requirement for PCPCM physicians, so the configuration is correct from the start rather than something you discover is wrong after your first submission.
+
+Step 3: Practice location(s)
+Your practice name, functional centre code, and address. When you enter your location, the platform looks up your community code and determines your RRNP eligibility automatically. If you’re eligible for rural and remote premiums, they’ll be applied to every qualifying claim without any additional configuration. You can add multiple locations if you work across sites or do locum shifts; each location carries its own functional centre and RRNP status, and you select the applicable location when you create a claim.
+
+Step 4: WCB configuration
+If you bill WCB Alberta, select your contract type from the dropdown. The platform auto-populates your permitted role codes and form types based on the WCB matrix, so you’re working from the correct set of options from day one. If you hold multiple WCB contracts (for example, GP and occupational injury), you can add each one. If you don’t bill WCB, skip this step entirely.
+
+That’s it. No training call, no implementation project, no six-week rollout. Once your profile is complete, your rules engine is configured and you can start entering claims immediately.
+
+Implementation note: Below the four steps, include a brief mention of delegate access: “If someone else helps manage your billing, you can invite them as a delegate with controlled permissions. They see only what you choose to share.” This references the delegate flow (PRV-005 through PRV-009) without making it a primary section. One sentence, no dedicated heading.
+
+SECTION 3
+Your Day with Meritum
+
+Implementation note: This section answers the question every physician asks: what do I actually have to do, day to day? The answer should be reassuring: very little. Meritum fits into the gaps in a clinical day, not on top of it. Three subsections covering the three ways claims enter the system.
+
+Meritum fits into your clinical day. It doesn’t replace it.
+
+The goal is to capture claims with as little disruption to patient care as possible. How that looks depends on how you work.
+
+If you use an EMR: import your encounters
+Export your encounters from your EMR system and import the file into Meritum. The platform reads the encounter data, maps it to AHCIP service codes, and queues the claims for rules checking. You review anything that needs attention; clean claims are cleared for the next Thursday submission.
+
+Implementation note: At launch, EMR integration works through file exports from systems like Med Access, Wolf Medical, and Accuro (the physician exports from their EMR and imports into Meritum). Direct API integration with EMR vendors is on the roadmap but depends on vendor cooperation and timeline. The copy should be honest about the current workflow without underselling it: file import is still a significant improvement over manual re-entry, and it’s the realistic launch capability.
+
+If you’re on shift: mobile claim entry
+For ED shifts, after-hours hospital work, and anywhere else you need to log a claim at the point of care, Meritum’s mobile entry captures the patient, the service codes, and the timestamps on your phone. The claim is queued the moment you enter it. No paper billing sheets, no pocket full of notes to transcribe later, and no gap between the care and the record.
+
+The after-hours time premium (03.01AA) is calculated automatically from your documented start and end times: the platform applies the correct time-period modifier so the premium pays out at the right rate, whether you worked a weekday evening or an overnight.
+
+If you prefer to enter claims directly: manual entry
+Meritum’s claim entry form is designed for speed. Select your patient, your service codes, and your location; the rules engine validates the claim as you build it, flagging issues before you save. For physicians who are used to entering their own claims, this is the familiar workflow with a rules layer running underneath it.
+
+However your claims enter the system, they all end up in the same place: queued, validated, and ready for Thursday.
+
+SECTION 4
+The Thursday Cycle
+
+Implementation note: This is the expanded version of homepage Section 4. The homepage keeps its four-step summary; this page goes deeper on the rules engine, the advice engine, and what the physician actually sees. The Thursday cycle is the strongest proof point for Alberta-specific depth, so this section can afford to be detailed.
+
+Alberta Health processes fee-for-service claims on a weekly Thursday cycle. Meritum is built around it.
+
+Before submission: the rules engine
+Every claim queued for submission is checked against the applicable AHCIP governing rules before it leaves the platform. This is not a spell-check or a format validator; it’s the governing rules themselves, encoded and applied to your specific claim context.
+
+The rules engine checks modifier eligibility based on your specialty and the service provided. It checks time-period requirements for after-hours premiums. It detects duplicate claims across your submission history. It validates age-based benefits, such as the 30% paediatric premium on eligible diagnostic radiology codes for patients 12 and under. It calculates your RRNP premium from your practice location and community code. And it cross-references your business arrangement type to confirm the claim is routed correctly.
+
+Claims that pass every applicable rule are cleared for submission. Claims with issues are flagged for your review, with the specific rule and the reason it was triggered, so you can correct and resubmit before Thursday rather than finding out weeks later from an assessment.
+
+Before submission: the advice engine
+After the rules engine clears a claim, the advice engine looks at what you may have missed. It identifies codes and modifiers that are eligible based on the service you provided but weren’t included in the claim, and it analyses your billing patterns over time to surface revenue recovery opportunities you might not spot on your own.
+
+The advice engine doesn’t change your claims or add codes automatically. It surfaces suggestions for your review: you decide what to act on. The goal is to ensure that the revenue you’re entitled to is the revenue you’re actually claiming, particularly for the kinds of modifiers and premiums that fall through the cracks after a long day or a busy week.
+
+Submission: your level of oversight
+You choose how much control you want over the final submission step. Meritum offers three modes, and you can change your preference at any time:
+
+Approve everything: every claim requires your sign-off before it goes out. Full control, no surprises.
+Auto-submit clean claims: claims that pass every rule are submitted automatically on Thursday. Claims with flags or advice engine suggestions are held for your review.
+Auto-submit all: the platform submits your entire validated batch on Thursday without intervention. You review assessments after the fact.
+
+Implementation note: These map to the submission preference modes in PRV-011 (Require Approval, Auto Clean, Auto All). AHCIP and WCB submission modes are configured independently. The copy above uses plain-language labels rather than the internal names.
+
+Most physicians start with auto-submit clean claims and move to full auto-submit once they’re comfortable with the rules engine’s accuracy. The point is that the choice is yours; the platform doesn’t decide how much oversight you need.
+
+Thursday: submission via H-Link
+Your validated claims are submitted to Alberta Health via H-Link on the Thursday cycle. There is no manual batching, no last-minute file assembly, and no deadline scramble. The platform handles the submission mechanics; you’ve already done your part by reviewing (or choosing to auto-approve) your claims earlier in the week.
+
+SECTION 5
+After Submission
+
+Implementation note: This section closes the loop. Most billing software stops at submission; Meritum’s post-submission tracking is a differentiator, especially for the control-pillar audience.
+
+Submission is not the finish line. Knowing what happened to your claims is.
+
+Assessment matching
+When Alberta Health returns assessments, Meritum matches them to your submitted claims automatically. Your dashboard shows the status of every claim: paid, held for review, or refused. No manual reconciliation, no spreadsheet cross-referencing, and no waiting for your agent to call you back.
+
+Rejection analytics
+Refusal codes are translated into plain language so you can understand what happened and act on it immediately. More importantly, the platform tracks your rejection patterns over time. If the same rule is catching you repeatedly, you’ll see it as a pattern rather than a series of isolated incidents, which means you can fix the underlying issue rather than correcting the same claim type every cycle.
+
+PCPCM reconciliation
+If you’re enrolled in PCPCM, Meritum tracks your panel enrolment and reconciles your capitation payments as a separate billing stream from fee-for-service. Panel changes, payment amounts, and reconciliation status are all visible in your dashboard alongside your FFS claim data, so you have a complete picture of your billing across both payment models.
+
+SECTION 6
+What Doesn’t Change
+
+Implementation note: Short closing section before the CTA. Addresses the implicit anxiety: “will this disrupt my practice?” The answer is no, and the copy should make that feel obvious rather than defensive.
+
+Your patients. Your clinical judgement. Your workflow. Meritum handles the billing; everything else stays the same.
+
+You don’t change EMRs. You don’t change how you see patients. You don’t attend a training session or block out an afternoon for onboarding. The learning curve is closer to switching pharmacies than switching software systems: the first week takes a little attention, and after that it’s just how you bill.
+
+If someone else currently manages your billing, you can invite them as a delegate with controlled permissions. They see only what you choose to share, and you can revoke access at any time. The transition doesn’t require you to do everything yourself; it requires you to own the process.
+
+SECTION 7
+How It Works Page CTA
+
+Implementation note: Bottom of page. The How It Works reader has now seen the full workflow. The CTA should move them toward the calculator (if they haven’t run the numbers yet) or directly to signup (if they have). Display the current applicable rate dynamically, consistent with the pricing page CTA pattern.
+
+Ten minutes to set up. Thursday to see it work.
+
+Everything included, cancel anytime, and your data is always yours.
+
+Implementation note: Display the current applicable rate dynamically. During early bird: “Start today — $199/month.” After early bird: “Start today — $279/month, or save 5% with annual billing.” Secondary link: “See what you’d save →” linking to the homepage calculator for readers who want the cost comparison before committing.
+
+[ Start today → ]
+
+Plus 5% GST. Cancel anytime.
+
+End of document. This page should be reviewed alongside homepage-copy-v4 (Section 4, Thursday Cycle) to ensure the two complement each other without significant overlap. Pricing decisions and interaction rules are maintained in the Pricing Strategy document (internal). Product scope changes should be reflected here when they affect the described workflow.

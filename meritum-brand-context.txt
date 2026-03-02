@@ -1,0 +1,159 @@
+Meritum Health Technologies
+Brand & Marketing Context Document
+For use as a prompt context in new Claude sessions
+1. Product Overview
+Meritum Health Technologies Inc. is a self-serve medical billing platform for Alberta physicians. It handles AHCIP (Alberta Health Care Insurance Plan) fee-for-service claims and WCB Alberta (Workers' Compensation Board) claims. It is a legally separate entity from SigOct, the founder's infosec consulting practice.
+The founder (Ian) is a solo developer with a security background (SigOct), a former medical practice manager (one year in Alberta), and is married to a physician. Most of his closest friends are physicians.
+
+Pricing
+Standard monthly: $279/month CAD. Standard annual: $2,790/year (~$232.50/month). Early bird (first 100 physicians): $199/month for first 12 months. GST 5% added. Payment via Stripe, CAD only.
+
+Infrastructure
+Hosted on DigitalOcean Toronto (tor1) for Canadian data residency compliance under the Alberta Health Information Act (HIA). Meritum acts as an Information Manager under HIA s.66.
+
+Expansion Plans
+Initial launch: Alberta (AHCIP + WCB). Future: BC (MSP, HIBC, WorkSafeBC) and Saskatchewan (MSI, WCB Saskatchewan). The Pillar 3 tagline is designed to accommodate this.
+
+2. Ideal Customer Profile
+Primary: Rural Alberta GPs
+Underserved by existing solutions (Med Access, Wolf Medical, Accuro). Often billing themselves or paying a billing agent. Pain points: cost of agents, clunkiness of existing tools, RRNP eligibility they may not be fully capturing.
+
+Secondary: High-Volume Specialists
+Radiologists, anesthesiologists, ophthalmologists, pathologists, general/orthopaedic surgeons. The value proposition here is different: not cost savings vs. an agent, but revenue recovery from missed modifiers at scale. A specialist billing $800K/year is handing $24K-$40K to a billing agent annually — the math is visceral.
+
+3. Positioning
+Internal One-Liner (also approved for external use as hero copy)
+Billing agents charge like it's 1995. Meritum doesn't.
+
+Formal Positioning Statement
+For Alberta physicians who are paying too much for too little, Meritum is the self-serve billing platform that puts you in control of your revenue — at a flat monthly rate that costs a fraction of what a billing agent charges.
+
+Brand Tone Rule
+Every piece of Meritum copy should pass this test: does it sound like someone who knows the system, finds it absurd, and built something better? If it sounds like a brochure, rewrite it.
+The Canadian modifier: be direct, but make it about the physician, not about the founder. The frustration lands when it's their frustration being articulated. Dry, knowing, and lets the reader feel smart for getting it.
+
+4. Messaging Hierarchy
+Hero
+Billing agents charge like it's 1995. Meritum doesn't.
+
+Promise (Subhead)
+Meritum is Alberta's self-serve medical billing platform. Flat monthly rate, full control, built for physicians who are done overpaying.
+
+The Three Pillars
+Pillar 1: The Money Argument
+'You're losing thousands of dollars a year and you know it.' The billing agent model charges a percentage of collections. That made sense when someone was manually keying claims. A rural GP billing $400K annually pays $12,000–$20,000 to a billing agent. Meritum is $199/month for your first year. The math isn't subtle.
+
+Pillar 2: The Control Argument
+'Your revenue data shouldn't live in someone else's head.' When you use a billing agent, you're dependent on their timelines, their error rates, their availability. Meritum puts your claims, assessments, analytics, and rejection patterns in front of you — in real time, on your terms.
+
+Pillar 3: The Competence Argument
+'Built for how Canadian physicians actually bill. Not adapted, not bolted on.' The shorthand: 'We don't add provinces. We learn them.' — this scales with BC and Saskatchewan expansion. For Alberta: AHCIP, WCB, RRNP, PCPCM, Thursday submission cycle. The specificity is the proof.
+
+Proof Points
+Money: Early bird rate saves the average rural GP $10,000–$17,000 per year vs. a 3–5% billing agent.
+Control: Real-time claim status, rejection analytics, pre-submission rules checking — all in your dashboard.
+Competence: SOMB fee schedule, RRNP auto-calculation, WCB timing tiers, HIA-compliant, DigitalOcean Toronto.
+
+Objection Handlers
+'What if I make a billing error?'
+The rules engine checks every claim against every applicable AHCIP governing rule before submission. Governing rule violations, missed modifiers, duplicate detection — it catches issues before your claim goes out.
+'I don't have time to learn new software.'
+Onboarding takes ten minutes. The Thursday cycle is automated. Mobile entry for ED shifts. If you can submit a claim today, you can use Meritum.
+'What about my patients' data?'
+Alberta HIA compliant. Data stays in Canada — DigitalOcean Toronto. You sign an Information Manager Agreement. The regulatory work is done.
+'What if I need help?'
+Email support with guaranteed response times. Help centre with Alberta-specific billing guidance. This isn't a US startup that's never heard of H-Link.
+
+Critical Language Decision: Rules Engine vs. AI
+The product has an AI Coach internally, but marketing copy must lead with the rules engine framing. 'AI' in a billing context raises audit anxiety. 'The rules' is what physicians trust — they're trained on rules. Use: rules engine, governing rules, built-in compliance checks, pre-submission validation. Not: AI, machine learning, smart suggestions.
+
+5. Website Structure
+Five Pages at Launch
+Home, How It Works, Pricing, About, Blog. No features page. No integrations page. No case studies page (build as placeholder, populate later).
+
+Navigation
+Meritum    How It Works    Pricing    About    Blog    [Start Today — $199/month]
+No free trial — this is a business, not an IT project. The early bird pricing IS the offer.
+
+Homepage Sections
+1. Hero — one line, subhead, single CTA to calculator. No feature list, no screenshots.
+2. Calculator — two paths (billing agent vs. self-serve). See Section 6 for full copy.
+3. Three Pillars — one paragraph each, prose with edge, not bullet lists.
+4. How the Thursday Cycle Works — timeline graphic. Demonstrates Alberta depth.
+5. Objection Busters — four, plain language, written like a human.
+6. Social Proof — at launch, use early bird scarcity framing: 'Join the first 100 physicians on Meritum at $199/month.' Replace with testimonials as they arrive.
+7. Final CTA — 'You already know you're overpaying. Start today. Cancel anytime.'
+
+6. Calculator Copy
+Path A: Currently Using a Billing Agent
+Heading
+How much is your billing agent actually costing you?
+Inputs
+Your estimated annual AHCIP billings. Your agent's percentage fee (default 4%, range 3–5%).
+Output
+What you're paying your agent this year: $XX,XXX. What Meritum costs: $2,388 (early bird, first 12 months). Your annual saving: $XX,XXX.
+Supporting line: 'That's what you're paying for someone to submit claims you could submit yourself — with a platform that checks every governing rule before anything goes out.'
+
+Path B: Currently Using Self-Serve Software
+Heading
+Self-serve is the right call. The question is whether your software is checking the rules.
+Intro
+Before a claim leaves Meritum, it's checked against every applicable governing rule in the AHCIP Schedule of Medical Benefits — your specialty, your patient's age, your service time, your location, your business arrangement type. Not guesswork. The rules themselves, applied automatically, before anything goes out.
+
+Example 1 — After-hours time premium (03.01AA)
+Code 03.01AA is an add-on time premium payable for patient care provided after hours in a hospital, auxiliary hospital, or nursing home. It applies to direct care, charting, reviewing results, and consulting on a patient — billed per 15-minute unit, on top of your visit or procedure codes.
+The rate depends on when you worked. Weekday evenings and weekends pay $22.91 per unit. Nights — 10pm to 7am — pay $45.77 per unit. Get the time-period modifier wrong, or miss the code entirely, and the premium doesn't pay out.
+For any physician regularly covering hospital, ED, or OR shifts — GPs on call, surgeons called in after hours, emergency physicians — this accrues across every eligible hour of every after-hours shift. Meritum calculates the applicable modifier automatically from your documented start and end times.
+
+Example 2 — Volume specialties and the scale problem
+For high-volume specialties — radiology, pathology, anesthesiology, ophthalmology — the governing rules aren't complicated in isolation. They're complicated at scale.
+Radiology: an additional 30% benefit applies to eligible diagnostic imaging codes for patients 12 and under. Miss it systematically because your billing software doesn't cross-reference patient age against applicable HSCs — and you've discounted an entire category of your workload.
+Anesthesiology: billing combines base procedure units, time units, and qualifying circumstance modifiers. A missed qualifying circumstance or miscounted time unit on every case across a full OR schedule compounds quickly.
+Meritum checks governing rule eligibility on every claim before it goes out, not after the assessment comes back.
+
+Example 3 — RRNP
+If you practice in an eligible rural or remote Alberta community, the Rural and Remote Northern Program adds an automatic premium to eligible services — calculated from your community code and your AHCIP specialty. Most billing software requires you to configure this yourself. Meritum calculates it automatically from your practice location and applies it to every eligible claim.
+
+Closing
+These aren't obscure corner cases. They're governing rules that apply to common, everyday billing scenarios — and they're exactly the kind of thing that falls through the cracks when you're submitting after a full clinic or a night shift. Meritum doesn't rely on you knowing every rule. It checks them for you.
+
+7. Standalone Proof Point — Lost Revenue / ED Billing Sheets
+I spent a year managing a medical practice in Alberta. Not observing one, not consulting for one — running one, from the inside, watching what actually happens when the billing doesn't get done right.
+
+I watched good physicians lose real money to two entirely avoidable problems. Claims that didn't go out on time. ED billing sheets that went home in someone's pocket and never came back. Neither of these is a technology failure — they're a workflow failure, and they're completely preventable.
+
+My wife is a physician. Most of my closest friends are physicians. The billing problem wasn't abstract to me before I stepped into that practice, and it's been impossible to ignore since. When you know the system well enough to see exactly what's broken — and you have the technical background to fix it — building the obvious alternative stops feeling optional.
+
+Meritum's mobile claim entry exists specifically because of this. Log the patient on your phone at the bedside. The claim is captured, timestamped, and queued before you walk out of the room. No sheet. No pocket. No gap.
+
+8. About Page Copy
+I spent a year managing a medical practice in Alberta. Not observing one, not consulting for one — running one, from the inside, watching what actually happens when the billing doesn't get done right.
+
+I watched good physicians lose real money to two entirely avoidable problems. Claims that didn't go out on time. ED billing sheets that went home in someone's pocket and never came back. Neither of these is a technology failure — they're a workflow failure, and they're completely preventable.
+
+My wife is a physician. Most of my closest friends are physicians. The billing problem wasn't abstract to me before I stepped into that practice, and it's been impossible to ignore since. When you know the system well enough to see exactly what's broken — and you have the technical background to fix it — building the obvious alternative stops feeling optional.
+
+That's Meritum. Alberta's billing rules, properly encoded. Your revenue, properly captured. Canadian data, staying in Canada. Flat monthly rate, no percentage taken off the top.
+
+I also run SigOct, an information security practice. Security isn't a feature Meritum added — it's the foundation it was built on.
+
+9. Blog Post Targets (Launch)
+Post 1: 'What does a medical billing agent actually cost an Alberta GP?' — pure math, ranks for billing agent cost searches.
+Post 2: 'RRNP billing in Alberta: what rural physicians need to know' — hyper-specific, zero competition, exactly the primary ICP.
+Post 3: 'AHCIP vs. WCB: how Alberta physicians should approach dual billing' — demonstrates depth, useful in physician communities.
+
+10. Work Remaining
+Pricing page copy — including billing agent vs. self-serve comparison table, and pricing objection FAQs.
+Full homepage copy — prose for the three pillars, objection busters, and final CTA sections.
+How It Works page copy.
+Blog post drafts — starting with the RRNP post and the billing agent cost calculator post.
+Visual identity — wordmark, colour palette, typographic direction.
+
+11. Critical Constraints & Decisions
+No free trial. The early bird rate ($199/month for first 12 months) is the offer. Charging from day one. 37signals principles apply.
+No US statistics. They are not defensible to a physician audience and the Canadian system is structurally different.
+CMA '5% unclaimed services' stat: secondary citation only (via Dr.Bill, not direct CMA source). Do not quote as 'the CMA says' — use 'industry research suggests' or don't use it at all.
+03.01AA modifier rates confirmed from AMA Fee Navigator: weekday evenings/weekends $22.91/unit, nights (10pm–7am) $45.77/unit.
+All SOMB code values should be verified against the current price list (updated April 1 annually) before publishing.
+Radiology 30% paediatric benefit: confirmed from AMA Fee Navigator for applicable diagnostic radiology HSCs for patients 12 and under.
+Pillar 3 tagline 'We don't add provinces. We learn them.' is approved and should be preserved across all future copy iterations.

@@ -1,0 +1,37 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const features = [
+  {
+    title: 'Assessment matching',
+    body: 'When Alberta Health returns assessments, Meritum matches them to your submitted claims automatically. Your dashboard shows the status of every claim: paid, held for review, or refused. No manual reconciliation, no spreadsheet cross-referencing, and no waiting for your agent to call you back.',
+  },
+  {
+    title: 'Rejection analytics',
+    body: 'Refusal codes are translated into plain language so you can understand what happened and act on it immediately. More importantly, the platform tracks your rejection patterns over time. If the same rule is catching you repeatedly, you\'ll see it as a pattern rather than a series of isolated incidents, which means you can fix the underlying issue rather than correcting the same claim type every cycle.',
+  },
+  {
+    title: 'PCPCM reconciliation',
+    body: 'If you\'re enrolled in PCPCM, Meritum tracks your panel enrolment and reconciles your capitation payments as a separate billing stream from fee-for-service. Panel changes, payment amounts, and reconciliation status are all visible in your dashboard alongside your FFS claim data, so you have a complete picture of your billing across both payment models.',
+  },
+];
+---
+
+<Section id="after-submission">
+  <Container>
+    <SectionHeading tag="h2" size="3xl" class="max-w-2xl">
+      Submission is not the finish line. Knowing what happened to your claims is.
+    </SectionHeading>
+
+    <div class="mt-12 grid gap-8 lg:grid-cols-3 lg:gap-12">
+      {features.map(({ title, body }) => (
+        <div>
+          <h3 class="font-display text-lg font-bold text-primary">{title}</h3>
+          <p class="mt-3 text-base leading-relaxed text-text">{body}</p>
+        </div>
+      ))}
+    </div>
+  </Container>
+</Section>

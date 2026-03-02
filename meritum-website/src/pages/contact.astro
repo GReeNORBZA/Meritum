@@ -1,0 +1,30 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import ContactForm from '../components/contact/ContactForm.astro';
+import { siteConfig } from '../config/site';
+---
+
+<PageLayout
+  title="Contact — Meritum"
+  description="Get in touch with the Meritum team. We'd love to hear from you."
+>
+  <Section>
+    <Container narrow>
+      <SectionHeading tag="h1" size="3xl">Get in touch</SectionHeading>
+      <p class="mt-4 font-body text-lg text-text-muted leading-relaxed">
+        Have a question about Meritum? Send us a message and we'll get back to you.
+        You can also reach us directly at
+        <a href={`mailto:${siteConfig.email}`} class="text-accent underline underline-offset-2 hover:text-accent-hover transition-colors">
+          {siteConfig.email}
+        </a>.
+      </p>
+
+      <div class="mt-12 relative">
+        <ContactForm />
+      </div>
+    </Container>
+  </Section>
+</PageLayout>

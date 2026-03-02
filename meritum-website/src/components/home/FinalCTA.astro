@@ -1,0 +1,28 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import { getCurrentRate, formatCAD } from '../../config/pricing';
+import { siteConfig } from '../../config/site';
+
+const rate = getCurrentRate();
+---
+
+<Section bg="surface">
+  <Container class="text-center">
+    <SectionHeading tag="h2" size="3xl">
+      You already know you're overpaying.
+    </SectionHeading>
+    <p class="mt-4 text-lg text-text-muted max-w-xl mx-auto">
+      Start today, cancel anytime. Your first year is {formatCAD(rate.monthly)}/month, and the math only gets better from there.
+    </p>
+    <div class="mt-8">
+      <a
+        href={siteConfig.ctaUrl}
+        class="inline-flex items-center justify-center rounded-md bg-accent px-8 py-4 text-lg font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        Start today — {formatCAD(rate.monthly)}/month
+      </a>
+    </div>
+  </Container>
+</Section>

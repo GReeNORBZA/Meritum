@@ -1,0 +1,40 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+
+const objections = [
+  {
+    question: 'What if I make a billing error?',
+    answer: "That's the point of the rules engine. Every claim goes through it before it leaves Meritum, checked against every applicable AHCIP governing rule: modifier eligibility, time-period requirements, duplicate services, and age-based restrictions. If something's wrong, you'll know before the claim goes out, not six weeks later when a refusal comes back. Beyond catching errors, the advice engine identifies codes and modifiers you may have missed; you're not just avoiding rejections, you're capturing revenue you might otherwise leave on the table.",
+  },
+  {
+    question: "I don't have time to learn new software.",
+    answer: "Onboarding takes about ten minutes. You enter your practitioner ID, your practice location, and your specialty; Meritum configures your rules engine from there. You can import encounters from your EMR through a simple file export, and the Thursday submission cycle runs on its own. Mobile claim entry works from your phone. The learning curve is closer to switching pharmacies than switching EMRs.",
+  },
+  {
+    question: "What about my patients' data?",
+    answer: "Meritum is compliant with the Alberta Health Information Act. Your data is hosted in Canada, in DigitalOcean's Toronto region, and it stays there. You sign an Information Manager Agreement under HIA s.66 before your first claim goes out, so the regulatory work is already done. The founder also runs an information security practice, which means Meritum was built with security as its foundation rather than as a feature added after the fact.",
+  },
+  {
+    question: 'What if I want to leave?',
+    answer: "Then you leave, and your data comes with you. Meritum provides a full export of your claims, assessments, and analytics at no charge and with no questions asked. Your billing history is yours; we don't hold it hostage to keep you on the platform. If you stay, it should be because Meritum is worth what you're paying for it, not because leaving is too painful.",
+  },
+  {
+    question: 'What if I need help?',
+    answer: "Email support with a one-business-day response commitment, and a help centre with Alberta-specific billing guidance rather than generic articles rewritten from US healthcare content. If you run into a governing rule question or a claim rejection you don't understand, you're talking to someone who knows what H-Link is and why your Thursday batch matters.",
+  },
+];
+---
+
+<Section>
+  <Container>
+    <div class="space-y-12 max-w-3xl">
+      {objections.map(({ question, answer }) => (
+        <div>
+          <h2 class="font-display text-xl font-bold text-primary">"{question}"</h2>
+          <p class="mt-3 text-base leading-relaxed text-text">{answer}</p>
+        </div>
+      ))}
+    </div>
+  </Container>
+</Section>

@@ -1,0 +1,56 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const steps = [
+  {
+    label: 'Step 1: Capture claims as you go',
+    body: "Meritum can import encounters from your EMR through system exports, so you don't re-enter what you've already documented. For ED shifts or after-hours work, mobile claim entry captures the patient, the codes, and the timestamps at the bedside. The claim is queued the moment it's entered, with no paper billing sheets and no gaps in your record.",
+  },
+  {
+    label: 'Step 2: Rules check before submission',
+    body: "Before anything leaves, every claim is validated against the applicable AHCIP governing rules: modifier eligibility, duplicate detection, time-period checks, age-based benefits, and RRNP premiums. Issues get flagged for your review, and clean claims are cleared for submission. Beyond the rules check, the advice engine identifies codes and modifiers you may have missed, so the revenue you're entitled to is the revenue you're actually claiming.",
+  },
+  {
+    label: 'Step 3: Thursday submission',
+    body: 'Your validated claims are submitted to Alberta Health via H-Link on the Thursday cycle, without manual batching or last-minute scrambling.',
+  },
+  {
+    label: 'Step 4: Assessment and tracking',
+    body: "When assessments come back, Meritum matches them to your submitted claims. You see paid, held, and refused statuses in your dashboard, with the reason codes translated into plain language so you can act on them immediately.",
+  },
+];
+---
+
+<Section bg="surface" topo>
+  <Container>
+    <SectionHeading class="max-w-2xl">
+      Your billing week, automated. Your clinical workflow, untouched.
+    </SectionHeading>
+    <p class="mt-4 max-w-2xl text-base text-text-muted">
+      Alberta Health processes fee-for-service claims on a weekly Thursday cycle. Meritum is built around it. The goal is simple: capture claims with as little disruption to your clinical day as possible, then let the platform handle everything from rules checking and billing optimisation to submission.
+    </p>
+
+    <div class="mt-12 space-y-8">
+      {steps.map(({ label, body }, i) => (
+        <div class="flex gap-6">
+          <div class="flex flex-col items-center">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+              {i + 1}
+            </div>
+            {i < steps.length - 1 && <div class="mt-2 w-px flex-1 bg-primary/20" />}
+          </div>
+          <div class="pb-8">
+            <h3 class="font-display text-lg font-bold text-primary">{label}</h3>
+            <p class="mt-2 text-base leading-relaxed text-text">{body}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <p class="mt-4 text-base text-text-muted italic">
+      If this looks like what you're already doing manually, it is. Except the rules checking, the submission, and the reconciliation happen without you thinking about them.
+    </p>
+  </Container>
+</Section>

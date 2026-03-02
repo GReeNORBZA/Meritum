@@ -1,0 +1,139 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import EarlyBirdCounter from '../home/EarlyBirdCounter';
+import { pricingConfig, getCurrentRate, formatCAD } from '../../config/pricing';
+import { siteConfig } from '../../config/site';
+
+const rate = getCurrentRate();
+const earlyBirdActive = pricingConfig.earlyBird.active;
+---
+
+<Section id="individual-pricing">
+  <Container>
+    <div class="text-center max-w-3xl mx-auto">
+      <SectionHeading tag="h2" size="3xl">
+        Flat monthly rate. No percentage of your billings. Ever.
+      </SectionHeading>
+      <p class="mt-4 text-lg text-text-muted font-body">
+        One plan, one price, everything included. The only choices are how you want to pay and whether your practice has five or more physicians.
+      </p>
+    </div>
+
+    {earlyBirdActive && (
+      <div class="mt-8 text-center">
+        <EarlyBirdCounter client:visible />
+      </div>
+    )}
+
+    <div class="mt-12 grid gap-8 lg:grid-cols-2 max-w-[960px] mx-auto">
+      {/* Card A: Early Bird */}
+      <div
+        class:list={[
+          "relative rounded-xl p-8 flex flex-col",
+          earlyBirdActive
+            ? "border-2 border-accent bg-white shadow-lg"
+            : "border border-surface bg-white opacity-60 pointer-events-none hidden",
+        ]}
+      >
+        {earlyBirdActive && (
+          <span class="absolute -top-3.5 left-6 inline-block rounded-full bg-accent px-4 py-1 text-sm font-body font-medium text-white">
+            Early Bird — First 100 Physicians
+          </span>
+        )}
+
+        <div class="mt-2">
+          <h3 class="font-display text-xl font-bold text-primary">Early Bird</h3>
+
+          <div class="mt-4">
+            <p class="font-display text-4xl font-bold text-primary">
+              {formatCAD(pricingConfig.earlyBird.monthlyRate)}<span class="text-lg font-medium text-text-muted">/month</span>
+            </p>
+            <p class="mt-2 text-base text-text-muted font-body">
+              {formatCAD(pricingConfig.earlyBird.annualRate)}/year ({formatCAD(pricingConfig.earlyBird.monthlyRate)}/month, paid annually)
+            </p>
+          </div>
+
+          <p class="mt-4 text-sm leading-relaxed text-text-muted font-body">
+            Your rate is locked for {pricingConfig.earlyBird.rateLockMonths} months from the date you sign up, regardless of billing frequency. After {pricingConfig.earlyBird.rateLockMonths} months, your subscription renews at the standard rate.
+          </p>
+        </div>
+
+        <div class="mt-6 border-t border-surface pt-6">
+          <p class="text-sm leading-relaxed text-text font-body">
+            Everything included. AHCIP claims, WCB claims, PCPCM tracking, rules engine, advice engine, rejection analytics, mobile claim entry, EMR imports, email support, and every future platform update. No tiers, no add-ons, no surprises.
+          </p>
+        </div>
+
+        <div class="mt-auto pt-8">
+          <a
+            href={siteConfig.ctaUrl}
+            class="inline-flex w-full items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            Start today — {formatCAD(pricingConfig.earlyBird.monthlyRate)}/month
+          </a>
+          <p class="mt-3 text-center text-sm text-text-muted font-body">
+            Plus {pricingConfig.gstPercent}% GST. Cancel anytime.
+          </p>
+        </div>
+      </div>
+
+      {/* Card B: Standard */}
+      <div
+        class:list={[
+          "relative rounded-xl p-8 flex flex-col",
+          earlyBirdActive
+            ? "border border-surface bg-white"
+            : "border-2 border-accent bg-white shadow-lg",
+        ]}
+      >
+        {!earlyBirdActive && (
+          <span class="absolute -top-3.5 left-6 inline-block rounded-full bg-accent px-4 py-1 text-sm font-body font-medium text-white">
+            Standard
+          </span>
+        )}
+
+        <div class={earlyBirdActive ? '' : 'mt-2'}>
+          <h3 class="font-display text-xl font-bold text-primary">Standard</h3>
+
+          <div class="mt-4">
+            <p class="font-display text-4xl font-bold text-primary">
+              {formatCAD(pricingConfig.standard.monthlyRate)}<span class="text-lg font-medium text-text-muted">/month</span>
+            </p>
+            <p class="mt-2 text-base text-text-muted font-body">
+              {formatCAD(pricingConfig.standard.annualRate)}/year (~{formatCAD(Math.round(pricingConfig.standard.annualRate / 12))}/month, save {pricingConfig.standard.annualDiscountPercent}%)
+            </p>
+          </div>
+
+          <p class="mt-4 text-sm leading-relaxed text-text-muted font-body">
+            Same platform, same features, same support. The annual plan saves you ${Math.round(pricingConfig.standard.monthlyRate * 12 - pricingConfig.standard.annualRate)} per year compared to monthly billing and gives you a predictable annual cost.
+          </p>
+        </div>
+
+        <div class="mt-6 border-t border-surface pt-6">
+          <p class="text-sm leading-relaxed text-text font-body">
+            Everything included. AHCIP claims, WCB claims, PCPCM tracking, rules engine, advice engine, rejection analytics, mobile claim entry, EMR imports, email support, and every future platform update. No tiers, no add-ons, no surprises.
+          </p>
+        </div>
+
+        <div class="mt-auto pt-8">
+          <a
+            href={siteConfig.ctaUrl}
+            class:list={[
+              "inline-flex w-full items-center justify-center rounded-md px-6 py-3 text-base font-body font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              earlyBirdActive
+                ? "border-2 border-primary text-primary hover:bg-primary hover:text-white"
+                : "bg-accent text-white hover:bg-accent-hover",
+            ]}
+          >
+            Start today — {formatCAD(pricingConfig.standard.monthlyRate)}/month
+          </a>
+          <p class="mt-3 text-center text-sm text-text-muted font-body">
+            Plus {pricingConfig.gstPercent}% GST. Cancel anytime.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Container>
+</Section>

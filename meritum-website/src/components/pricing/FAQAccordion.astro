@@ -1,0 +1,112 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const faqs = [
+  {
+    question: "Why isn't there a free trial?",
+    answer: "Medical billing isn't something you trial; it's something you commit to. Setting up Meritum means configuring your practitioner profile, connecting your rules engine, and submitting real claims to Alberta Health. That's onboarding, not a test drive. We charge from day one because the platform is built to be worth the cost from the first Thursday cycle, and the pricing is structured to make that commitment straightforward.",
+  },
+  {
+    question: "What happens after my early bird rate expires?",
+    answer: "Your early bird rate of $199/month is locked for 12 months from signup. After that, your subscription renews at the standard rate: $279/month or $3,181/year. You'll get advance notice before the rate change, and you can cancel at any time.",
+  },
+  {
+    question: "Is there a contract or commitment?",
+    answer: "No contract and no minimum term on monthly billing; you can cancel at the end of any month. Annual billing comes with a lower effective rate, and in exchange we ask for a six-month commitment: cancellations within the first six months forfeit the remaining balance, while cancellations after six months receive a prorated refund for unused months. Either way, your full billing data is exported at no charge when you leave.",
+  },
+  {
+    question: "Does the price go up if I bill more?",
+    answer: "It does not. Meritum is a flat rate regardless of your billing volume. Whether you're billing $200,000 or $2,000,000 annually, your subscription cost is the same. This is the fundamental difference from the billing agent model: their fee scales with your revenue, while ours stays fixed.",
+  },
+  {
+    question: "Can I switch between monthly and annual billing?",
+    answer: "Yes, at any renewal date. If you start on monthly and decide to move to annual, the change takes effect at the start of your next billing period. The annual plan saves you 5% compared to monthly billing.",
+  },
+  {
+    question: "Is this per physician or per clinic?",
+    answer: "Per physician. Each subscription covers one practitioner with their own claims, rules engine, advice engine, and dashboard. This keeps your billing data separate and your compliance clean under the Health Information Act. If you're a practice with five or more physicians, the practice tier gives you 10% off the standard per-physician rate, with a further 5% for annual billing.",
+  },
+  {
+    question: "How does the referral program work?",
+    answer: "Refer a colleague who signs up and completes their first billing cycle, and you receive one month's subscription credited to your next invoice. You can earn up to three referral credits per year, applied one per billing period. Referrals must be physicians outside your own practice account. If you're on a practice tier, you choose whether the credit applies to your practice's invoice or is banked against a future individual subscription in your name.",
+  },
+  {
+    question: "Do I get future updates and features?",
+    answer: "Every platform update, feature addition, and governing rule change is included in your subscription at no additional cost. When AHCIP rules are updated (including the annual April 1 fee schedule change), Meritum's rules engine reflects the changes automatically. You don't need to request updates or pay for a new version; the platform you're using today gets better over time, and your subscription covers all of it.",
+  },
+  {
+    question: "What payment methods do you accept?",
+    answer: "Payment is handled through Stripe in Canadian dollars. Visa, Mastercard, and American Express are accepted. All prices are in CAD with 5% GST applied at checkout.",
+  },
+];
+
+export { faqs };
+---
+
+<Section id="faq">
+  <Container>
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center">
+        <SectionHeading tag="h2" size="3xl">
+          Pricing FAQ
+        </SectionHeading>
+      </div>
+
+      <div class="mt-12 divide-y divide-primary/10" role="region" aria-label="Frequently asked questions">
+        {faqs.map((faq, index) => (
+          <details
+            class="group"
+            id={`faq-${index}`}
+          >
+            <summary
+              class="flex cursor-pointer items-center justify-between py-5 text-left font-display text-base lg:text-lg font-bold text-primary transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden list-none"
+              aria-controls={`faq-content-${index}`}
+            >
+              <span>{faq.question}</span>
+              <span class="ml-4 flex-shrink-0 transition-transform duration-300 group-open:rotate-45" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+            </summary>
+            <div
+              id={`faq-content-${index}`}
+              class="overflow-hidden transition-all duration-300 ease-in-out"
+            >
+              <p class="pb-5 text-base leading-relaxed text-text font-body">
+                {faq.answer}
+              </p>
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  details[open] > summary ~ div {
+    animation: faq-open 300ms ease-in-out;
+  }
+
+  @keyframes faq-open {
+    from {
+      opacity: 0;
+      max-height: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      max-height: 500px;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    details[open] > summary ~ div {
+      animation: none;
+    }
+  }
+</style>

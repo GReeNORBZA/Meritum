@@ -1,0 +1,24 @@
+---
+import { pricingConfig, getCurrentRate, formatCAD } from '../../config/pricing';
+import { siteConfig } from '../../config/site';
+
+interface Props {
+  class?: string;
+  size?: 'sm' | 'base';
+}
+
+const { class: className = '', size = 'sm' } = Astro.props;
+const rate = getCurrentRate();
+const label = `Start Today — ${formatCAD(rate.monthly)}/month`;
+---
+
+<a
+  href={siteConfig.ctaUrl}
+  class:list={[
+    "inline-flex items-center justify-center rounded-md bg-accent font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+    size === 'sm' ? 'px-4 py-2 text-sm' : 'px-6 py-3 text-base',
+    className,
+  ]}
+>
+  {label}
+</a>

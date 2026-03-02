@@ -1,0 +1,1369 @@
+{
+  "domainNumber": "05",
+  "domainName": "Provider Management",
+  "manifestFile": "domain-05-provider.tasks",
+  "promptPrefix": "d05",
+  "modulePath": "apps/api/src/domains/provider",
+  "sections": [
+    {
+      "title": "Domain 5: Provider Management — Shared Types & Constants",
+      "tasks": [
+        {
+          "id": "D05-001",
+          "description": "Provider constants, enums, delegate permission catalogue, audit action identifiers",
+          "verify": "pnpm --filter shared build",
+          "build": [
+            "Create `packages/shared/src/constants/provider.constants.ts` with all Provider Management constants:",
+            "",
+            "**Provider status enum:**",
+            "- ACTIVE, SUSPENDED, INACTIVE",
+            "",
+            "**Physician type enum:**",
+            "- GP, SPECIALIST, LOCUM",
+            "",
+            "**BA type enum:**",
+            "- FFS, PCPCM, ARP",
+            "",
+            "**BA status enum:**",
+            "- ACTIVE, PENDING, INACTIVE",
+            "",
+            "**PCPCM enrolment status enum:**",
+            "- ACTIVE, PENDING, WITHDRAWN",
+            "",
+            "**Delegate relationship status enum:**",
+            "- ACTIVE, INVITED, REVOKED",
+            "",
+            "**Submission mode enum:**",
+            "- AUTO_CLEAN, AUTO_ALL, REQUIRE_APPROVAL",
+            "",
+            "**H-Link accreditation status enum:**",
+            "- PENDING, ACTIVE, SUSPENDED",
+            "",
+            "**Delegate permission keys (24 total):**",
+            "- CLAIM_CREATE, CLAIM_EDIT, CLAIM_VIEW, CLAIM_DELETE, CLAIM_QUEUE, CLAIM_APPROVE, CLAIM_RESUBMIT, CLAIM_WRITE_OFF",
+            "- BATCH_VIEW, BATCH_DOWNLOAD, BATCH_CONFIRM_UPLOAD",
+            "- IMPORT_EMR, IMPORT_MANAGE_TEMPLATES",
+            "- PATIENT_VIEW, PATIENT_CREATE, PATIENT_EDIT, PATIENT_IMPORT",
+            "- SHIFT_MANAGE",
+            "- REPORT_VIEW, REPORT_EXPORT",
+            "- AI_COACH_REVIEW",
+            "- REJECTION_MANAGE",
+            "- PREFERENCE_VIEW, PREFERENCE_EDIT",
+            "",
+            "**Default permission templates:**",
+            "- FULL_ACCESS: All 24 permissions.",
+            "- BILLING_ENTRY: CLAIM_CREATE, CLAIM_EDIT, CLAIM_VIEW, CLAIM_QUEUE, IMPORT_EMR, PATIENT_VIEW, PATIENT_CREATE, SHIFT_MANAGE, AI_COACH_REVIEW.",
+            "- REVIEW_SUBMIT: CLAIM_VIEW, CLAIM_APPROVE, BATCH_VIEW, BATCH_DOWNLOAD, BATCH_CONFIRM_UPLOAD, REJECTION_MANAGE, REPORT_VIEW.",
+            "- VIEW_ONLY: CLAIM_VIEW, BATCH_VIEW, PATIENT_VIEW, REPORT_VIEW.",
+            "",
+            "**Provider audit action identifiers:**",
+            "- provider.profile_updated, provider.onboarding_completed",
+            "- ba.added, ba.updated, ba.deactivated",
+            "- location.added, location.updated, location.deactivated",
+            "- wcb_config.added, wcb_config.updated, wcb_config.removed",
+            "- delegate.invited, delegate.accepted, delegate.permissions_changed, delegate.revoked",
+            "- submission_preference.changed",
+            "- hlink_config.updated",
+            "",
+            "**Default submission preferences:**",
+            "- AHCIP: AUTO_CLEAN, WCB: REQUIRE_APPROVAL",
+            "- batch_review_reminder: true, deadline_reminder_days: 7",
+            "",
+            "Export all as frozen objects / TypeScript enums. These are consumed by the API and frontend."
+          ],
+          "frd": [
+            "Domain 5 Section 3.1: 24 delegate permission keys across 8 categories (Claims, Batches, Import, Patients, ED Shifts, Reports, AI Coach, Rejections, Settings).",
+            "Domain 5 Section 3.2: 4 permission templates (Full Access, Billing Entry, Review & Submit, View Only) plus Custom.",
+            "Domain 5 Section 10.2: 11 audit action categories for provider management covering profile, BA, location, WCB, delegate, preferences, H-Link changes."
+          ]
+        },
+        {
+          "id": "D05-002",
+          "description": "Drizzle schema for providers table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/db/provider.schema.ts` starting with the providers table.",
+            "",
+            "**providers table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| provider_id | UUID | PK | Same value as user_id in Domain 1 users table |",
+            "| billing_number | VARCHAR(10) | NOT NULL, UNIQUE | AHCIP practitioner ID (prac ID). Used in H-Link submissions |",
+            "| cpsa_registration_number | VARCHAR(10) | NOT NULL, UNIQUE | College of Physicians & Surgeons of Alberta registration |",
+            "| first_name | VARCHAR(50) | NOT NULL | Legal first name |",
+            "| middle_name | VARCHAR(50) | NULLABLE | Legal middle name |",
+            "| last_name | VARCHAR(50) | NOT NULL | Legal last name |",
+            "| specialty_code | VARCHAR(10) | NOT NULL | Primary specialty. Maps to AHCIP specialty codes |",
+            "| specialty_description | VARCHAR(100) | NULLABLE | Human-readable specialty name |",
+            "| sub_specialty_code | VARCHAR(10) | NULLABLE | Sub-specialty if applicable |",
+            "| physician_type | VARCHAR(20) | NOT NULL | GP, SPECIALIST, LOCUM |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'ACTIVE' | ACTIVE, SUSPENDED, INACTIVE |",
+            "| onboarding_completed | BOOLEAN | NOT NULL, DEFAULT false | Claims cannot be created until true |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "**Foreign key:** provider_id references users(user_id) in Domain 1.",
+            "",
+            "**Indexes:** unique on billing_number, unique on cpsa_registration_number, index on specialty_code, index on status.",
+            "",
+            "Export the table and its inferred types (InsertProvider, SelectProvider) from the schema file."
+          ],
+          "frd": [
+            "Domain 5 Section 2.1: Providers table. One row per physician. Linked 1:1 to users table. Indexes on billing_number (unique), cpsa_registration_number (unique), specialty_code, status."
+          ],
+          "security": [
+            "provider_id is the same as user_id — this is the physician tenant isolation key. All downstream queries scope to provider_id.",
+            "billing_number and cpsa_registration_number are professional identity, not PHI, but uniqueness constraints prevent impersonation."
+          ]
+        },
+        {
+          "id": "D05-003",
+          "description": "Drizzle schema for business_arrangements and pcpcm_enrolments tables",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/provider.schema.ts`:",
+            "",
+            "**business_arrangements table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| ba_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, FK → providers | |",
+            "| ba_number | VARCHAR(10) | NOT NULL | Business Arrangement number from Alberta Health |",
+            "| ba_type | VARCHAR(10) | NOT NULL | FFS, PCPCM, ARP |",
+            "| is_primary | BOOLEAN | NOT NULL | For dual-BA, FFS BA is primary |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | ACTIVE, PENDING, INACTIVE |",
+            "| effective_date | DATE | NULLABLE | When BA became active |",
+            "| end_date | DATE | NULLABLE | When BA was deactivated (null if active) |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Constraints: ba_number unique across active records. Max 2 active BAs per provider (enforced at service layer). If ba_type = PCPCM, a second BA with ba_type = FFS must exist.",
+            "Indexes: (provider_id, status), unique partial index on (ba_number) WHERE status != 'INACTIVE'.",
+            "",
+            "**pcpcm_enrolments table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| enrolment_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, FK → providers | |",
+            "| pcpcm_ba_id | UUID FK | NOT NULL, FK → business_arrangements | The PCPCM BA |",
+            "| ffs_ba_id | UUID FK | NOT NULL, FK → business_arrangements | The paired FFS BA |",
+            "| panel_size | INTEGER | NULLABLE | Current PCPCM panel size, updated periodically |",
+            "| enrolment_date | DATE | NOT NULL | When physician enrolled in PCPCM |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | ACTIVE, PENDING, WITHDRAWN |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Indexes: unique on (provider_id) for active enrolments, (provider_id, status).",
+            "",
+            "Export tables and inferred types."
+          ],
+          "frd": [
+            "Domain 5 Section 2.2: Business Arrangements table. Max 2 active BAs per provider. PCPCM requires paired FFS BA. ba_number unique across active records.",
+            "Domain 5 Section 2.4: PCPCM Enrolments table. Tracks dual-BA linkage and panel size."
+          ]
+        },
+        {
+          "id": "D05-004",
+          "description": "Drizzle schema for practice_locations table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/provider.schema.ts`:",
+            "",
+            "**practice_locations table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| location_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, FK → providers | |",
+            "| name | VARCHAR(100) | NOT NULL | Physician-assigned name (e.g., 'Main Clinic', 'Edson Hospital') |",
+            "| functional_centre | VARCHAR(10) | NOT NULL | AHCIP functional centre code |",
+            "| facility_number | VARCHAR(10) | NULLABLE | Facility number for hospital-based locations |",
+            "| address_line_1 | VARCHAR(100) | NULLABLE | Street address |",
+            "| address_line_2 | VARCHAR(100) | NULLABLE | |",
+            "| city | VARCHAR(50) | NULLABLE | |",
+            "| province | VARCHAR(2) | NULLABLE, DEFAULT 'AB' | |",
+            "| postal_code | VARCHAR(7) | NULLABLE | |",
+            "| community_code | VARCHAR(10) | NULLABLE | Community code for RRNP eligibility lookup |",
+            "| rrnp_eligible | BOOLEAN | NOT NULL, DEFAULT false | Derived from community_code via Reference Data |",
+            "| rrnp_rate | DECIMAL(8,2) | NULLABLE | Current RRNP rate, cached from Reference Data, refreshed quarterly |",
+            "| is_default | BOOLEAN | NOT NULL, DEFAULT false | Primary practice location. Used as default on new claims |",
+            "| is_active | BOOLEAN | NOT NULL, DEFAULT true | Active locations appear in claim creation dropdown |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Constraints: Exactly one default location per provider where is_active = true (enforced at service layer). community_code validated against Reference Data.",
+            "Indexes: (provider_id, is_active), (provider_id, is_default).",
+            "",
+            "Export table and inferred types."
+          ],
+          "frd": [
+            "Domain 5 Section 2.3: Practice Locations table. Multi-site support and locum arrangements. Each location maps to an AHCIP functional centre. RRNP eligibility derived from community_code."
+          ]
+        },
+        {
+          "id": "D05-005",
+          "description": "Drizzle schema for wcb_configurations and delegate_relationships tables",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/provider.schema.ts`:",
+            "",
+            "**wcb_configurations table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| wcb_config_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, FK → providers | |",
+            "| contract_id | VARCHAR(10) | NOT NULL | WCB Contract ID (e.g., 000001, 000006, 000053) |",
+            "| role_code | VARCHAR(10) | NOT NULL | WCB Role code (e.g., GP, SP, OR, OIS) |",
+            "| skill_code | VARCHAR(10) | NULLABLE | WCB Skill code. Defaults based on specialty |",
+            "| permitted_form_types | JSONB | NOT NULL | Array of form IDs this Contract ID/Role can create |",
+            "| is_default | BOOLEAN | NOT NULL, DEFAULT false | Default WCB config for this provider |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Constraints: UNIQUE on (provider_id, contract_id). At most one default per provider.",
+            "Indexes: (provider_id), unique on (provider_id, contract_id).",
+            "",
+            "**delegate_relationships table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| relationship_id | UUID | PK | Default: gen_random_uuid() |",
+            "| physician_id | UUID FK | NOT NULL, FK → providers | The physician granting delegation |",
+            "| delegate_user_id | UUID FK | NOT NULL, FK → users (Domain 1) | The delegate receiving permissions |",
+            "| permissions | JSONB | NOT NULL | Array of permission keys granted (subset of 24) |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'INVITED' | ACTIVE, INVITED, REVOKED |",
+            "| invited_at | TIMESTAMPTZ | NOT NULL | When the invitation was sent |",
+            "| accepted_at | TIMESTAMPTZ | NULLABLE | When the delegate accepted |",
+            "| revoked_at | TIMESTAMPTZ | NULLABLE | When the physician revoked access |",
+            "| revoked_by | UUID FK | NULLABLE | Who revoked (physician or admin) |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Constraints: UNIQUE on (physician_id, delegate_user_id) for active relationships.",
+            "Indexes: (physician_id, status), (delegate_user_id, status).",
+            "",
+            "Export tables and inferred types."
+          ],
+          "frd": [
+            "Domain 5 Section 2.5: WCB Configuration table. Multiple Contract IDs per provider. Each maps to Role code and permitted form types from WCB matrix.",
+            "Domain 5 Section 2.6: Delegate Relationships table. Tracks physician-delegate linkage with JSONB permissions. Statuses: ACTIVE, INVITED, REVOKED."
+          ],
+          "security": [
+            "delegate_relationships scoped to physician_id — tenant isolation critical.",
+            "permitted_form_types in wcb_configurations is derived from the WCB matrix and must be validated against it at creation time."
+          ]
+        },
+        {
+          "id": "D05-006",
+          "description": "Drizzle schema for submission_preferences and hlink_configurations tables",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/provider.schema.ts`:",
+            "",
+            "**submission_preferences table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| preference_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, UNIQUE, FK → providers | One row per physician |",
+            "| ahcip_submission_mode | VARCHAR(20) | NOT NULL, DEFAULT 'AUTO_CLEAN' | AUTO_CLEAN, AUTO_ALL, REQUIRE_APPROVAL |",
+            "| wcb_submission_mode | VARCHAR(20) | NOT NULL, DEFAULT 'REQUIRE_APPROVAL' | AUTO_CLEAN, AUTO_ALL, REQUIRE_APPROVAL |",
+            "| batch_review_reminder | BOOLEAN | NOT NULL, DEFAULT true | Remind physician to review flagged claims before Thursday cutoff |",
+            "| deadline_reminder_days | INTEGER | NOT NULL, DEFAULT 7 | Days before submission deadline for first reminder |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_by | UUID FK | NOT NULL | Who last changed preferences |",
+            "",
+            "Indexes: unique on provider_id.",
+            "",
+            "**hlink_configurations table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| hlink_config_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, UNIQUE, FK → providers | One row per physician |",
+            "| submitter_prefix | VARCHAR(10) | NOT NULL | H-Link submitter prefix assigned during accreditation |",
+            "| credential_secret_ref | VARCHAR(100) | NOT NULL | Reference to credentials in secrets management. NOT the credentials |",
+            "| accreditation_status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | PENDING, ACTIVE, SUSPENDED |",
+            "| accreditation_date | DATE | NULLABLE | When H-Link accreditation was granted |",
+            "| last_successful_transmission | TIMESTAMPTZ | NULLABLE | Last successful batch transmission timestamp |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "",
+            "Indexes: unique on provider_id.",
+            "",
+            "Export tables and inferred types."
+          ],
+          "frd": [
+            "Domain 5 Section 2.7: Submission Preferences table. One row per physician. Defaults: AUTO_CLEAN for AHCIP, REQUIRE_APPROVAL for WCB.",
+            "Domain 5 Section 2.8: H-Link Configuration table. One row per physician. Credentials are references to secrets management — actual values never stored in database."
+          ],
+          "security": [
+            "H-Link credentials (credential_secret_ref) is a REFERENCE KEY ONLY. The actual transmission credentials are stored in secrets management (DigitalOcean encrypted secrets). Never store plaintext credentials in this table.",
+            "submission_preferences scoped to provider_id — only the owning physician or their delegate can modify."
+          ]
+        },
+        {
+          "id": "D05-007",
+          "description": "Zod validation schemas for provider profile, BA, location, WCB endpoints",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/provider.schema.ts` with Zod schemas for request/response validation:",
+            "",
+            "**Provider profile:**",
+            "- updateProviderSchema: { first_name: string().min(1).max(50).optional(), last_name: string().min(1).max(50).optional(), middle_name: string().max(50).optional(), specialty_code: string().max(10).optional(), specialty_description: string().max(100).optional(), sub_specialty_code: string().max(10).optional(), physician_type: enum(['GP','SPECIALIST','LOCUM']).optional() }",
+            "- completeOnboardingSchema: {} (no body — server validates all required fields exist)",
+            "",
+            "**Business Arrangements:**",
+            "- createBaSchema: { ba_number: string().min(1).max(10).regex(/^\\d{1,10}$/), ba_type: enum(['FFS','PCPCM','ARP']), is_primary: boolean().optional(), effective_date: string().date().optional() }",
+            "- updateBaSchema: { status: enum(['ACTIVE','PENDING','INACTIVE']).optional(), effective_date: string().date().optional(), end_date: string().date().optional() }",
+            "- baIdParamSchema: { id: string().uuid() }",
+            "",
+            "**Practice Locations:**",
+            "- createLocationSchema: { name: string().min(1).max(100), functional_centre: string().min(1).max(10), facility_number: string().max(10).optional(), address_line_1: string().max(100).optional(), address_line_2: string().max(100).optional(), city: string().max(50).optional(), province: string().max(2).default('AB').optional(), postal_code: string().max(7).optional(), community_code: string().max(10).optional() }",
+            "- updateLocationSchema: (same fields as create, all optional)",
+            "- locationIdParamSchema: { id: string().uuid() }",
+            "",
+            "**WCB Configuration:**",
+            "- createWcbConfigSchema: { contract_id: string().min(1).max(10), role_code: string().min(1).max(10), skill_code: string().max(10).optional(), is_default: boolean().optional() }",
+            "- updateWcbConfigSchema: { skill_code: string().max(10).optional(), is_default: boolean().optional() }",
+            "- wcbConfigIdParamSchema: { id: string().uuid() }",
+            "",
+            "Export all schemas AND their inferred TypeScript types (z.infer<typeof schema>)."
+          ],
+          "frd": [
+            "Domain 5 Section 5.1-5.4: API contracts for provider profile, BAs, locations, WCB configuration endpoints.",
+            "Domain 5 Section 9.1: Onboarding steps define required fields — billing_number, cpsa_registration_number validated against known formats."
+          ]
+        },
+        {
+          "id": "D05-008",
+          "description": "Zod validation schemas for delegate, submission preferences, H-Link, internal API",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D05-001", "D05-007"],
+          "build": [
+            "Add to `packages/shared/src/schemas/provider.schema.ts`:",
+            "",
+            "**Delegate Management:**",
+            "- inviteDelegateSchema: { email: string().email().max(255), permissions: array(enum(DELEGATE_PERMISSION_KEYS)).min(1) }",
+            "- updateDelegatePermissionsSchema: { permissions: array(enum(DELEGATE_PERMISSION_KEYS)).min(1) }",
+            "- delegateRelIdParamSchema: { rel_id: string().uuid() }",
+            "- acceptInvitationSchema: { token: string().min(1) }",
+            "- switchContextParamSchema: { provider_id: string().uuid() }",
+            "",
+            "**Submission Preferences:**",
+            "- updateSubmissionPreferencesSchema: { ahcip_submission_mode: enum(['AUTO_CLEAN','AUTO_ALL','REQUIRE_APPROVAL']).optional(), wcb_submission_mode: enum(['AUTO_CLEAN','AUTO_ALL','REQUIRE_APPROVAL']).optional(), batch_review_reminder: boolean().optional(), deadline_reminder_days: number().int().min(1).max(30).optional() }",
+            "",
+            "**H-Link Configuration:**",
+            "- updateHlinkConfigSchema: { submitter_prefix: string().min(1).max(10).optional(), accreditation_status: enum(['PENDING','ACTIVE','SUSPENDED']).optional() }",
+            "",
+            "**Internal Provider Context API:**",
+            "- providerIdParamSchema: { id: string().uuid() }",
+            "- baForClaimQuerySchema: { claim_type: enum(['AHCIP','WCB']), hsc_code: string().optional() }",
+            "- wcbConfigForFormQuerySchema: { form_id: string().min(1) }",
+            "",
+            "**Provider Context Response Type (TypeScript interface, not Zod):**",
+            "Define ProviderContext type matching Section 6 of the FRD:",
+            "provider_id, billing_number, specialty_code, physician_type, bas[], default_location, all_locations[], pcpcm_enrolled, pcpcm_ba_number, ffs_ba_number, wcb_configs[], default_wcb_config, submission_preferences, hlink_accreditation_status, hlink_submitter_prefix, onboarding_completed, status.",
+            "",
+            "Export all schemas, types, and the ProviderContext interface."
+          ],
+          "frd": [
+            "Domain 5 Section 5.5-5.8: API contracts for delegate management, submission preferences, H-Link configuration, and internal provider context endpoints.",
+            "Domain 5 Section 6: Provider Context Object specification — 17 fields consumed by Claim Lifecycle (Domain 4)."
+          ]
+        },
+        {
+          "id": "D05-009",
+          "description": "Generate and apply database migration for all provider tables",
+          "verify": "cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1",
+          "depends": ["D05-002", "D05-003", "D05-004", "D05-005", "D05-006"],
+          "build": [
+            "Run the Drizzle migration generator to create the migration for all Provider Management tables:",
+            "",
+            "```bash",
+            "cd apps/api",
+            "pnpm drizzle-kit generate",
+            "pnpm drizzle-kit migrate",
+            "```",
+            "",
+            "Verify that the migration file was created in `apps/api/drizzle/migrations/`.",
+            "Verify that all 8 tables exist in the test database: providers, business_arrangements, pcpcm_enrolments, practice_locations, wcb_configurations, delegate_relationships, submission_preferences, hlink_configurations.",
+            "Verify all indexes, unique constraints, and foreign keys are applied.",
+            "Verify the FK from providers.provider_id → users.user_id exists."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 5: Provider Management — Repository Layer",
+      "tasks": [
+        {
+          "id": "D05-010",
+          "description": "Repository: provider CRUD operations",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Create `apps/api/src/domains/provider/provider.repository.ts` with provider operations:",
+            "",
+            "- `createProvider(data: InsertProvider)` — insert provider record. provider_id must match the user_id from Domain 1.",
+            "- `findProviderById(providerId: string)` — find provider by ID. Return null if not found.",
+            "- `findProviderByBillingNumber(billingNumber: string)` — find provider by billing number. Used for uniqueness validation.",
+            "- `findProviderByCpsaNumber(cpsaNumber: string)` — find by CPSA registration number.",
+            "- `updateProvider(providerId: string, data: Partial<InsertProvider>)` — update provider fields. Set updated_at to now().",
+            "- `completeOnboarding(providerId: string)` — set onboarding_completed = true. Validate all required fields are populated before setting.",
+            "- `getOnboardingStatus(providerId: string)` — return which required fields are populated and which are missing.",
+            "",
+            "All queries are scoped to a single provider_id — no cross-provider queries at this layer."
+          ],
+          "security": [
+            "All queries must be parameterised — no string interpolation for provider_id or billing_number.",
+            "findProviderById returns null if not found — callers must check and return 404."
+          ],
+          "tests": [
+            "createProvider inserts provider record",
+            "createProvider rejects duplicate billing_number",
+            "createProvider rejects duplicate cpsa_registration_number",
+            "findProviderById returns provider for valid ID",
+            "findProviderById returns null for unknown ID",
+            "updateProvider updates fields and updated_at",
+            "completeOnboarding sets onboarding_completed true",
+            "completeOnboarding fails if required fields missing",
+            "getOnboardingStatus reports missing fields accurately"
+          ]
+        },
+        {
+          "id": "D05-011",
+          "description": "Repository: business arrangement management",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "- `createBa(data: InsertBa)` — insert business arrangement.",
+            "- `findBaById(baId: string, providerId: string)` — find BA scoped to provider.",
+            "- `listBasForProvider(providerId: string)` — list all BAs (active, pending, inactive).",
+            "- `listActiveBasForProvider(providerId: string)` — list only active BAs.",
+            "- `countActiveBasForProvider(providerId: string)` — count active BAs (for max 2 enforcement).",
+            "- `updateBa(baId: string, providerId: string, data: Partial<InsertBa>)` — update BA fields scoped to provider.",
+            "- `deactivateBa(baId: string, providerId: string)` — set status = INACTIVE, end_date = now().",
+            "- `findBaByNumber(baNumber: string)` — find active BA by number (for uniqueness check across system)."
+          ],
+          "security": [
+            "All BA queries scoped to providerId — physician can only see their own BAs.",
+            "deactivateBa is a soft operation — the record is preserved for audit and historical claim references."
+          ],
+          "tests": [
+            "createBa inserts BA record",
+            "listBasForProvider returns only this provider's BAs",
+            "listActiveBasForProvider excludes INACTIVE BAs",
+            "countActiveBasForProvider returns correct count",
+            "updateBa updates fields scoped to provider",
+            "updateBa rejects if BA belongs to different provider",
+            "deactivateBa sets INACTIVE and end_date",
+            "findBaByNumber finds active BA across system"
+          ]
+        },
+        {
+          "id": "D05-012",
+          "description": "Repository: practice location management",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "- `createLocation(data: InsertLocation)` — insert practice location.",
+            "- `findLocationById(locationId: string, providerId: string)` — find location scoped to provider.",
+            "- `listLocationsForProvider(providerId: string)` — list all locations.",
+            "- `listActiveLocationsForProvider(providerId: string)` — list active locations (for claim creation dropdown).",
+            "- `updateLocation(locationId: string, providerId: string, data: Partial<InsertLocation>)` — update location fields.",
+            "- `setDefaultLocation(locationId: string, providerId: string)` — unset current default, set this as default. Transaction required.",
+            "- `deactivateLocation(locationId: string, providerId: string)` — set is_active = false. If this was default, clear is_default.",
+            "- `getDefaultLocation(providerId: string)` — return the default location or null."
+          ],
+          "security": [
+            "All location queries scoped to providerId.",
+            "setDefaultLocation uses a transaction to ensure exactly one default at all times."
+          ],
+          "tests": [
+            "createLocation inserts location record",
+            "listActiveLocationsForProvider returns only active locations",
+            "updateLocation updates fields scoped to provider",
+            "updateLocation rejects if location belongs to different provider",
+            "setDefaultLocation unsets previous default and sets new",
+            "deactivateLocation sets is_active false",
+            "deactivateLocation clears is_default if was default",
+            "getDefaultLocation returns default location"
+          ]
+        },
+        {
+          "id": "D05-013",
+          "description": "Repository: PCPCM enrolment and WCB configuration",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "**PCPCM Enrolment:**",
+            "- `createPcpcmEnrolment(data: InsertPcpcmEnrolment)` — insert enrolment linking PCPCM and FFS BAs.",
+            "- `findPcpcmEnrolmentForProvider(providerId: string)` — find active enrolment.",
+            "- `updatePcpcmEnrolment(enrolmentId: string, providerId: string, data: Partial<InsertPcpcmEnrolment>)` — update panel size or status.",
+            "",
+            "**WCB Configuration:**",
+            "- `createWcbConfig(data: InsertWcbConfig)` — insert WCB configuration.",
+            "- `findWcbConfigById(wcbConfigId: string, providerId: string)` — find WCB config scoped to provider.",
+            "- `listWcbConfigsForProvider(providerId: string)` — list all WCB configurations.",
+            "- `updateWcbConfig(wcbConfigId: string, providerId: string, data: Partial<InsertWcbConfig>)` — update fields.",
+            "- `deleteWcbConfig(wcbConfigId: string, providerId: string)` — hard delete (WCB configs are not soft-deleted).",
+            "- `setDefaultWcbConfig(wcbConfigId: string, providerId: string)` — unset current default, set new. Transaction.",
+            "- `getAggregatedFormPermissions(providerId: string)` — union all permitted_form_types across all Contract IDs."
+          ],
+          "security": [
+            "WCB configuration queries scoped to providerId.",
+            "permitted_form_types is stored as JSONB — validate it's a string array on insert."
+          ],
+          "tests": [
+            "createPcpcmEnrolment inserts enrolment record",
+            "findPcpcmEnrolmentForProvider returns active enrolment",
+            "createWcbConfig inserts WCB config",
+            "createWcbConfig rejects duplicate (provider_id, contract_id)",
+            "listWcbConfigsForProvider returns only this provider's configs",
+            "deleteWcbConfig removes config scoped to provider",
+            "setDefaultWcbConfig unsets previous default",
+            "getAggregatedFormPermissions unions all permitted form types"
+          ]
+        },
+        {
+          "id": "D05-014",
+          "description": "Repository: delegate relationships",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "- `createDelegateRelationship(data: InsertDelegateRelationship)` — insert relationship with status INVITED.",
+            "- `findRelationshipById(relationshipId: string, physicianId: string)` — find scoped to physician.",
+            "- `findActiveRelationship(physicianId: string, delegateUserId: string)` — find active relationship.",
+            "- `listDelegatesForPhysician(physicianId: string)` — list all delegate relationships (ACTIVE, INVITED, REVOKED) with delegate user info (join to Domain 1 users).",
+            "- `listPhysiciansForDelegate(delegateUserId: string)` — list all physicians the delegate serves (ACTIVE only) with permissions per physician.",
+            "- `updateDelegatePermissions(relationshipId: string, physicianId: string, permissions: string[])` — update permissions JSONB.",
+            "- `acceptRelationship(relationshipId: string)` — set status = ACTIVE, accepted_at = now().",
+            "- `revokeRelationship(relationshipId: string, physicianId: string, revokedBy: string)` — set status = REVOKED, revoked_at = now(), revoked_by."
+          ],
+          "security": [
+            "listDelegatesForPhysician scoped to physicianId — physician can only see their own delegates.",
+            "listPhysiciansForDelegate scoped to delegateUserId — delegate only sees physicians they serve.",
+            "UNIQUE constraint on (physician_id, delegate_user_id) for active relationships prevents duplicates."
+          ],
+          "tests": [
+            "createDelegateRelationship inserts with status INVITED",
+            "createDelegateRelationship rejects duplicate active (physician, delegate) pair",
+            "listDelegatesForPhysician returns only this physician's delegates",
+            "listPhysiciansForDelegate returns only ACTIVE relationships",
+            "updateDelegatePermissions replaces permission set",
+            "updateDelegatePermissions rejects if relationship belongs to different physician",
+            "acceptRelationship sets ACTIVE and accepted_at",
+            "revokeRelationship sets REVOKED with revoked_at and revoked_by"
+          ]
+        },
+        {
+          "id": "D05-015",
+          "description": "Repository: submission preferences and H-Link configuration",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-009"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "**Submission Preferences:**",
+            "- `createSubmissionPreferences(data: InsertSubmissionPreferences)` — insert default preferences during onboarding.",
+            "- `findSubmissionPreferences(providerId: string)` — find preferences for provider.",
+            "- `updateSubmissionPreferences(providerId: string, data: Partial<InsertSubmissionPreferences>, updatedBy: string)` — update preferences. Set updated_by.",
+            "",
+            "**H-Link Configuration:**",
+            "- `createHlinkConfig(data: InsertHlinkConfig)` — insert H-Link configuration.",
+            "- `findHlinkConfig(providerId: string)` — find H-Link config for provider.",
+            "- `updateHlinkConfig(providerId: string, data: Partial<InsertHlinkConfig>)` — update H-Link fields.",
+            "- `updateLastTransmission(providerId: string, timestamp: Date)` — update last_successful_transmission."
+          ],
+          "security": [
+            "H-Link config never returns or accepts actual credentials — only the credential_secret_ref.",
+            "Submission preferences and H-Link config scoped to providerId."
+          ],
+          "tests": [
+            "createSubmissionPreferences inserts with defaults",
+            "findSubmissionPreferences returns correct preferences",
+            "updateSubmissionPreferences updates modes and sets updated_by",
+            "createHlinkConfig inserts H-Link config",
+            "findHlinkConfig returns config without actual credentials",
+            "updateHlinkConfig updates submitter_prefix and accreditation_status",
+            "updateLastTransmission updates timestamp"
+          ]
+        },
+        {
+          "id": "D05-016",
+          "description": "Repository: provider context queries (internal API)",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-010", "D05-011", "D05-012", "D05-013", "D05-015"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.repository.ts`:",
+            "",
+            "- `getFullProviderContext(providerId: string)` — single query (or optimised multi-query) that returns the complete ProviderContext object: provider record, all active BAs, default location, all active locations, PCPCM enrolment status, all WCB configs, default WCB config, submission preferences, H-Link config.",
+            "- `getBaForClaim(providerId: string, claimType: 'AHCIP' | 'WCB', hscCode?: string)` — return the correct BA number. For AHCIP: if PCPCM enrolled and hscCode provided, look up basket classification (via Reference Data) to determine PCPCM vs FFS BA. For WCB: return primary BA.",
+            "- `getWcbConfigForForm(providerId: string, formId: string)` — find the WCB configuration whose permitted_form_types includes the given formId. Return Contract ID, Role code, or null if not permitted.",
+            "",
+            "These are the core queries consumed by Domain 4 (Claim Lifecycle) via the internal API."
+          ],
+          "security": [
+            "Internal API queries are still scoped to providerId — no cross-provider data access even for service-to-service calls.",
+            "PCPCM basket routing lookup should use the SOMB version effective at the date of service, not current."
+          ],
+          "tests": [
+            "getFullProviderContext returns complete context for active provider",
+            "getFullProviderContext returns null for unknown provider",
+            "getBaForClaim returns FFS BA for non-PCPCM physician",
+            "getBaForClaim returns PCPCM BA for in-basket HSC code",
+            "getBaForClaim returns FFS BA for out-of-basket HSC code",
+            "getBaForClaim returns FFS BA when HSC code has no basket classification",
+            "getWcbConfigForForm returns matching config for permitted form",
+            "getWcbConfigForForm returns null for non-permitted form"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 5: Provider Management — Service Layer",
+      "tasks": [
+        {
+          "id": "D05-020",
+          "description": "Service: provider profile management and onboarding",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-010"],
+          "build": [
+            "Create `apps/api/src/domains/provider/provider.service.ts` with provider profile functions:",
+            "",
+            "- `getProviderProfile(providerId: string)` — return full provider profile including BAs, locations, WCB configs, PCPCM status, RRNP eligibility, submission preferences, H-Link config. Compose from repository calls.",
+            "- `updateProviderProfile(providerId: string, data: UpdateProviderInput, actorId: string)` — update profile fields. Emit provider.profile_updated audit event with field-level diff (old vs new). If specialty changes, note that validation context updates for future claims.",
+            "- `getOnboardingStatus(providerId: string)` — return checklist of required fields (billing_number, cpsa_registration, specialty, physician_type, at least 1 BA, at least 1 location, IMA acknowledgement) with completion status per field.",
+            "- `completeOnboarding(providerId: string)` — validate all required fields are set (steps 1-4 and 7). If valid: set onboarding_completed = true, emit provider.onboarding_completed audit event. If invalid: return list of missing fields.",
+            "- `createProviderFromOnboarding(userId: string, data: OnboardingProfileInput)` — create the provider record during the onboarding wizard. Called from the first onboarding step. Sets provider_id = userId.",
+            "",
+            "**Onboarding steps (reference):** 1. Professional Identity, 2. Specialty & Type, 3. BA, 4. Primary Location, 5. WCB Config (optional), 6. Submission Preferences (defaults), 7. IMA Generation."
+          ],
+          "frd": [
+            "Domain 5 Section 9.1-9.2: 7-step onboarding wizard. Steps 1-4 and 7 required. Steps 5-6 optional. Onboarding_completed blocks claim creation until true.",
+            "Domain 5 Section 4.1 PRV-001: Guided wizard for professional identity setup."
+          ],
+          "security": [
+            "createProviderFromOnboarding sets provider_id = userId, establishing the 1:1 link between IAM and Provider.",
+            "updateProviderProfile logs field-level diffs to audit trail — captures old and new values."
+          ],
+          "tests": [
+            "getProviderProfile returns complete profile for active provider",
+            "updateProviderProfile updates fields and emits audit event",
+            "updateProviderProfile captures field-level diff in audit detail",
+            "getOnboardingStatus reports missing fields accurately",
+            "completeOnboarding succeeds when all required fields populated",
+            "completeOnboarding fails listing missing fields",
+            "createProviderFromOnboarding creates provider with provider_id = userId"
+          ]
+        },
+        {
+          "id": "D05-021",
+          "description": "Service: business arrangement management with PCPCM constraints",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-011", "D05-013"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `addBa(providerId: string, data: CreateBaInput, actorId: string)` — validate: max 2 active BAs, ba_number format, ba_number uniqueness. If ba_type = PCPCM: validate a FFS BA exists (or is being added simultaneously). Emit ba.added audit event.",
+            "- `updateBa(providerId: string, baId: string, data: UpdateBaInput, actorId: string)` — update BA fields. Validate status transitions: PENDING → ACTIVE → INACTIVE. Emit ba.updated audit event.",
+            "- `deactivateBa(providerId: string, baId: string, actorId: string)` — set INACTIVE. If this is the PCPCM BA: also withdraw the PCPCM enrolment. Verify no pending claims reference this BA. Emit ba.deactivated audit event.",
+            "- `listBas(providerId: string)` — return all BAs for the provider.",
+            "",
+            "**PCPCM Dual-BA Flow:**",
+            "When a physician adds a PCPCM BA, the service enforces:",
+            "1. A FFS BA must already exist OR be provided in the same request.",
+            "2. A pcpcm_enrolments record is created linking both BAs.",
+            "3. The FFS BA is marked as primary."
+          ],
+          "frd": [
+            "Domain 5 Section 2.2: Max 2 active BAs. PCPCM requires paired FFS BA. ba_number unique across active records.",
+            "Domain 5 Section 4.1 PRV-002: BA setup during onboarding with validation.",
+            "Domain 5 Section 11.2: BA test requirements including PCPCM constraints and status transitions."
+          ],
+          "tests": [
+            "addBa creates BA with valid data",
+            "addBa rejects third active BA",
+            "addBa rejects PCPCM without existing FFS BA",
+            "addBa creates PCPCM enrolment when adding PCPCM BA",
+            "addBa rejects duplicate ba_number across system",
+            "updateBa validates status transitions (PENDING → ACTIVE OK, ACTIVE → PENDING rejected)",
+            "deactivateBa sets INACTIVE and end_date",
+            "deactivateBa withdraws PCPCM enrolment when deactivating PCPCM BA",
+            "deactivateBa emits audit event"
+          ]
+        },
+        {
+          "id": "D05-022",
+          "description": "Service: practice location management with RRNP eligibility",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-012"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `addLocation(providerId: string, data: CreateLocationInput, actorId: string)` — create location. If community_code provided: look up RRNP eligibility and rate from Reference Data (Domain 2). Set rrnp_eligible and rrnp_rate. If no community_code: rrnp_eligible = false. If this is the first location: auto-set as default. Emit location.added audit event.",
+            "- `updateLocation(providerId: string, locationId: string, data: UpdateLocationInput, actorId: string)` — update fields. If community_code changed: re-derive RRNP eligibility and rate. Emit location.updated audit event with changes.",
+            "- `setDefaultLocation(providerId: string, locationId: string, actorId: string)` — set as default. Unset previous default in transaction.",
+            "- `deactivateLocation(providerId: string, locationId: string, actorId: string)` — soft-delete. If was default, clear default. Emit location.deactivated. Existing claims using this location are unaffected.",
+            "- `listLocations(providerId: string)` — return all locations.",
+            "- `listActiveLocations(providerId: string)` — return active locations (for claim creation dropdown).",
+            "- `refreshRrnpRates(providerId: string)` — re-derive RRNP eligibility and rates for all active locations from Reference Data. Called quarterly or on demand."
+          ],
+          "frd": [
+            "Domain 5 Section 2.3: Practice locations with RRNP eligibility derived from community_code.",
+            "Domain 5 Section 8: Locum support — multi-location management with per-claim location selection.",
+            "Domain 5 Section 11.3: Location test requirements."
+          ],
+          "tests": [
+            "addLocation creates location and derives RRNP eligibility",
+            "addLocation without community_code sets rrnp_eligible false",
+            "addLocation auto-sets default for first location",
+            "updateLocation re-derives RRNP when community_code changes",
+            "setDefaultLocation swaps default in transaction",
+            "deactivateLocation clears default if was default",
+            "deactivateLocation does not affect existing claims",
+            "refreshRrnpRates updates all active locations"
+          ]
+        },
+        {
+          "id": "D05-023",
+          "description": "Service: PCPCM routing logic",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-011", "D05-013", "D05-016"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `routeClaimToBa(providerId: string, claimType: 'AHCIP' | 'WCB', hscCode?: string, dateOfService?: string)` — determine the correct BA for a claim:",
+            "  1. If claimType = WCB: return primary BA number.",
+            "  2. If claimType = AHCIP and physician NOT PCPCM-enrolled: return FFS BA number.",
+            "  3. If claimType = AHCIP and physician IS PCPCM-enrolled:",
+            "     a. Look up HSC code's PCPCM basket classification from Reference Data (using SOMB version effective at dateOfService).",
+            "     b. If in-basket: return PCPCM BA number.",
+            "     c. If out-of-basket: return FFS BA number.",
+            "     d. If no classification (rare edge case): return FFS BA number + warning flag.",
+            "",
+            "- `isPcpcmEnrolled(providerId: string)` — check if provider has active PCPCM enrolment.",
+            "",
+            "**Critical:** The SOMB version in effect at the date of service governs the basket classification, NOT the current SOMB version. This prevents retroactive reclassification."
+          ],
+          "frd": [
+            "Domain 5 Section 7.1: PCPCM routing decision — in-basket → PCPCM BA, out-of-basket → FFS BA, no classification → FFS BA with warning.",
+            "Domain 5 Section 7.2: Batch assembly impact — PCPCM physicians generate two separate batches per Thursday cycle.",
+            "Domain 5 Section 7.3: BA routing displayed in UI, updates in real-time on HSC code change."
+          ],
+          "tests": [
+            "routeClaimToBa returns FFS BA for non-PCPCM physician",
+            "routeClaimToBa returns PCPCM BA for in-basket HSC code",
+            "routeClaimToBa returns FFS BA for out-of-basket HSC code",
+            "routeClaimToBa returns FFS BA with warning for unclassified HSC code",
+            "routeClaimToBa uses SOMB version effective at dateOfService",
+            "routeClaimToBa returns primary BA for WCB claims",
+            "isPcpcmEnrolled returns true for enrolled provider",
+            "isPcpcmEnrolled returns false for non-enrolled provider"
+          ]
+        },
+        {
+          "id": "D05-024",
+          "description": "Service: WCB configuration management",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-013"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `addWcbConfig(providerId: string, data: CreateWcbConfigInput, actorId: string)` — validate contract_id and role_code against WCB Contract ID/Role/Form ID matrix (from Reference Data Domain 2). Auto-populate permitted_form_types from the matrix. Emit wcb_config.added audit event.",
+            "- `updateWcbConfig(providerId: string, wcbConfigId: string, data: UpdateWcbConfigInput, actorId: string)` — update skill_code or default status. Emit wcb_config.updated.",
+            "- `removeWcbConfig(providerId: string, wcbConfigId: string, actorId: string)` — delete WCB config. Verify no pending WCB claims reference this config. Emit wcb_config.removed with Contract ID and Role in audit detail.",
+            "- `listWcbConfigs(providerId: string)` — list all configs.",
+            "- `getFormPermissions(providerId: string)` — return aggregated permitted form types across all Contract IDs.",
+            "- `getWcbConfigForForm(providerId: string, formId: string)` — find the matching Contract ID/Role for a given form type. Return null if not permitted."
+          ],
+          "frd": [
+            "Domain 5 Section 2.5: WCB configurations. Multiple Contract IDs per provider.",
+            "Domain 5 Section 4.1 PRV-004: WCB setup with Contract ID dropdown and auto-populated form types.",
+            "Domain 5 Section 11.4: WCB configuration test requirements."
+          ],
+          "tests": [
+            "addWcbConfig validates against WCB matrix",
+            "addWcbConfig auto-populates permitted_form_types",
+            "addWcbConfig rejects duplicate (provider, contract_id)",
+            "updateWcbConfig updates skill_code",
+            "removeWcbConfig deletes config scoped to provider",
+            "removeWcbConfig rejects if pending claims reference config",
+            "getFormPermissions returns union of all permitted forms",
+            "getWcbConfigForForm returns matching config",
+            "getWcbConfigForForm returns null for non-permitted form"
+          ]
+        },
+        {
+          "id": "D05-025",
+          "description": "Service: delegate management (invitation, acceptance, revocation)",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-014"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `inviteDelegate(physicianId: string, email: string, permissions: string[], actorId: string)` — validate permissions are from the 24-key catalogue. Create delegate_relationships record with status INVITED. Generate single-use invitation token (7-day expiry, hash stored). Emit DELEGATE_INVITED notification event. Emit delegate.invited audit event.",
+            "- `acceptInvitation(token: string, delegateUserId: string)` — validate token (hash comparison), check not expired (7 days), check not already accepted. Set status = ACTIVE, accepted_at = now(). Emit delegate.accepted audit event.",
+            "- `listDelegates(physicianId: string)` — return all delegates with permissions, status, invited_at, accepted_at.",
+            "- `updateDelegatePermissions(physicianId: string, relationshipId: string, permissions: string[], actorId: string)` — validate permissions from catalogue. Update JSONB. Emit delegate.permissions_changed audit event with old vs new permissions.",
+            "- `revokeDelegate(physicianId: string, relationshipId: string, actorId: string)` — set REVOKED. Emit delegate.revoked audit event. Emit DELEGATE_REVOKED notification. Note: actual session revocation handled by Domain 1 — emit event for Domain 1 to consume.",
+            "- `listPhysiciansForDelegate(delegateUserId: string)` — return list of physicians with permissions per physician.",
+            "- `switchPhysicianContext(delegateUserId: string, physicianId: string)` — verify active relationship exists. Return updated auth context data for Domain 1. Emit delegate.context_switched audit event."
+          ],
+          "frd": [
+            "Domain 5 Section 3: Delegate permission model. 24 permissions, 4 templates, multi-physician delegation.",
+            "Domain 5 Section 4.2 PRV-005 through PRV-009: Delegate user stories.",
+            "Domain 5 Section 11.5: Delegate test requirements."
+          ],
+          "security": [
+            "Invitation tokens are single-use, 7-day expiry, stored as hash.",
+            "Permission changes take effect immediately — next API call uses new permissions.",
+            "Delegate revocation must trigger session invalidation in Domain 1 (event-driven).",
+            "Context switching is explicit and logged — no implicit cross-physician access."
+          ],
+          "tests": [
+            "inviteDelegate creates relationship with INVITED status",
+            "inviteDelegate validates permissions against catalogue",
+            "inviteDelegate rejects invalid permission keys",
+            "acceptInvitation activates relationship",
+            "acceptInvitation rejects expired token (>7 days)",
+            "acceptInvitation rejects already-accepted invitation",
+            "updateDelegatePermissions updates JSONB and logs old/new diff",
+            "updateDelegatePermissions rejects if relationship not owned by physician",
+            "revokeDelegate sets REVOKED and emits events",
+            "listPhysiciansForDelegate returns only ACTIVE relationships",
+            "switchPhysicianContext succeeds with active relationship",
+            "switchPhysicianContext fails without active relationship"
+          ]
+        },
+        {
+          "id": "D05-026",
+          "description": "Service: submission preferences and H-Link configuration",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-015"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "**Submission Preferences:**",
+            "- `getSubmissionPreferences(providerId: string)` — return current preferences.",
+            "- `updateSubmissionPreferences(providerId: string, data: UpdatePreferencesInput, actorId: string)` — update modes and reminder settings. Emit submission_preference.changed audit event with old vs new values.",
+            "- `initDefaultPreferences(providerId: string, actorId: string)` — create default preferences during onboarding: AHCIP = AUTO_CLEAN, WCB = REQUIRE_APPROVAL, reminders on, 7 days.",
+            "",
+            "**H-Link Configuration:**",
+            "- `getHlinkConfig(providerId: string)` — return H-Link config. NEVER return credential_secret_ref to the client — only submitter_prefix, accreditation_status, dates.",
+            "- `updateHlinkConfig(providerId: string, data: UpdateHlinkInput, actorId: string)` — update submitter_prefix, accreditation_status. Credential rotation routes to secrets management (out of scope for this service — emit event). Emit hlink_config.updated audit event.",
+            "- `isSubmissionAllowed(providerId: string)` — check: onboarding_completed = true, provider status = ACTIVE, H-Link accreditation_status = ACTIVE. Return boolean + reason if false."
+          ],
+          "frd": [
+            "Domain 5 Section 2.7-2.8: Submission preferences and H-Link configuration.",
+            "Domain 5 Section 4.3 PRV-011: Submission preference user story.",
+            "Domain 5 Section 11.6: Submission preference test requirements."
+          ],
+          "security": [
+            "H-Link credential_secret_ref is NEVER returned in API responses. Only submitter_prefix and accreditation_status are exposed.",
+            "Credential changes logged as 'credential rotated' in audit — no actual values in audit detail."
+          ],
+          "tests": [
+            "getSubmissionPreferences returns current preferences",
+            "updateSubmissionPreferences updates modes and emits audit",
+            "initDefaultPreferences creates defaults (AUTO_CLEAN, REQUIRE_APPROVAL)",
+            "getHlinkConfig returns config without credential_secret_ref",
+            "updateHlinkConfig updates prefix and accreditation status",
+            "isSubmissionAllowed returns true for fully configured provider",
+            "isSubmissionAllowed returns false with reason for incomplete onboarding",
+            "isSubmissionAllowed returns false for SUSPENDED provider",
+            "isSubmissionAllowed returns false for PENDING H-Link accreditation"
+          ]
+        },
+        {
+          "id": "D05-027",
+          "description": "Service: provider context (internal API for claim lifecycle)",
+          "verify": "pnpm --filter api vitest run src/domains/provider/provider.test.ts",
+          "depends": ["D05-016", "D05-023"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.service.ts`:",
+            "",
+            "- `getProviderContext(providerId: string)` — assemble the full ProviderContext object (Section 6 of FRD). Cached per request, invalidated on any provider data change. Returns: provider_id, billing_number, specialty_code, physician_type, bas[], default_location, all_locations[], pcpcm_enrolled, pcpcm_ba_number, ffs_ba_number, wcb_configs[], default_wcb_config, submission_preferences, hlink_accreditation_status, hlink_submitter_prefix, onboarding_completed, status.",
+            "- `getBaForClaim(providerId: string, claimType: string, hscCode?: string, dateOfService?: string)` — delegate to routeClaimToBa. Return { ba_number, ba_type, routing_reason }.",
+            "- `getWcbConfigForForm(providerId: string, formId: string)` — delegate to repository. Return { contract_id, role_code, skill_code } or throw if not permitted.",
+            "",
+            "**Caching:** Provider context is computed once per request and stored on the Fastify request object. Invalidated when any provider data changes (profile, BA, location, WCB config, preferences). RRNP rate changes (quarterly) and PCPCM basket classification updates (SOMB update) trigger a cache refresh."
+          ],
+          "frd": [
+            "Domain 5 Section 6: Provider Context Object — 17 fields consumed by Domain 4.",
+            "Domain 5 Section 5.8: Internal Provider Context API endpoints."
+          ],
+          "tests": [
+            "getProviderContext returns complete context with all 17 fields",
+            "getProviderContext returns null for unknown provider",
+            "getProviderContext reflects latest BA changes",
+            "getBaForClaim delegates to PCPCM routing logic",
+            "getWcbConfigForForm returns matching config",
+            "getWcbConfigForForm throws for non-permitted form"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 5: Provider Management — Routes & Integration Tests",
+      "tasks": [
+        {
+          "id": "D05-030",
+          "description": "Routes: provider profile, onboarding, BA, and location endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/provider/",
+          "depends": ["D05-020", "D05-021", "D05-022"],
+          "build": [
+            "Create `apps/api/src/domains/provider/provider.routes.ts` and `apps/api/src/domains/provider/provider.handlers.ts`.",
+            "",
+            "**Provider profile routes (auth required, physician or delegate with PROVIDER_VIEW/PROVIDER_EDIT):**",
+            "- GET /api/v1/providers/me → getProfileHandler",
+            "- PUT /api/v1/providers/me → updateProfileHandler (body: updateProviderSchema)",
+            "- GET /api/v1/providers/me/onboarding-status → onboardingStatusHandler",
+            "- POST /api/v1/providers/me/complete-onboarding → completeOnboardingHandler",
+            "",
+            "**BA routes (auth required, physician or delegate with appropriate permission):**",
+            "- GET /api/v1/providers/me/bas → listBasHandler",
+            "- POST /api/v1/providers/me/bas → addBaHandler (body: createBaSchema)",
+            "- PUT /api/v1/providers/me/bas/:id → updateBaHandler (body: updateBaSchema, params: baIdParamSchema)",
+            "- DELETE /api/v1/providers/me/bas/:id → deactivateBaHandler (params: baIdParamSchema)",
+            "",
+            "**Location routes (auth required):**",
+            "- GET /api/v1/providers/me/locations → listLocationsHandler",
+            "- POST /api/v1/providers/me/locations → addLocationHandler (body: createLocationSchema)",
+            "- PUT /api/v1/providers/me/locations/:id → updateLocationHandler (body: updateLocationSchema, params: locationIdParamSchema)",
+            "- PUT /api/v1/providers/me/locations/:id/set-default → setDefaultLocationHandler (params: locationIdParamSchema)",
+            "- DELETE /api/v1/providers/me/locations/:id → deactivateLocationHandler (params: locationIdParamSchema)",
+            "",
+            "**Handlers are thin:** validate input (via Zod schema on route), extract providerId from auth context (physician's own ID or delegate's active physician context), call service, format response.",
+            "",
+            "Create `apps/api/test/integration/provider/profile.integration.ts`, `ba.integration.ts`, `locations.integration.ts`."
+          ],
+          "security": [
+            "All /providers/me routes derive providerId from the auth context — never from a URL parameter. Physician uses their own ID; delegate uses their active physician context.",
+            "PUT /providers/me requires physician role or delegate with PREFERENCE_EDIT permission.",
+            "POST /providers/me/complete-onboarding requires physician role."
+          ],
+          "tests": [
+            "GET /providers/me returns full profile for authenticated physician",
+            "PUT /providers/me updates profile and returns updated data",
+            "GET /providers/me/onboarding-status returns missing fields for incomplete provider",
+            "POST /providers/me/complete-onboarding succeeds when all required fields set",
+            "POST /providers/me/complete-onboarding fails with missing fields list",
+            "GET /providers/me/bas returns all BAs",
+            "POST /providers/me/bas creates BA with valid data",
+            "POST /providers/me/bas rejects third active BA",
+            "DELETE /providers/me/bas/:id deactivates BA",
+            "POST /providers/me/locations creates location with RRNP lookup",
+            "PUT /providers/me/locations/:id/set-default swaps default",
+            "DELETE /providers/me/locations/:id deactivates location"
+          ]
+        },
+        {
+          "id": "D05-031",
+          "description": "Routes: WCB configuration and submission preferences endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/provider/",
+          "depends": ["D05-024", "D05-026"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.routes.ts` and handlers:",
+            "",
+            "**WCB routes (auth required):**",
+            "- GET /api/v1/providers/me/wcb → listWcbConfigsHandler",
+            "- POST /api/v1/providers/me/wcb → addWcbConfigHandler (body: createWcbConfigSchema)",
+            "- PUT /api/v1/providers/me/wcb/:id → updateWcbConfigHandler (body: updateWcbConfigSchema, params: wcbConfigIdParamSchema)",
+            "- DELETE /api/v1/providers/me/wcb/:id → removeWcbConfigHandler (params: wcbConfigIdParamSchema)",
+            "- GET /api/v1/providers/me/wcb/form-permissions → formPermissionsHandler",
+            "",
+            "**Submission preferences routes (auth required):**",
+            "- GET /api/v1/providers/me/submission-preferences → getPreferencesHandler",
+            "- PUT /api/v1/providers/me/submission-preferences → updatePreferencesHandler (body: updateSubmissionPreferencesSchema)",
+            "",
+            "**H-Link routes (auth required, physician only):**",
+            "- GET /api/v1/providers/me/hlink → getHlinkConfigHandler",
+            "- PUT /api/v1/providers/me/hlink → updateHlinkConfigHandler (body: updateHlinkConfigSchema)",
+            "",
+            "Create `apps/api/test/integration/provider/wcb.integration.ts`, `preferences.integration.ts`, `hlink.integration.ts`."
+          ],
+          "security": [
+            "H-Link config GET response must never include credential_secret_ref.",
+            "H-Link config PUT does not accept credential values — credential rotation is a separate secrets management operation.",
+            "Submission preferences update requires physician role or delegate with PREFERENCE_EDIT."
+          ],
+          "tests": [
+            "GET /providers/me/wcb returns all WCB configs",
+            "POST /providers/me/wcb validates against WCB matrix",
+            "POST /providers/me/wcb auto-populates permitted_form_types",
+            "DELETE /providers/me/wcb/:id removes config",
+            "GET /providers/me/wcb/form-permissions returns aggregated forms",
+            "GET /providers/me/submission-preferences returns current preferences",
+            "PUT /providers/me/submission-preferences updates modes",
+            "GET /providers/me/hlink returns config without credentials",
+            "PUT /providers/me/hlink updates submitter prefix"
+          ]
+        },
+        {
+          "id": "D05-032",
+          "description": "Routes: delegate management endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/provider/",
+          "depends": ["D05-025"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.routes.ts` and handlers:",
+            "",
+            "**Delegate routes (auth required, physician role):**",
+            "- GET /api/v1/providers/me/delegates → listDelegatesHandler",
+            "- POST /api/v1/providers/me/delegates/invite → inviteDelegateHandler (body: inviteDelegateSchema)",
+            "- PUT /api/v1/providers/me/delegates/:rel_id/permissions → updateDelegatePermissionsHandler (body: updateDelegatePermissionsSchema, params: delegateRelIdParamSchema)",
+            "- POST /api/v1/providers/me/delegates/:rel_id/revoke → revokeDelegateHandler (params: delegateRelIdParamSchema)",
+            "",
+            "**Delegate self-service routes (auth required, delegate role):**",
+            "- GET /api/v1/delegates/me/physicians → listPhysiciansHandler",
+            "- POST /api/v1/delegates/me/switch-context/:provider_id → switchContextHandler (params: switchContextParamSchema)",
+            "",
+            "**Invitation acceptance (no auth required — token-based):**",
+            "- POST /api/v1/delegates/invitations/:token/accept → acceptInvitationHandler (body: acceptInvitationSchema)",
+            "",
+            "Create `apps/api/test/integration/provider/delegates.integration.ts`."
+          ],
+          "security": [
+            "Physician delegate management routes require physician role.",
+            "Delegate self-service routes require delegate role.",
+            "Invitation acceptance is unauthenticated — secured by the token.",
+            "Context switching logs audit event and verifies active relationship."
+          ],
+          "tests": [
+            "GET /providers/me/delegates returns all delegate relationships",
+            "POST /providers/me/delegates/invite creates invitation",
+            "POST /providers/me/delegates/invite as delegate returns 403",
+            "PUT /providers/me/delegates/:rel_id/permissions updates permissions",
+            "POST /providers/me/delegates/:rel_id/revoke sets REVOKED",
+            "GET /delegates/me/physicians returns linked physicians for delegate",
+            "POST /delegates/me/switch-context/:id succeeds with active relationship",
+            "POST /delegates/me/switch-context/:id fails without active relationship",
+            "POST /delegates/invitations/:token/accept activates relationship",
+            "POST /delegates/invitations/:token/accept rejects expired token"
+          ]
+        },
+        {
+          "id": "D05-033",
+          "description": "Routes: internal provider context API endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/provider/",
+          "depends": ["D05-027"],
+          "build": [
+            "Add to `apps/api/src/domains/provider/provider.routes.ts` and handlers:",
+            "",
+            "**Internal API routes (service-to-service, not exposed to UI):**",
+            "- GET /api/v1/internal/providers/:id/claim-context → claimContextHandler (params: providerIdParamSchema)",
+            "- GET /api/v1/internal/providers/:id/ba-for-claim → baForClaimHandler (params: providerIdParamSchema, query: baForClaimQuerySchema)",
+            "- GET /api/v1/internal/providers/:id/wcb-config-for-form → wcbConfigForFormHandler (params: providerIdParamSchema, query: wcbConfigForFormQuerySchema)",
+            "",
+            "These routes are consumed by Domain 4 (Claim Lifecycle). They require internal service authentication (not user session — use a shared internal API key or service token). The routes bypass standard user auth middleware but still validate the requested provider exists.",
+            "",
+            "Create `apps/api/test/integration/provider/internal.integration.ts`."
+          ],
+          "security": [
+            "Internal API routes must NOT be accessible from the public API. Use a route prefix guard or internal API key validation.",
+            "Even internal routes scope data to the requested provider_id — no cross-provider leakage.",
+            "Internal routes do not carry user auth context — they are service-to-service."
+          ],
+          "tests": [
+            "GET /internal/providers/:id/claim-context returns full ProviderContext",
+            "GET /internal/providers/:id/claim-context returns 404 for unknown provider",
+            "GET /internal/providers/:id/ba-for-claim returns correct BA for AHCIP (non-PCPCM)",
+            "GET /internal/providers/:id/ba-for-claim returns PCPCM BA for in-basket code",
+            "GET /internal/providers/:id/ba-for-claim returns FFS BA for out-of-basket code",
+            "GET /internal/providers/:id/wcb-config-for-form returns matching config",
+            "GET /internal/providers/:id/wcb-config-for-form returns 404 for non-permitted form",
+            "Internal routes reject requests without internal API key"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 5: Provider Management — Security Tests",
+      "tasks": [
+        {
+          "id": "D05-040",
+          "description": "Security: authentication enforcement on every route",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.authn.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032", "D05-033"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.authn.security.ts`.",
+            "",
+            "Test every authenticated route in the Provider Management domain returns 401 without a valid session cookie:",
+            "",
+            "- GET /api/v1/providers/me",
+            "- PUT /api/v1/providers/me",
+            "- GET /api/v1/providers/me/onboarding-status",
+            "- POST /api/v1/providers/me/complete-onboarding",
+            "- GET /api/v1/providers/me/bas",
+            "- POST /api/v1/providers/me/bas",
+            "- PUT /api/v1/providers/me/bas/:id",
+            "- DELETE /api/v1/providers/me/bas/:id",
+            "- GET /api/v1/providers/me/locations",
+            "- POST /api/v1/providers/me/locations",
+            "- PUT /api/v1/providers/me/locations/:id",
+            "- PUT /api/v1/providers/me/locations/:id/set-default",
+            "- DELETE /api/v1/providers/me/locations/:id",
+            "- GET /api/v1/providers/me/wcb",
+            "- POST /api/v1/providers/me/wcb",
+            "- PUT /api/v1/providers/me/wcb/:id",
+            "- DELETE /api/v1/providers/me/wcb/:id",
+            "- GET /api/v1/providers/me/wcb/form-permissions",
+            "- GET /api/v1/providers/me/delegates",
+            "- POST /api/v1/providers/me/delegates/invite",
+            "- PUT /api/v1/providers/me/delegates/:rel_id/permissions",
+            "- POST /api/v1/providers/me/delegates/:rel_id/revoke",
+            "- GET /api/v1/providers/me/submission-preferences",
+            "- PUT /api/v1/providers/me/submission-preferences",
+            "- GET /api/v1/providers/me/hlink",
+            "- PUT /api/v1/providers/me/hlink",
+            "- GET /api/v1/delegates/me/physicians",
+            "- POST /api/v1/delegates/me/switch-context/:provider_id",
+            "",
+            "For each route: send request with no cookie, with expired cookie, and with tampered cookie. All must return 401."
+          ],
+          "security": [
+            "401 responses must not contain any data in the response body beyond the error object.",
+            "Tampered cookies must be rejected (invalid signature / hash mismatch).",
+            "Expired sessions must return 401 (not 200 with stale data)."
+          ]
+        },
+        {
+          "id": "D05-041",
+          "description": "Security: authorization and role enforcement",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.authz.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032", "D05-033"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.authz.security.ts`.",
+            "",
+            "Test role-based access control:",
+            "",
+            "**Delegate cannot access physician-only routes:**",
+            "- POST /providers/me/delegates/invite as delegate → 403",
+            "- PUT /providers/me/delegates/:rel_id/permissions as delegate → 403",
+            "- POST /providers/me/delegates/:rel_id/revoke as delegate → 403",
+            "- POST /providers/me/complete-onboarding as delegate → 403",
+            "- PUT /providers/me/hlink as delegate → 403",
+            "",
+            "**Physician cannot access delegate-only routes:**",
+            "- GET /delegates/me/physicians as physician → 403",
+            "- POST /delegates/me/switch-context/:id as physician → 403",
+            "",
+            "**Delegate permission boundary tests:**",
+            "- Create delegate with CLAIM_VIEW only. Delegate cannot POST /providers/me/bas (requires PROVIDER_EDIT-level access).",
+            "- Create delegate with PREFERENCE_VIEW only. Delegate cannot PUT /providers/me/submission-preferences (requires PREFERENCE_EDIT).",
+            "",
+            "**Internal API access control:**",
+            "- GET /internal/providers/:id/claim-context without internal API key → 401 or 403.",
+            "- Regular user session cannot access internal routes."
+          ]
+        },
+        {
+          "id": "D05-042",
+          "description": "Security: cross-user isolation (physician tenant scoping) — MOST CRITICAL",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.scoping.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032", "D05-033"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.scoping.security.ts`.",
+            "",
+            "Create two physician accounts (physician1, physician2) using createSecurityPair fixture.",
+            "",
+            "**Provider profile isolation:**",
+            "- GET /providers/me as physician1 returns physician1's data, not physician2's",
+            "",
+            "**BA isolation:**",
+            "- Physician1 cannot see physician2's BAs via GET /providers/me/bas",
+            "- Physician1 cannot update physician2's BA by guessing ba_id via PUT /providers/me/bas/:id → 404",
+            "- Physician1 cannot deactivate physician2's BA via DELETE /providers/me/bas/:id → 404",
+            "",
+            "**Location isolation:**",
+            "- Physician1 cannot see physician2's locations",
+            "- Physician1 cannot modify physician2's location by guessing location_id → 404",
+            "",
+            "**WCB config isolation:**",
+            "- Physician1 cannot see physician2's WCB configs",
+            "- Physician1 cannot delete physician2's WCB config → 404",
+            "",
+            "**Delegate isolation:**",
+            "- Physician1 cannot see physician2's delegates",
+            "- Physician1 cannot revoke physician2's delegate → 404",
+            "- Physician1 cannot modify physician2's delegate permissions → 404",
+            "",
+            "**Delegate cross-context isolation:**",
+            "- Create delegate linked to physician1 only",
+            "- Delegate cannot switch to physician2 context (no active relationship) → 403",
+            "- If delegate linked to both: data in physician1 context does not leak into physician2 context",
+            "",
+            "**IMPORTANT:** All cross-user access attempts return 404, not 403 (do not confirm resource existence)."
+          ]
+        },
+        {
+          "id": "D05-043",
+          "description": "Security: input validation and injection prevention",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.input.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.input.security.ts`.",
+            "",
+            "**SQL injection payloads on all string inputs:**",
+            "- billing_number: `'; DROP TABLE providers;--`",
+            "- ba_number: `' OR 1=1--`",
+            "- functional_centre: SQL injection payloads",
+            "- name fields (first_name, last_name, location name): SQL injection payloads",
+            "",
+            "**XSS payloads on all stored text fields:**",
+            "- first_name: `<script>alert(1)</script>`",
+            "- location name: `<img onerror=alert(1) src=x>`",
+            "- specialty_description: XSS payloads",
+            "",
+            "**Type coercion attacks:**",
+            "- Send number where string expected, array where string expected, null where required",
+            "- Send negative panel_size to PCPCM enrolment update",
+            "- Send deadline_reminder_days > 30 (should be capped at 30)",
+            "",
+            "**Format validation:**",
+            "- billing_number with letters → 400",
+            "- billing_number exceeding 10 characters → 400",
+            "- ba_type with invalid value → 400",
+            "- physician_type with invalid value → 400",
+            "- submission_mode with invalid value → 400",
+            "",
+            "**UUID parameter validation:**",
+            "- Non-UUID in path params (e.g., PUT /providers/me/bas/not-a-uuid) → 400",
+            "",
+            "**Permission array validation:**",
+            "- Delegate invite with empty permissions array → 400",
+            "- Delegate invite with invalid permission key → 400",
+            "- Delegate invite with duplicate permission keys → deduplicated or rejected"
+          ]
+        },
+        {
+          "id": "D05-044",
+          "description": "Security: data leakage prevention",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.leakage.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032", "D05-033"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.leakage.security.ts`.",
+            "",
+            "**Credential leakage prevention:**",
+            "- GET /providers/me/hlink response does NOT contain credential_secret_ref",
+            "- GET /providers/me (full profile) does NOT contain credential_secret_ref",
+            "- GET /internal/providers/:id/claim-context does NOT contain credential_secret_ref",
+            "",
+            "**Error response sanitisation:**",
+            "- 401 response body contains only error object, no provider data",
+            "- 404 response for cross-user resource does not confirm resource exists",
+            "- 500 error does not expose stack traces, SQL errors, or internal details",
+            "- Validation errors do not expose database column names",
+            "",
+            "**Header checks:**",
+            "- No X-Powered-By header",
+            "- No Server header revealing version",
+            "",
+            "**Sensitive data not in responses:**",
+            "- Delegate list response does not expose delegate's password_hash from joined users table",
+            "- Audit log entries for credential changes do not contain actual credential values",
+            "- Internal API responses do not leak other providers' data in error messages",
+            "",
+            "**Anti-enumeration:**",
+            "- POST /providers/me/delegates/invite with existing delegate returns consistent response (no leakage of whether email is already a delegate)"
+          ]
+        },
+        {
+          "id": "D05-045",
+          "description": "Security: audit trail completeness",
+          "verify": "pnpm --filter api vitest run test/security/provider/provider.audit.security.ts",
+          "depends": ["D05-030", "D05-031", "D05-032"],
+          "build": [
+            "Create `apps/api/test/security/provider/provider.audit.security.ts`.",
+            "",
+            "Verify that each state-changing action produces an audit record with correct fields.",
+            "",
+            "**Provider profile events:**",
+            "- Update profile → provider.profile_updated with field-level diff",
+            "- Complete onboarding → provider.onboarding_completed with timestamp",
+            "",
+            "**BA events:**",
+            "- Add BA → ba.added with ba_number, ba_type",
+            "- Update BA → ba.updated with changed fields",
+            "- Deactivate BA → ba.deactivated with ba_number",
+            "",
+            "**Location events:**",
+            "- Add location → location.added with location name, functional_centre",
+            "- Update location → location.updated with changed fields, RRNP eligibility change if applicable",
+            "- Deactivate location → location.deactivated",
+            "",
+            "**WCB events:**",
+            "- Add WCB config → wcb_config.added with contract_id, role_code",
+            "- Update WCB config → wcb_config.updated",
+            "- Remove WCB config → wcb_config.removed with contract_id, role_code",
+            "",
+            "**Delegate events:**",
+            "- Invite delegate → delegate.invited with email, permissions granted",
+            "- Accept invitation → delegate.accepted with delegate_user_id",
+            "- Permissions changed → delegate.permissions_changed with old/new diff",
+            "- Revoke delegate → delegate.revoked with delegate_user_id, actor",
+            "",
+            "**Preference/H-Link events:**",
+            "- Update submission preferences → submission_preference.changed with old/new modes",
+            "- Update H-Link config → hlink_config.updated (credential changes logged as 'credential rotated' without values)",
+            "",
+            "**Audit log integrity:**",
+            "- Verify audit entries are append-only (no UPDATE/DELETE on audit_log from this domain)"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 5: Provider Management — Final Validation",
+      "tasks": [
+        {
+          "id": "D05-099",
+          "description": "Full domain test suite: all unit + integration + security tests",
+          "verify": "pnpm --filter api vitest run src/domains/provider/ test/integration/provider/ test/security/provider/",
+          "depends": ["D05-040", "D05-041", "D05-042", "D05-043", "D05-044", "D05-045"],
+          "build": [
+            "Run the complete test suite for Domain 5 Provider Management. Do NOT write new code unless tests fail.",
+            "",
+            "1. Run all unit tests: `pnpm --filter api vitest run src/domains/provider/`",
+            "2. Run all integration tests: `pnpm --filter api vitest run test/integration/provider/`",
+            "3. Run all security tests: `pnpm --filter api vitest run test/security/provider/`",
+            "",
+            "If any tests fail: read the failure, fix the source code (not the tests unless the test is wrong), re-run.",
+            "",
+            "After all pass, run the full suite one final time:",
+            "```bash",
+            "pnpm --filter api vitest run src/domains/provider/ test/integration/provider/ test/security/provider/",
+            "```",
+            "",
+            "Verify these security test files exist and are non-empty:",
+            "- test/security/provider/provider.authn.security.ts",
+            "- test/security/provider/provider.authz.security.ts",
+            "- test/security/provider/provider.scoping.security.ts",
+            "- test/security/provider/provider.input.security.ts",
+            "- test/security/provider/provider.leakage.security.ts",
+            "- test/security/provider/provider.audit.security.ts"
+          ]
+        }
+      ]
+    }
+  ]
+}

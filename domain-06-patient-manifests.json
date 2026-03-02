@@ -1,0 +1,1005 @@
+{
+  "domainNumber": "06",
+  "domainName": "Patient Registry",
+  "manifestFile": "domain-06-patient.tasks",
+  "promptPrefix": "d06",
+  "modulePath": "apps/api/src/domains/patient",
+  "sections": [
+    {
+      "title": "Domain 6: Patient Registry — Shared Types & Constants",
+      "tasks": [
+        {
+          "id": "D06-001",
+          "description": "Patient constants, enums, audit action identifiers, PHN validation utility",
+          "verify": "pnpm --filter shared build",
+          "build": [
+            "Create `packages/shared/src/constants/patient.constants.ts` with all Patient Registry constants:",
+            "",
+            "**Gender enum:** M, F, X",
+            "",
+            "**Import status enum:** PENDING, PROCESSING, COMPLETED, FAILED",
+            "",
+            "**PHN province defaults:** AB (Alberta), plus all Canadian province codes for reciprocal billing.",
+            "",
+            "**Search modes enum:** PHN_LOOKUP, NAME_SEARCH, DOB_SEARCH, COMBINED, RECENT",
+            "",
+            "**Import source enum:** MANUAL, CSV_IMPORT",
+            "",
+            "**Patient audit action identifiers:**",
+            "- patient.created, patient.updated, patient.deactivated, patient.reactivated",
+            "- patient.merged",
+            "- patient.import_completed",
+            "- patient.export_requested, patient.export_downloaded",
+            "- patient.searched",
+            "",
+            "**PHN validation utility function:**",
+            "Create `packages/shared/src/utils/phn.utils.ts`:",
+            "- `validateAlbertaPhn(phn: string): { valid: boolean; error?: string }` — validate 9-digit numeric Alberta PHN using Luhn algorithm (modulus 10, double-add-double on odd positions from right).",
+            "- `maskPhn(phn: string): string` — mask PHN for audit logs and admin views: show first 3 digits, replace remaining 6 with asterisks (e.g., 123******).",
+            "",
+            "**CSV import column mappings (auto-detection headers):**",
+            "- phn: ['PHN', 'HealthNumber', 'AB_PHN']",
+            "- first_name: ['FirstName', 'First', 'GivenName']",
+            "- last_name: ['LastName', 'Last', 'Surname']",
+            "- date_of_birth: ['DOB', 'DateOfBirth', 'BirthDate']",
+            "- gender: ['Gender', 'Sex'] with value mappings: Male→M, Female→F",
+            "- phone: ['Phone', 'PhoneNumber', 'Tel']",
+            "- address_line_1: ['Address', 'Address1', 'Street']",
+            "- city: ['City', 'Town']",
+            "- postal_code: ['PostalCode', 'Postal', 'Zip']",
+            "",
+            "Export all as frozen objects / TypeScript enums."
+          ],
+          "frd": [
+            "Domain 6 Section 3.1: Alberta PHN format — 9 digits, Luhn check digit on 9th digit.",
+            "Domain 6 Section 5.2: CSV import column mapping with common header aliases.",
+            "Domain 6 Section 9.2: 7 audit action categories for patient registry.",
+            "Domain 6 Section 9.3: PHN masking — first 3 shown, remaining 6 asterisks."
+          ]
+        },
+        {
+          "id": "D06-002",
+          "description": "Drizzle schema for patients table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D06-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/db/patient.schema.ts` starting with the patients table.",
+            "",
+            "**patients table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| patient_id | UUID | PK | Default: gen_random_uuid() |",
+            "| physician_id | UUID FK | NOT NULL, FK → providers | HIA custodian. Scopes all access |",
+            "| phn | VARCHAR(9) | NULLABLE | Alberta PHN. 9 digits. Null for newborns, out-of-province (use phn_province), WCB no-PHN |",
+            "| phn_province | VARCHAR(2) | NULLABLE, DEFAULT 'AB' | Province of PHN issuance. Set for out-of-province reciprocal billing |",
+            "| first_name | VARCHAR(50) | NOT NULL | Patient first name |",
+            "| middle_name | VARCHAR(50) | NULLABLE | Patient middle name |",
+            "| last_name | VARCHAR(50) | NOT NULL | Patient last name |",
+            "| date_of_birth | DATE | NOT NULL | Required for age-based fee calcs and WCB forms |",
+            "| gender | VARCHAR(1) | NOT NULL | M, F, or X |",
+            "| phone | VARCHAR(24) | NULLABLE | Primary phone number |",
+            "| email | VARCHAR(100) | NULLABLE | Email address (not used in claim submission) |",
+            "| address_line_1 | VARCHAR(100) | NULLABLE | Mailing address |",
+            "| address_line_2 | VARCHAR(100) | NULLABLE | |",
+            "| city | VARCHAR(50) | NULLABLE | |",
+            "| province | VARCHAR(2) | NULLABLE | |",
+            "| postal_code | VARCHAR(7) | NULLABLE | |",
+            "| notes | TEXT | NULLABLE | Physician's private notes. Not transmitted in claims. Encrypted at rest |",
+            "| is_active | BOOLEAN | NOT NULL, DEFAULT true | Active patients appear in search |",
+            "| last_visit_date | DATE | NULLABLE | Updated when claims are created. Drives recent patients list |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| created_by | UUID FK | NOT NULL | Creator (physician or delegate) |",
+            "",
+            "**Indexes:**",
+            "- UNIQUE on (physician_id, phn) WHERE phn IS NOT NULL — partial unique index",
+            "- (physician_id, last_name, first_name) — name search",
+            "- (physician_id, date_of_birth) — DOB search",
+            "- (physician_id, last_visit_date DESC) — recent patients",
+            "- (physician_id, is_active) — active filter",
+            "",
+            "**pg_trgm index:** Create GIN trigram index on (last_name, first_name) for efficient prefix/fuzzy name matching.",
+            "Note: pg_trgm extension must be enabled: `CREATE EXTENSION IF NOT EXISTS pg_trgm;`",
+            "",
+            "Export the table and its inferred types (InsertPatient, SelectPatient)."
+          ],
+          "frd": [
+            "Domain 6 Section 2.1: Patients table. One row per patient per physician. Physician-scoped. PHN unique per physician (partial unique index). pg_trgm for name search."
+          ],
+          "security": [
+            "Patient records are PHI — encrypted at rest (AES-256) and in transit (TLS 1.3).",
+            "physician_id is the tenant isolation key. All queries MUST include physician_id in WHERE clause.",
+            "notes field may contain sensitive clinical observations — encrypted at rest, never transmitted in claims.",
+            "Partial unique index on (physician_id, phn) WHERE phn IS NOT NULL allows multiple null-PHN patients per physician."
+          ]
+        },
+        {
+          "id": "D06-003",
+          "description": "Drizzle schema for patient_import_batches and patient_merge_history tables",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D06-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/patient.schema.ts`:",
+            "",
+            "**patient_import_batches table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| import_id | UUID | PK | Default: gen_random_uuid() |",
+            "| physician_id | UUID FK | NOT NULL, FK → providers | |",
+            "| file_name | VARCHAR(255) | NOT NULL | Original uploaded filename |",
+            "| file_hash | VARCHAR(64) | NOT NULL | SHA-256 hash for deduplication |",
+            "| total_rows | INTEGER | NOT NULL, DEFAULT 0 | Total rows in import file |",
+            "| created_count | INTEGER | NOT NULL, DEFAULT 0 | New patient records created |",
+            "| updated_count | INTEGER | NOT NULL, DEFAULT 0 | Existing records updated (matched by PHN) |",
+            "| skipped_count | INTEGER | NOT NULL, DEFAULT 0 | Rows skipped (duplicate PHN in file, no changes) |",
+            "| error_count | INTEGER | NOT NULL, DEFAULT 0 | Rows that failed validation |",
+            "| error_details | JSONB | NULLABLE | Per-row error details: [{row, field, error}] |",
+            "| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | PENDING, PROCESSING, COMPLETED, FAILED |",
+            "| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| created_by | UUID FK | NOT NULL | |",
+            "",
+            "Indexes: (physician_id, created_at DESC), (physician_id, file_hash).",
+            "",
+            "**patient_merge_history table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| merge_id | UUID | PK | Default: gen_random_uuid() |",
+            "| physician_id | UUID FK | NOT NULL, FK → providers | |",
+            "| surviving_patient_id | UUID FK | NOT NULL, FK → patients | The record that remains |",
+            "| merged_patient_id | UUID FK | NOT NULL, FK → patients | The record absorbed (soft-deleted after merge) |",
+            "| claims_transferred | INTEGER | NOT NULL | Number of claims re-linked |",
+            "| field_conflicts | JSONB | NULLABLE | Fields where records differed. Surviving values kept |",
+            "| merged_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |",
+            "| merged_by | UUID FK | NOT NULL | Who performed the merge |",
+            "",
+            "Indexes: (physician_id, merged_at DESC), (surviving_patient_id), (merged_patient_id).",
+            "",
+            "Export tables and inferred types."
+          ],
+          "frd": [
+            "Domain 6 Section 2.2: Patient Import Batches table. Tracks CSV imports with row-level result counts and error details.",
+            "Domain 6 Section 2.3: Patient Merge History table. Records merge operations with claim transfer count and field conflicts."
+          ]
+        },
+        {
+          "id": "D06-004",
+          "description": "Zod validation schemas for patient CRUD, search, import, merge, and export endpoints",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D06-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/patient.schema.ts` with Zod schemas:",
+            "",
+            "**Patient CRUD:**",
+            "- createPatientSchema: { phn: string().length(9).regex(/^\\d{9}$/).optional().nullable(), phn_province: string().length(2).default('AB').optional(), first_name: string().min(1).max(50), middle_name: string().max(50).optional(), last_name: string().min(1).max(50), date_of_birth: string().date(), gender: enum(['M','F','X']), phone: string().max(24).optional(), email: string().email().max(100).optional(), address_line_1: string().max(100).optional(), address_line_2: string().max(100).optional(), city: string().max(50).optional(), province: string().max(2).optional(), postal_code: string().max(7).optional(), notes: string().optional() }",
+            "- updatePatientSchema: (same fields as create, all optional)",
+            "- patientIdParamSchema: { id: string().uuid() }",
+            "",
+            "**Patient Search:**",
+            "- patientSearchQuerySchema: { phn: string().optional(), name: string().min(2).optional(), dob: string().date().optional(), page: number().int().min(1).default(1), page_size: number().int().min(1).max(100).default(20) }",
+            "- recentPatientsQuerySchema: { limit: number().int().min(1).max(50).default(20) }",
+            "",
+            "**CSV Import:**",
+            "- importMappingSchema: { mapping: record(string(), string().nullable()) } — column name → patient field mapping",
+            "- importIdParamSchema: { id: string().uuid() }",
+            "",
+            "**Patient Merge:**",
+            "- mergePreviewSchema: { surviving_id: string().uuid(), merged_id: string().uuid() }",
+            "- mergeExecuteSchema: { surviving_id: string().uuid(), merged_id: string().uuid() }",
+            "",
+            "**Patient Export:**",
+            "- exportIdParamSchema: { id: string().uuid() }",
+            "",
+            "**Internal API:**",
+            "- internalPatientIdParamSchema: { id: string().uuid() }",
+            "- validatePhnParamSchema: { phn: string().length(9).regex(/^\\d{9}$/) }",
+            "",
+            "Export all schemas AND their inferred TypeScript types."
+          ],
+          "frd": [
+            "Domain 6 Section 8.1-8.6: API contracts for patient CRUD, search, import, merge, export, and internal endpoints.",
+            "Domain 6 Section 3.1: PHN validation — 9 digits, numeric only."
+          ]
+        },
+        {
+          "id": "D06-005",
+          "description": "Generate and apply database migration for all patient tables",
+          "verify": "cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1",
+          "depends": ["D06-002", "D06-003"],
+          "build": [
+            "Run the Drizzle migration generator for Patient Registry tables:",
+            "",
+            "```bash",
+            "cd apps/api",
+            "pnpm drizzle-kit generate",
+            "pnpm drizzle-kit migrate",
+            "```",
+            "",
+            "Before running migrations, ensure the pg_trgm extension is enabled:",
+            "```sql",
+            "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+            "```",
+            "",
+            "Add this extension creation to the migration if Drizzle doesn't handle it automatically.",
+            "",
+            "Verify that the migration file was created in `apps/api/drizzle/migrations/`.",
+            "Verify that all 3 tables exist: patients, patient_import_batches, patient_merge_history.",
+            "Verify all indexes including the partial unique index on (physician_id, phn) WHERE phn IS NOT NULL.",
+            "Verify the pg_trgm GIN index on (last_name, first_name) exists.",
+            "Verify FK from patients.physician_id → providers.provider_id."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 6: Patient Registry — Repository Layer",
+      "tasks": [
+        {
+          "id": "D06-010",
+          "description": "Repository: patient CRUD operations",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-005"],
+          "build": [
+            "Create `apps/api/src/domains/patient/patient.repository.ts` with patient operations:",
+            "",
+            "- `createPatient(data: InsertPatient)` — insert patient record. If PHN provided, validate uniqueness within physician_id.",
+            "- `findPatientById(patientId: string, physicianId: string)` — find patient scoped to physician. Return null if not found or belongs to different physician.",
+            "- `findPatientByPhn(physicianId: string, phn: string)` — exact match on (physician_id, phn). Used for duplicate check and import matching.",
+            "- `updatePatient(patientId: string, physicianId: string, data: Partial<InsertPatient>)` — update fields. Set updated_at to now(). Scoped to physician.",
+            "- `deactivatePatient(patientId: string, physicianId: string)` — set is_active = false.",
+            "- `reactivatePatient(patientId: string, physicianId: string)` — set is_active = true.",
+            "- `updateLastVisitDate(patientId: string, physicianId: string, date: Date)` — update last_visit_date. Called when a claim is created for this patient.",
+            "",
+            "**CRITICAL:** All queries MUST include `physician_id = :physicianId` in the WHERE clause. No repository function should accept patient_id alone without physician_id scoping."
+          ],
+          "security": [
+            "Every query includes physician_id — this is the HIA custodian isolation boundary.",
+            "findPatientById returns null (not 403) when patient belongs to different physician — prevents existence confirmation."
+          ],
+          "tests": [
+            "createPatient inserts patient record",
+            "createPatient rejects duplicate PHN for same physician",
+            "createPatient allows same PHN for different physicians",
+            "createPatient allows null PHN",
+            "findPatientById returns patient scoped to physician",
+            "findPatientById returns null for different physician's patient",
+            "findPatientByPhn returns exact match",
+            "updatePatient updates fields and updated_at",
+            "deactivatePatient sets is_active false",
+            "reactivatePatient sets is_active true",
+            "updateLastVisitDate updates date"
+          ]
+        },
+        {
+          "id": "D06-011",
+          "description": "Repository: patient search (PHN, name with pg_trgm, DOB, combined, recent)",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-005"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.repository.ts`:",
+            "",
+            "- `searchByPhn(physicianId: string, phn: string)` — exact match on (physician_id, phn) where is_active = true. Returns 0 or 1 result.",
+            "- `searchByName(physicianId: string, nameQuery: string, page: number, pageSize: number)` — case-insensitive prefix match using pg_trgm similarity on (first_name, last_name). Minimum 2 characters. Ranked by similarity score. Only active patients. Paginated.",
+            "- `searchByDob(physicianId: string, dob: Date, page: number, pageSize: number)` — exact match on date_of_birth. Only active patients. Paginated.",
+            "- `searchCombined(physicianId: string, filters: { phn?: string, name?: string, dob?: Date }, page: number, pageSize: number)` — AND all provided criteria. Only active patients. Paginated.",
+            "- `getRecentPatients(physicianId: string, limit: number)` — return patients ordered by last_visit_date DESC, limited to `limit` (default 20). Only active patients with a non-null last_visit_date.",
+            "",
+            "**pg_trgm usage:** Use `similarity()` or `ILIKE` with the GIN trigram index for name search. The query should be: `WHERE physician_id = :id AND is_active = true AND (first_name ILIKE :pattern OR last_name ILIKE :pattern) ORDER BY similarity(last_name || ' ' || first_name, :nameQuery) DESC`.",
+            "",
+            "All search functions are scoped to physician_id and return only active patients."
+          ],
+          "security": [
+            "All search queries include physician_id — no cross-physician patient results.",
+            "Deactivated patients excluded from all search results.",
+            "Name search minimum 2 characters prevents overly broad queries."
+          ],
+          "tests": [
+            "searchByPhn returns exact match for physician's patient",
+            "searchByPhn returns empty for different physician",
+            "searchByName returns case-insensitive prefix matches",
+            "searchByName ranks results by similarity",
+            "searchByName requires minimum 2 characters",
+            "searchByName excludes inactive patients",
+            "searchByDob returns matching patients",
+            "searchCombined ANDs all criteria",
+            "getRecentPatients returns ordered by last_visit_date DESC",
+            "getRecentPatients respects limit",
+            "getRecentPatients excludes patients with null last_visit_date"
+          ]
+        },
+        {
+          "id": "D06-012",
+          "description": "Repository: CSV import batch operations",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-005"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.repository.ts`:",
+            "",
+            "- `createImportBatch(data: InsertImportBatch)` — insert import batch record with PENDING status.",
+            "- `findImportBatchById(importId: string, physicianId: string)` — find import batch scoped to physician.",
+            "- `findImportByFileHash(physicianId: string, fileHash: string)` — check for duplicate file upload by SHA-256 hash.",
+            "- `updateImportStatus(importId: string, status: string, counts?: { created, updated, skipped, error }, errorDetails?: any)` — update status and result counts.",
+            "- `listImportBatches(physicianId: string, page: number, pageSize: number)` — list imports for physician, newest first.",
+            "- `bulkCreatePatients(physicianId: string, patients: InsertPatient[])` — batch insert multiple patients in a single transaction. Return array of created patient_ids.",
+            "- `bulkUpsertPatients(physicianId: string, patients: { phn: string, data: Partial<InsertPatient> }[])` — for rows with PHN match: update. For rows without match: insert. Return counts."
+          ],
+          "security": [
+            "Import batches scoped to physician_id.",
+            "bulkCreatePatients and bulkUpsertPatients must all run within a transaction — partial imports are not acceptable.",
+            "CSV file content is processed in memory; the uploaded file is stored temporarily and deleted after import."
+          ],
+          "tests": [
+            "createImportBatch inserts with PENDING status",
+            "findImportByFileHash detects duplicate file upload",
+            "updateImportStatus updates status and counts",
+            "bulkCreatePatients inserts all patients in transaction",
+            "bulkCreatePatients rolls back on failure",
+            "bulkUpsertPatients creates new and updates existing by PHN match",
+            "listImportBatches returns newest first for physician"
+          ]
+        },
+        {
+          "id": "D06-013",
+          "description": "Repository: patient merge operations",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-005"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.repository.ts`:",
+            "",
+            "- `getMergePreview(physicianId: string, survivingId: string, mergedId: string)` — return side-by-side comparison of both patient records plus count of claims that would be transferred. Both patients must belong to the physician.",
+            "- `executeMerge(physicianId: string, survivingId: string, mergedId: string, mergedBy: string)` — in a single transaction:",
+            "  1. Transfer draft/validated claims from merged patient to surviving patient (UPDATE claims SET patient_id = survivingId WHERE patient_id = mergedId AND status IN ('draft','validated')).",
+            "  2. Soft-delete the merged patient (is_active = false).",
+            "  3. Record in patient_merge_history: surviving_patient_id, merged_patient_id, claims_transferred count, field_conflicts JSONB.",
+            "  4. Return merge_id and counts.",
+            "- `listMergeHistory(physicianId: string, page: number, pageSize: number)` — list merge history for physician, newest first.",
+            "",
+            "**Critical merge rules:**",
+            "- Only draft/validated claims have patient_id updated. Submitted/assessed/paid claims retain original patient_id (audit integrity).",
+            "- Surviving record's values are kept for all conflicting fields.",
+            "- Merge is irreversible in the application (history preserved for admin recovery)."
+          ],
+          "security": [
+            "Both patients must belong to the same physician — cross-physician merge is impossible.",
+            "Submitted claims retain original patient_id for audit trail integrity.",
+            "Merge runs in a single transaction — no partial state."
+          ],
+          "tests": [
+            "getMergePreview returns side-by-side comparison",
+            "getMergePreview returns correct claim transfer count",
+            "getMergePreview rejects if either patient belongs to different physician",
+            "executeMerge transfers draft/validated claims to surviving patient",
+            "executeMerge does NOT transfer submitted/assessed claims",
+            "executeMerge soft-deletes merged patient",
+            "executeMerge records merge history with field conflicts",
+            "executeMerge runs in single transaction (rollback on failure)"
+          ]
+        },
+        {
+          "id": "D06-014",
+          "description": "Repository: patient export and internal API queries",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-005"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.repository.ts`:",
+            "",
+            "**Export:**",
+            "- `exportActivePatients(physicianId: string)` — return all active patients for the physician as an array (for CSV generation). Select: phn, first_name, last_name, date_of_birth, gender, phone, address fields. No notes (never in export).",
+            "- `countActivePatients(physicianId: string)` — return count for export metadata.",
+            "",
+            "**Internal API (consumed by Domain 4):**",
+            "- `getPatientClaimContext(patientId: string, physicianId: string)` — return minimal payload for claim creation: patient_id, phn, phn_province, first_name, last_name, date_of_birth, gender. No notes, no address, no phone.",
+            "- `validatePhnExists(physicianId: string, phn: string)` — validate PHN format (Luhn) and check if a patient with this PHN exists in the physician's registry. Return { valid: boolean, exists: boolean, patient_id?: string }."
+          ],
+          "security": [
+            "Export excludes notes field — notes are physician's private clinical observations, never exported.",
+            "Internal claim context returns minimal PHI — only what's required for claim creation.",
+            "validatePhnExists scoped to physician_id — cannot check other physicians' patient lists."
+          ],
+          "tests": [
+            "exportActivePatients returns all active patients without notes",
+            "exportActivePatients excludes inactive patients",
+            "countActivePatients returns correct count",
+            "getPatientClaimContext returns minimal claim fields",
+            "getPatientClaimContext returns null for different physician's patient",
+            "validatePhnExists returns valid and exists for known PHN",
+            "validatePhnExists returns valid but not exists for unknown PHN",
+            "validatePhnExists returns invalid for bad Luhn check"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 6: Patient Registry — Service Layer",
+      "tasks": [
+        {
+          "id": "D06-020",
+          "description": "Service: patient CRUD with PHN validation and audit logging",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-010"],
+          "build": [
+            "Create `apps/api/src/domains/patient/patient.service.ts` with patient CRUD functions:",
+            "",
+            "- `createPatient(physicianId: string, data: CreatePatientInput, actorId: string)` — if PHN provided: validate Alberta format (9 digits + Luhn check), check uniqueness within physician's patients. Create record. Emit patient.created audit event with PHN (masked), actor, source = MANUAL.",
+            "- `getPatient(patientId: string, physicianId: string)` — return patient record. Return null if not found/wrong physician.",
+            "- `updatePatient(patientId: string, physicianId: string, data: UpdatePatientInput, actorId: string)` — if PHN changed: re-validate Luhn, re-check uniqueness. Update record. Emit patient.updated audit event with field-level diff (old vs new, PHNs masked).",
+            "- `deactivatePatient(patientId: string, physicianId: string, actorId: string)` — soft-delete. Emit patient.deactivated audit event. Existing claims unaffected.",
+            "- `reactivatePatient(patientId: string, physicianId: string, actorId: string)` — reactivate. Emit patient.reactivated.",
+            "",
+            "**PHN validation rules:**",
+            "1. If phn provided and phn_province = 'AB': validate 9-digit Luhn.",
+            "2. If phn provided and phn_province != 'AB': accept any 9–12 digit numeric (out-of-province reciprocal).",
+            "3. If phn is null: accept (newborns, uninsured, WCB no-PHN scenarios).",
+            "4. If phn provided: check unique within physician's active patients."
+          ],
+          "frd": [
+            "Domain 6 Section 3.1-3.2: PHN validation (Luhn) and PHN-optional scenarios (newborns, out-of-province, WCB, uninsured).",
+            "Domain 6 Section 7 PAT-001, PAT-006, PAT-008: CRUD user stories."
+          ],
+          "security": [
+            "PHN is masked in all audit log entries — first 3 digits shown, remaining 6 asterisks.",
+            "PHN changes are logged with both old (masked) and new (masked) values.",
+            "Patient notes are never included in audit log detail payloads."
+          ],
+          "tests": [
+            "createPatient with valid Alberta PHN succeeds",
+            "createPatient rejects invalid Luhn check digit",
+            "createPatient rejects 8-digit PHN",
+            "createPatient rejects non-numeric PHN",
+            "createPatient rejects duplicate PHN for same physician",
+            "createPatient allows same PHN for different physicians",
+            "createPatient allows null PHN",
+            "createPatient with out-of-province PHN skips Luhn check",
+            "createPatient emits audit event with masked PHN",
+            "updatePatient re-validates PHN on change",
+            "updatePatient emits audit with field-level diff",
+            "deactivatePatient soft-deletes patient",
+            "reactivatePatient restores patient"
+          ]
+        },
+        {
+          "id": "D06-021",
+          "description": "Service: patient search orchestration",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-011"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.service.ts`:",
+            "",
+            "- `searchPatients(physicianId: string, query: PatientSearchInput, actorId: string)` — orchestrate search based on provided criteria:",
+            "  1. If phn provided: exact PHN lookup.",
+            "  2. If name provided (no phn): trigram name search.",
+            "  3. If dob provided (no phn, no name): DOB search.",
+            "  4. If multiple criteria: combined search with AND logic.",
+            "  5. Return paginated results with total count.",
+            "  Emit patient.searched audit event with search parameters (NOT results). Rate-limit PHN searches to prevent enumeration.",
+            "",
+            "- `getRecentPatients(physicianId: string, limit: number)` — delegate to repository. Return recent patients. No audit log for this (it's a default view, not an active search).",
+            "",
+            "**Search result format:** Return { patients: SelectPatient[], total: number, page: number, page_size: number }."
+          ],
+          "frd": [
+            "Domain 6 Section 4.1: 5 search modes — PHN lookup, name search, DOB search, combined, recent patients.",
+            "Domain 6 Section 4.2: All searches scoped to physician. Never returns other physicians' patients.",
+            "Domain 6 Section 4.3: Expected 500–20,000 patients per physician. pg_trgm for name search."
+          ],
+          "security": [
+            "PHN search logged for PHI access audit — rate-limited to prevent enumeration.",
+            "Search results scoped to physician — enforced at repository layer.",
+            "Search audit logs parameters only, never result contents."
+          ],
+          "tests": [
+            "searchPatients routes to PHN lookup when phn provided",
+            "searchPatients routes to name search when name provided",
+            "searchPatients routes to DOB search when dob provided",
+            "searchPatients combines criteria with AND logic",
+            "searchPatients returns paginated results with total count",
+            "searchPatients emits audit event with search parameters",
+            "getRecentPatients returns ordered list",
+            "getRecentPatients does not emit audit event"
+          ]
+        },
+        {
+          "id": "D06-022",
+          "description": "Service: CSV bulk import workflow",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-010", "D06-012"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.service.ts`:",
+            "",
+            "- `initiateImport(physicianId: string, file: Buffer, fileName: string, actorId: string)` — compute SHA-256 hash of file. Check for duplicate upload (same hash for this physician). Parse CSV: auto-detect delimiter (comma, tab, pipe) and header row presence. Create import batch record. Store parsed rows temporarily. Return import_id.",
+            "",
+            "- `getImportPreview(importId: string, physicianId: string)` — return: detected delimiter, detected headers, auto-mapped columns (using the column mapping aliases from constants), first 10 rows with mapped values, validation warnings for preview rows.",
+            "",
+            "- `updateImportMapping(importId: string, physicianId: string, mapping: Record<string, string | null>)` — physician confirms or adjusts the column-to-field mapping.",
+            "",
+            "- `commitImport(importId: string, physicianId: string, actorId: string)` — process all rows:",
+            "  1. Set status = PROCESSING.",
+            "  2. For each row: validate required fields (first_name, last_name, dob, gender). Validate PHN if present (Luhn). Apply gender mappings (Male→M, Female→F).",
+            "  3. Duplicate handling: if PHN match found in physician's patients → update (non-null import values overwrite). If no match → create. If no PHN → always create. If duplicate PHN in file → skip second occurrence.",
+            "  4. Track counts: created, updated, skipped, error. Store per-row error details.",
+            "  5. Set status = COMPLETED (or FAILED if entire batch fails).",
+            "  6. Emit patient.import_completed audit event with counts.",
+            "",
+            "- `getImportStatus(importId: string, physicianId: string)` — return current status and result counts."
+          ],
+          "frd": [
+            "Domain 6 Section 5.1: Import workflow — upload, detect, map, preview, commit, results.",
+            "Domain 6 Section 5.2: Column mapping with common CSV header aliases.",
+            "Domain 6 Section 5.3: Duplicate handling — PHN match updates, no match creates, no PHN always creates, duplicate in file skips."
+          ],
+          "security": [
+            "CSV files processed in memory. Uploaded files stored temporarily (encrypted), deleted after import completion.",
+            "Import scoped to physician_id — imported patients belong to the initiating physician.",
+            "File hash check prevents accidental duplicate imports."
+          ],
+          "tests": [
+            "initiateImport parses comma-delimited CSV with headers",
+            "initiateImport parses tab-delimited CSV without headers",
+            "initiateImport detects duplicate file upload by hash",
+            "getImportPreview returns auto-mapped columns",
+            "getImportPreview returns first 10 rows with validation warnings",
+            "commitImport creates patients for new rows",
+            "commitImport updates existing patients by PHN match",
+            "commitImport skips duplicate PHN in same file",
+            "commitImport rejects rows with invalid PHN (bad Luhn)",
+            "commitImport rejects rows missing required fields",
+            "commitImport tracks correct created/updated/skipped/error counts",
+            "commitImport emits audit event with counts"
+          ]
+        },
+        {
+          "id": "D06-023",
+          "description": "Service: patient merge workflow",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-013"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.service.ts`:",
+            "",
+            "- `getMergePreview(physicianId: string, survivingId: string, mergedId: string)` — verify both patients belong to physician and are active. Return side-by-side comparison highlighting field differences and claim transfer count (draft/validated claims only).",
+            "",
+            "- `executeMerge(physicianId: string, survivingId: string, mergedId: string, actorId: string)` — delegate to repository executeMerge (transactional). Emit patient.merged audit event with: surviving_patient_id, merged_patient_id, claims_transferred count, field_conflicts, actor. Return merge_id.",
+            "",
+            "- `getMergeHistory(physicianId: string, page: number, pageSize: number)` — return paginated merge history for the physician.",
+            "",
+            "**Merge rules enforced:**",
+            "- Both patients must belong to the same physician.",
+            "- Both patients must be active (cannot merge already-deactivated patient).",
+            "- Surviving record's field values are kept for all conflicts.",
+            "- Only draft/validated claims transferred. Submitted claims retain original patient_id."
+          ],
+          "frd": [
+            "Domain 6 Section 6.1-6.2: Merge workflow and merge rules.",
+            "Domain 6 Section 10.4: Merge test requirements."
+          ],
+          "tests": [
+            "getMergePreview returns side-by-side comparison with field diffs",
+            "getMergePreview returns correct claim count (draft/validated only)",
+            "getMergePreview rejects if patient belongs to different physician",
+            "getMergePreview rejects if either patient is inactive",
+            "executeMerge transfers claims and soft-deletes merged patient",
+            "executeMerge emits audit event with full merge details",
+            "executeMerge records in merge history",
+            "getMergeHistory returns paginated results"
+          ]
+        },
+        {
+          "id": "D06-024",
+          "description": "Service: patient export and internal API",
+          "verify": "pnpm --filter api vitest run src/domains/patient/patient.test.ts",
+          "depends": ["D06-014"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.service.ts`:",
+            "",
+            "**Export:**",
+            "- `requestExport(physicianId: string, actorId: string)` — generate CSV of all active patients (phn, first_name, last_name, date_of_birth, gender, phone, address fields — NO notes). Store as temporary file in DigitalOcean Spaces with time-limited (1 hour) authenticated download URL. Emit patient.export_requested audit event with row count. Return { export_id, row_count, status: 'PROCESSING' }.",
+            "- `getExportStatus(exportId: string, physicianId: string)` — return export status and download URL (if ready). Emit patient.export_downloaded when URL is first accessed.",
+            "",
+            "**Internal API (consumed by Domain 4):**",
+            "- `getPatientClaimContext(patientId: string, physicianId: string)` — return minimal claim context: patient_id, phn, phn_province, first_name, last_name, date_of_birth, gender.",
+            "- `validatePhn(physicianId: string, phn: string)` — validate PHN format (Luhn if AB) and check existence in physician's registry. Return { valid, format_ok, exists, patient_id? }."
+          ],
+          "frd": [
+            "Domain 6 Section 8.5: Patient export — CSV via authenticated, time-limited download link. Not emailed.",
+            "Domain 6 Section 8.6: Internal patient API for claim lifecycle."
+          ],
+          "security": [
+            "Export files delivered via authenticated, time-limited download link (1 hour). NOT emailed.",
+            "Export excludes notes field — never in export.",
+            "Internal API returns minimal PHI needed for claim creation.",
+            "Download URL is one-time use or time-limited for security."
+          ],
+          "tests": [
+            "requestExport generates CSV without notes field",
+            "requestExport emits audit event with row count",
+            "getExportStatus returns download URL when ready",
+            "getPatientClaimContext returns minimal claim fields",
+            "getPatientClaimContext returns null for wrong physician",
+            "validatePhn returns valid for correct Luhn",
+            "validatePhn returns exists for known patient",
+            "validatePhn returns not exists for unknown PHN"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 6: Patient Registry — Routes & Integration Tests",
+      "tasks": [
+        {
+          "id": "D06-030",
+          "description": "Routes: patient CRUD and search endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/patient/",
+          "depends": ["D06-020", "D06-021"],
+          "build": [
+            "Create `apps/api/src/domains/patient/patient.routes.ts` and `apps/api/src/domains/patient/patient.handlers.ts`.",
+            "",
+            "**Patient CRUD routes (auth required):**",
+            "- POST /api/v1/patients → createPatientHandler (body: createPatientSchema, requires PATIENT_CREATE)",
+            "- GET /api/v1/patients/:id → getPatientHandler (params: patientIdParamSchema, requires PATIENT_VIEW)",
+            "- PUT /api/v1/patients/:id → updatePatientHandler (body: updatePatientSchema, params: patientIdParamSchema, requires PATIENT_EDIT)",
+            "- POST /api/v1/patients/:id/deactivate → deactivateHandler (params: patientIdParamSchema, requires PATIENT_EDIT)",
+            "- POST /api/v1/patients/:id/reactivate → reactivateHandler (params: patientIdParamSchema, requires PATIENT_EDIT)",
+            "",
+            "**Patient search routes (auth required, PATIENT_VIEW):**",
+            "- GET /api/v1/patients/search → searchHandler (query: patientSearchQuerySchema)",
+            "- GET /api/v1/patients/recent → recentHandler (query: recentPatientsQuerySchema)",
+            "",
+            "**Handlers extract physician_id from auth context (physician's own ID or delegate's active physician context).**",
+            "",
+            "Create `apps/api/test/integration/patient/crud.integration.ts` and `search.integration.ts`."
+          ],
+          "security": [
+            "All patient routes derive physician_id from auth context — never from URL parameter.",
+            "PATIENT_CREATE, PATIENT_VIEW, PATIENT_EDIT permissions enforced via Domain 1 RBAC middleware.",
+            "PHN search rate-limited to prevent enumeration."
+          ],
+          "tests": [
+            "POST /patients creates patient with valid PHN",
+            "POST /patients rejects invalid Luhn PHN with 400",
+            "POST /patients rejects duplicate PHN with 409",
+            "GET /patients/:id returns patient for physician",
+            "GET /patients/:id returns 404 for other physician's patient",
+            "PUT /patients/:id updates demographics",
+            "POST /patients/:id/deactivate soft-deletes",
+            "POST /patients/:id/reactivate restores",
+            "GET /patients/search?phn=123456789 returns exact match",
+            "GET /patients/search?name=Sm returns name prefix results",
+            "GET /patients/recent returns last 20 by visit date"
+          ]
+        },
+        {
+          "id": "D06-031",
+          "description": "Routes: CSV import endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/patient/",
+          "depends": ["D06-022"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.routes.ts` and handlers:",
+            "",
+            "**Import routes (auth required, PATIENT_IMPORT):**",
+            "- POST /api/v1/patients/imports → uploadHandler (multipart file upload)",
+            "- GET /api/v1/patients/imports/:id/preview → previewHandler (params: importIdParamSchema)",
+            "- PUT /api/v1/patients/imports/:id/mapping → mappingHandler (body: importMappingSchema, params: importIdParamSchema)",
+            "- POST /api/v1/patients/imports/:id/commit → commitHandler (params: importIdParamSchema)",
+            "- GET /api/v1/patients/imports/:id → statusHandler (params: importIdParamSchema)",
+            "",
+            "**File upload handling:** Use @fastify/multipart. Accept .csv and .txt files. Max file size: 10MB. Rate limit: 5 uploads per minute per user.",
+            "",
+            "Create `apps/api/test/integration/patient/import.integration.ts`."
+          ],
+          "security": [
+            "PATIENT_IMPORT permission required for all import endpoints.",
+            "File upload rate-limited to 5 per minute per user.",
+            "CSV file processed in memory. Temporary storage encrypted. Deleted after import completion.",
+            "Max file size 10MB to prevent resource exhaustion."
+          ],
+          "tests": [
+            "POST /patients/imports uploads CSV and returns import_id",
+            "POST /patients/imports rejects non-CSV file",
+            "POST /patients/imports rejects file exceeding 10MB",
+            "GET /patients/imports/:id/preview returns column mapping",
+            "PUT /patients/imports/:id/mapping updates mapping",
+            "POST /patients/imports/:id/commit processes all rows",
+            "POST /patients/imports/:id/commit handles PHN duplicates correctly",
+            "GET /patients/imports/:id returns status and counts"
+          ]
+        },
+        {
+          "id": "D06-032",
+          "description": "Routes: merge, export, and internal API endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/patient/",
+          "depends": ["D06-023", "D06-024"],
+          "build": [
+            "Add to `apps/api/src/domains/patient/patient.routes.ts` and handlers:",
+            "",
+            "**Merge routes (auth required, PATIENT_EDIT):**",
+            "- POST /api/v1/patients/merge/preview → mergePreviewHandler (body: mergePreviewSchema)",
+            "- POST /api/v1/patients/merge/execute → mergeExecuteHandler (body: mergeExecuteSchema)",
+            "",
+            "**Export routes (auth required, PATIENT_VIEW + REPORT_EXPORT):**",
+            "- POST /api/v1/patients/exports → requestExportHandler",
+            "- GET /api/v1/patients/exports/:id → exportStatusHandler (params: exportIdParamSchema)",
+            "",
+            "**Internal API routes (service-to-service):**",
+            "- GET /api/v1/internal/patients/:id/claim-context → claimContextHandler (params: internalPatientIdParamSchema)",
+            "- GET /api/v1/internal/patients/validate-phn/:phn → validatePhnHandler (params: validatePhnParamSchema)",
+            "",
+            "Internal routes require internal API key authentication (same pattern as Domain 5).",
+            "",
+            "Create `apps/api/test/integration/patient/merge.integration.ts`, `export.integration.ts`, `internal.integration.ts`."
+          ],
+          "security": [
+            "Merge requires PATIENT_EDIT permission. Merge is irreversible in UI.",
+            "Export uses authenticated, time-limited download link. Never emailed.",
+            "Internal API routes not accessible from public API.",
+            "Internal routes still scope data to physician_id passed as context."
+          ],
+          "tests": [
+            "POST /patients/merge/preview returns side-by-side comparison",
+            "POST /patients/merge/preview rejects cross-physician patients",
+            "POST /patients/merge/execute transfers claims and soft-deletes",
+            "POST /patients/exports generates export and returns export_id",
+            "GET /patients/exports/:id returns download URL when ready",
+            "GET /internal/patients/:id/claim-context returns minimal context",
+            "GET /internal/patients/:id/claim-context returns 404 for unknown patient",
+            "GET /internal/patients/validate-phn/:phn validates format and existence",
+            "Internal routes reject requests without internal API key"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 6: Patient Registry — Security Tests",
+      "tasks": [
+        {
+          "id": "D06-040",
+          "description": "Security: authentication enforcement on every route",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.authn.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.authn.security.ts`.",
+            "",
+            "Test every authenticated route in the Patient Registry domain returns 401 without a valid session cookie:",
+            "",
+            "- POST /api/v1/patients",
+            "- GET /api/v1/patients/:id",
+            "- PUT /api/v1/patients/:id",
+            "- POST /api/v1/patients/:id/deactivate",
+            "- POST /api/v1/patients/:id/reactivate",
+            "- GET /api/v1/patients/search",
+            "- GET /api/v1/patients/recent",
+            "- POST /api/v1/patients/imports",
+            "- GET /api/v1/patients/imports/:id/preview",
+            "- PUT /api/v1/patients/imports/:id/mapping",
+            "- POST /api/v1/patients/imports/:id/commit",
+            "- GET /api/v1/patients/imports/:id",
+            "- POST /api/v1/patients/merge/preview",
+            "- POST /api/v1/patients/merge/execute",
+            "- POST /api/v1/patients/exports",
+            "- GET /api/v1/patients/exports/:id",
+            "",
+            "For each route: send request with no cookie, with expired cookie, and with tampered cookie. All must return 401."
+          ],
+          "security": [
+            "401 responses must not contain any data beyond the error object.",
+            "Tampered cookies must be rejected.",
+            "Expired sessions must return 401."
+          ]
+        },
+        {
+          "id": "D06-041",
+          "description": "Security: authorization and role enforcement",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.authz.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.authz.security.ts`.",
+            "",
+            "Test delegate permission enforcement:",
+            "",
+            "**Delegate with PATIENT_VIEW only:**",
+            "- GET /patients/:id → 200 (allowed)",
+            "- GET /patients/search → 200 (allowed)",
+            "- POST /patients → 403 (requires PATIENT_CREATE)",
+            "- PUT /patients/:id → 403 (requires PATIENT_EDIT)",
+            "- POST /patients/imports → 403 (requires PATIENT_IMPORT)",
+            "- POST /patients/merge/execute → 403 (requires PATIENT_EDIT)",
+            "",
+            "**Delegate with PATIENT_CREATE only:**",
+            "- POST /patients → 200 (allowed)",
+            "- PUT /patients/:id → 403 (requires PATIENT_EDIT)",
+            "",
+            "**Delegate with no patient permissions:**",
+            "- All patient routes → 403",
+            "",
+            "**Internal API access control:**",
+            "- GET /internal/patients/:id/claim-context without internal API key → 401 or 403",
+            "- Regular user session cannot access internal routes"
+          ]
+        },
+        {
+          "id": "D06-042",
+          "description": "Security: cross-physician patient isolation (HIA custodian scoping) — MOST CRITICAL",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.scoping.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.scoping.security.ts`.",
+            "",
+            "Create two physician accounts (physician1, physician2) using createSecurityPair fixture. Create patients for each.",
+            "",
+            "**Patient record isolation:**",
+            "- Physician1 cannot see physician2's patient via GET /patients/:id → 404",
+            "- Physician1 cannot update physician2's patient via PUT /patients/:id → 404",
+            "- Physician1 cannot deactivate physician2's patient → 404",
+            "",
+            "**Search isolation:**",
+            "- Physician1's search (by PHN, name, DOB) never returns physician2's patients",
+            "- Physician1's recent patients list never includes physician2's patients",
+            "- Same PHN exists for both physicians — search returns only the authenticated physician's patient",
+            "",
+            "**Import isolation:**",
+            "- Physician1 cannot access physician2's import batch via GET /patients/imports/:id → 404",
+            "- Patients created during import scoped to importing physician",
+            "",
+            "**Merge isolation:**",
+            "- Physician1 cannot merge physician2's patients → 404 for both preview and execute",
+            "- Cannot merge one of physician1's patients with one of physician2's patients → 404",
+            "",
+            "**Export isolation:**",
+            "- Physician1 cannot access physician2's export → 404",
+            "",
+            "**Delegate cross-context isolation:**",
+            "- Delegate linked to physician1 only cannot see physician2's patients",
+            "- Delegate linked to both: patients in physician1 context do not leak into physician2 context",
+            "",
+            "**IMPORTANT:** All cross-physician access attempts return 404, not 403 (do not confirm resource existence)."
+          ]
+        },
+        {
+          "id": "D06-043",
+          "description": "Security: input validation and injection prevention",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.input.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.input.security.ts`.",
+            "",
+            "**SQL injection payloads on all string inputs:**",
+            "- phn field: `' OR 1=1--`, `'; DROP TABLE patients;--`",
+            "- first_name, last_name: SQL injection payloads",
+            "- search name query: SQL injection payloads (must be rejected or safely parameterised)",
+            "",
+            "**XSS payloads on all stored text fields:**",
+            "- first_name: `<script>alert(1)</script>`",
+            "- notes: `<img onerror=alert(1) src=x>`",
+            "- address_line_1: XSS payloads",
+            "",
+            "**Type coercion attacks:**",
+            "- Send number where string expected, array where string expected",
+            "- Send negative page_size to search → rejected or capped",
+            "- Send page_size > 100 to search → capped at 100",
+            "",
+            "**PHN validation:**",
+            "- PHN with 8 digits → 400",
+            "- PHN with 10 digits → 400",
+            "- PHN with letters → 400",
+            "- PHN with valid format but invalid Luhn check digit → 400",
+            "",
+            "**Gender validation:**",
+            "- Gender value 'Z' → 400",
+            "- Gender value 'Male' (must be M) → 400",
+            "",
+            "**UUID parameter validation:**",
+            "- Non-UUID in path params (e.g., GET /patients/not-a-uuid) → 400",
+            "",
+            "**Import file validation:**",
+            "- Upload non-CSV file → 400",
+            "- Upload file exceeding 10MB → 413",
+            "- CSV with malicious content in cells (formula injection: =CMD|') → sanitised"
+          ]
+        },
+        {
+          "id": "D06-044",
+          "description": "Security: PHI leakage prevention",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.leakage.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.leakage.security.ts`.",
+            "",
+            "**PHN masking in audit logs:**",
+            "- Create patient with PHN. Query audit log. PHN in audit detail is masked (123******).",
+            "- Update patient PHN. Audit log contains both old and new PHNs masked.",
+            "",
+            "**Error response sanitisation:**",
+            "- 401 response body contains only error object, no patient data",
+            "- 404 response for cross-physician patient does not confirm patient exists",
+            "- 500 error does not expose stack traces, SQL errors, or patient details",
+            "- Duplicate PHN error does not reveal existing patient details",
+            "",
+            "**Header checks:**",
+            "- No X-Powered-By header",
+            "- No Server header revealing version",
+            "",
+            "**Sensitive data not in responses:**",
+            "- Patient notes NOT included in export CSV",
+            "- Patient notes NOT included in internal claim-context API response",
+            "- Search results do not include notes field",
+            "- Import error details do not expose existing patient PHI",
+            "",
+            "**Anti-enumeration:**",
+            "- PHN search rate-limited to prevent PHN enumeration across requests",
+            "- Internal PHN validation endpoint does not expose patient name/DOB in response",
+            "",
+            "**Export security:**",
+            "- Export download URL is time-limited (1 hour expiry)",
+            "- Export download URL requires authentication"
+          ]
+        },
+        {
+          "id": "D06-045",
+          "description": "Security: audit trail completeness",
+          "verify": "pnpm --filter api vitest run test/security/patient/patient.audit.security.ts",
+          "depends": ["D06-030", "D06-031", "D06-032"],
+          "build": [
+            "Create `apps/api/test/security/patient/patient.audit.security.ts`.",
+            "",
+            "Verify that each state-changing action produces an audit record with correct fields.",
+            "",
+            "**Patient CRUD events:**",
+            "- Create patient → patient.created with PHN (masked), creator, source = MANUAL",
+            "- Update patient → patient.updated with field-level diff (PHNs masked)",
+            "- Deactivate patient → patient.deactivated with patient_id, actor",
+            "- Reactivate patient → patient.reactivated with patient_id, actor",
+            "",
+            "**Merge events:**",
+            "- Execute merge → patient.merged with surviving_id, merged_id, claims_transferred, field_conflicts, actor",
+            "",
+            "**Import events:**",
+            "- Commit import → patient.import_completed with import_id, file_hash, created/updated/skipped/error counts, actor",
+            "",
+            "**Export events:**",
+            "- Request export → patient.export_requested with export_id, row_count, actor",
+            "",
+            "**Search audit:**",
+            "- PHN search → patient.searched with search_type = PHN_LOOKUP, parameters (no results logged)",
+            "",
+            "**Audit log integrity:**",
+            "- Audit entries are append-only (no UPDATE/DELETE from this domain)",
+            "- PHN values in audit details are always masked"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 6: Patient Registry — Final Validation",
+      "tasks": [
+        {
+          "id": "D06-099",
+          "description": "Full domain test suite: all unit + integration + security tests",
+          "verify": "pnpm --filter api vitest run src/domains/patient/ test/integration/patient/ test/security/patient/",
+          "depends": ["D06-040", "D06-041", "D06-042", "D06-043", "D06-044", "D06-045"],
+          "build": [
+            "Run the complete test suite for Domain 6 Patient Registry. Do NOT write new code unless tests fail.",
+            "",
+            "1. Run all unit tests: `pnpm --filter api vitest run src/domains/patient/`",
+            "2. Run all integration tests: `pnpm --filter api vitest run test/integration/patient/`",
+            "3. Run all security tests: `pnpm --filter api vitest run test/security/patient/`",
+            "",
+            "If any tests fail: read the failure, fix the source code (not the tests unless the test is wrong), re-run.",
+            "",
+            "After all pass, run the full suite one final time:",
+            "```bash",
+            "pnpm --filter api vitest run src/domains/patient/ test/integration/patient/ test/security/patient/",
+            "```",
+            "",
+            "Verify these security test files exist and are non-empty:",
+            "- test/security/patient/patient.authn.security.ts",
+            "- test/security/patient/patient.authz.security.ts",
+            "- test/security/patient/patient.scoping.security.ts",
+            "- test/security/patient/patient.input.security.ts",
+            "- test/security/patient/patient.leakage.security.ts",
+            "- test/security/patient/patient.audit.security.ts"
+          ]
+        }
+      ]
+    }
+  ]
+}

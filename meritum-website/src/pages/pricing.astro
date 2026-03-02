@@ -1,0 +1,172 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import PricingCards from '../components/pricing/PricingCards.astro';
+import PracticeTable from '../components/pricing/PracticeTable.astro';
+import ComparisonTable from '../components/pricing/ComparisonTable.astro';
+import WorkedExamples from '../components/pricing/WorkedExamples.astro';
+import ReferralCallout from '../components/pricing/ReferralCallout.astro';
+import FAQAccordion from '../components/pricing/FAQAccordion.astro';
+import { getCurrentRate, formatCAD, pricingConfig } from '../config/pricing';
+import { siteConfig } from '../config/site';
+
+const rate = getCurrentRate();
+const earlyBirdActive = pricingConfig.earlyBird.active;
+
+const includedFeatures = [
+  'AHCIP fee-for-service claims and WCB Alberta claims with full support for both billing streams, regardless of your EMR or system configuration.',
+  'PCPCM panel tracking and payment reconciliation handled as a separate billing stream from fee-for-service, with its own enrolment tracking and reconciliation workflow.',
+  'Pre-submission rules engine that checks every claim against applicable AHCIP governing rules before it goes out: modifier eligibility, time-period requirements, duplicate detection, age-based benefits, and RRNP premiums.',
+  'Advice engine that identifies codes and modifiers you may have missed and analyses your billing patterns to surface revenue recovery opportunities across your claim history.',
+  'Real-time claim tracking and rejection analytics so you see what\'s paid, what\'s held, and what\'s refused, with reason codes in plain language.',
+  'Mobile claim entry for ED shifts, after-hours work, and anywhere else you need to log a claim at the point of care.',
+  'EMR encounter imports through system file exports from supported EMRs, so you\'re not re-entering what you\'ve already documented.',
+  'Automated Thursday submission via H-Link on Alberta Health\'s weekly cycle, with no manual batching required.',
+  'RRNP auto-calculation from your practice location and specialty, applied automatically to every eligible claim.',
+  'Full data export at any time at no charge. Your billing data is yours, and it leaves with you if you decide to go.',
+  'Email support with a one-business-day response commitment and a help centre built around Alberta-specific billing guidance.',
+  'HIA-compliant Canadian hosting on DigitalOcean Toronto, with an Information Manager Agreement under HIA s.66.',
+  'Every future platform update included at no additional cost. When AHCIP governing rules change, Meritum\'s rules engine updates automatically. When new features ship, they\'re available to every physician on the platform. Your subscription covers the platform as it is today and everything it becomes.',
+];
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why isn't there a free trial?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Medical billing isn't something you trial; it's something you commit to. Setting up Meritum means configuring your practitioner profile, connecting your rules engine, and submitting real claims to Alberta Health. That's onboarding, not a test drive. We charge from day one because the platform is built to be worth the cost from the first Thursday cycle, and the pricing is structured to make that commitment straightforward."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens after my early bird rate expires?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Your early bird rate of $199/month is locked for 12 months from signup. After that, your subscription renews at the standard rate: $279/month or $3,181/year. You'll get advance notice before the rate change, and you can cancel at any time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a contract or commitment?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No contract and no minimum term on monthly billing; you can cancel at the end of any month. Annual billing comes with a lower effective rate, and in exchange we ask for a six-month commitment: cancellations within the first six months forfeit the remaining balance, while cancellations after six months receive a prorated refund for unused months. Either way, your full billing data is exported at no charge when you leave."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does the price go up if I bill more?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It does not. Meritum is a flat rate regardless of your billing volume. Whether you're billing $200,000 or $2,000,000 annually, your subscription cost is the same. This is the fundamental difference from the billing agent model: their fee scales with your revenue, while ours stays fixed."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I switch between monthly and annual billing?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, at any renewal date. If you start on monthly and decide to move to annual, the change takes effect at the start of your next billing period. The annual plan saves you 5% compared to monthly billing."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is this per physician or per clinic?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Per physician. Each subscription covers one practitioner with their own claims, rules engine, advice engine, and dashboard. This keeps your billing data separate and your compliance clean under the Health Information Act. If you're a practice with five or more physicians, the practice tier gives you 10% off the standard per-physician rate, with a further 5% for annual billing."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the referral program work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Refer a colleague who signs up and completes their first billing cycle, and you receive one month's subscription credited to your next invoice. You can earn up to three referral credits per year, applied one per billing period. Referrals must be physicians outside your own practice account. If you're on a practice tier, you choose whether the credit applies to your practice's invoice or is banked against a future individual subscription in your name."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I get future updates and features?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every platform update, feature addition, and governing rule change is included in your subscription at no additional cost. When AHCIP rules are updated (including the annual April 1 fee schedule change), Meritum's rules engine reflects the changes automatically. You don't need to request updates or pay for a new version; the platform you're using today gets better over time, and your subscription covers all of it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Payment is handled through Stripe in Canadian dollars. Visa, Mastercard, and American Express are accepted. All prices are in CAD with 5% GST applied at checkout."
+      }
+    },
+  ],
+};
+---
+
+<PageLayout
+  title="Pricing — Meritum | Flat-Rate Medical Billing for Alberta Physicians"
+  description="Flat monthly rate, no percentage of your billings. One plan, everything included. AHCIP, WCB, PCPCM, rules engine, advice engine, and every future update."
+  structuredData={faqStructuredData}
+>
+  <PricingCards />
+  <PracticeTable />
+
+  {/* What's Included */}
+  <Section id="whats-included">
+    <Container>
+      <div class="max-w-3xl mx-auto">
+        <SectionHeading tag="h2" size="3xl" class="text-center">
+          One plan. Everything included. Every update, forever.
+        </SectionHeading>
+        <p class="mt-4 text-lg text-text-muted font-body text-center">
+          There's no "pro" tier, no feature gating, and no upsell. Every physician on Meritum gets the full platform from day one, and every improvement made to the platform is included in your subscription automatically.
+        </p>
+
+        <ul class="mt-10 space-y-4">
+          {includedFeatures.map((feature) => (
+            <li class="flex gap-3 text-base leading-relaxed text-text font-body">
+              <span class="mt-1.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Container>
+  </Section>
+
+  <ComparisonTable />
+  <WorkedExamples />
+  <ReferralCallout />
+  <FAQAccordion />
+
+  {/* Bottom CTA */}
+  <Section bg="primary" id="pricing-cta">
+    <Container class="text-center">
+      <SectionHeading tag="h2" size="3xl" light>
+        The math is simple. The decision should be too.
+      </SectionHeading>
+      <p class="mt-4 text-lg text-white/80 max-w-xl mx-auto font-body">
+        Everything included, cancel anytime, and your data is always yours.
+      </p>
+      <div class="mt-8">
+        <a
+          href={siteConfig.ctaUrl}
+          class="inline-flex items-center justify-center rounded-md bg-accent px-8 py-4 text-lg font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          {earlyBirdActive
+            ? `Start today — ${formatCAD(rate.monthly)}/month`
+            : `Start today — ${formatCAD(rate.monthly)}/month, or save ${pricingConfig.standard.annualDiscountPercent}% with annual billing`
+          }
+        </a>
+      </div>
+    </Container>
+  </Section>
+</PageLayout>

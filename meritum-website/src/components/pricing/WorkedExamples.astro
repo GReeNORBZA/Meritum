@@ -1,0 +1,77 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import { pricingConfig, formatCAD } from '../../config/pricing';
+
+const examples = [
+  {
+    title: 'A rural GP billing $400,000 annually',
+    agentLabel: 'Billing agent at 4%',
+    agentCost: 16_000,
+    meritumLabel: 'Meritum (standard annual)',
+    meritumCost: pricingConfig.standard.annualRate,
+  },
+  {
+    title: 'A specialist billing $800,000 annually',
+    agentLabel: 'Billing agent at 3%',
+    agentCost: 24_000,
+    meritumLabel: 'Meritum (standard annual)',
+    meritumCost: pricingConfig.standard.annualRate,
+  },
+];
+---
+
+<Section bg="surface" id="the-math">
+  <Container>
+    <div class="text-center max-w-3xl mx-auto">
+      <SectionHeading tag="h2" size="3xl">
+        The Math
+      </SectionHeading>
+    </div>
+
+    <div class="mt-12 grid gap-8 lg:grid-cols-2 max-w-[960px] mx-auto">
+      {examples.map(({ title, agentLabel, agentCost, meritumLabel, meritumCost }) => {
+        const saving = agentCost - meritumCost;
+        return (
+          <div class="rounded-xl border border-surface bg-white p-8">
+            <h3 class="font-display text-lg font-bold text-primary">{title}</h3>
+
+            <div class="mt-6 space-y-3">
+              <div class="flex items-baseline justify-between">
+                <span class="font-body text-sm text-text-muted">{agentLabel}</span>
+                <span class="font-display text-lg font-bold text-text-muted">{formatCAD(agentCost)}/year</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <span class="font-body text-sm text-text">{meritumLabel}</span>
+                <span class="font-display text-lg font-bold text-accent">{formatCAD(meritumCost)}/year</span>
+              </div>
+            </div>
+
+            <div class="mt-6 border-t border-surface pt-4">
+              <div class="flex items-baseline justify-between">
+                <span class="font-body text-base font-medium text-primary">Annual saving</span>
+                <span class="font-display text-2xl font-bold text-primary">{formatCAD(saving)}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <div class="mt-10 max-w-3xl mx-auto">
+      <p class="text-base leading-relaxed text-text font-body">
+        The flat rate means the savings grow with your billings. A billing agent's percentage fee scales with your revenue; Meritum's subscription stays the same. And beyond the cost comparison, the rules engine and advice engine are catching errors and identifying missed revenue that the billing agent comparison doesn't even account for.
+      </p>
+
+      <div class="mt-8 text-center">
+        <a
+          href="/#calculator"
+          class="inline-flex items-center justify-center rounded-md border-2 border-primary px-6 py-3 text-base font-body font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          Run the numbers with your own billings
+        </a>
+      </div>
+    </div>
+  </Container>
+</Section>

@@ -1,0 +1,20 @@
+---
+interface Props {
+  id?: string;
+  bg?: 'background' | 'surface' | 'primary';
+  topo?: boolean;
+  class?: string;
+}
+
+const { id, bg = 'background', topo = false, class: className = '' } = Astro.props;
+
+const bgClass = {
+  background: 'bg-background',
+  surface: 'bg-surface',
+  primary: 'bg-primary text-white',
+}[bg];
+---
+
+<section id={id} class:list={[bgClass, topo && 'bg-topo', 'py-20 lg:py-24', className]}>
+  <slot />
+</section>

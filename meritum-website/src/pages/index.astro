@@ -1,0 +1,31 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Hero from '../components/home/Hero.astro';
+import Calculator from '../components/home/Calculator';
+import ThreePillars from '../components/home/ThreePillars.astro';
+import ThursdayCycle from '../components/home/ThursdayCycle.astro';
+import ObjectionBusters from '../components/home/ObjectionBusters.astro';
+import SocialProof from '../components/home/SocialProof.astro';
+import FinalCTA from '../components/home/FinalCTA.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+---
+
+<PageLayout
+  title="Meritum — Alberta's Self-Serve Medical Billing Platform"
+  description="Flat monthly rate, full control, built for physicians who are done overpaying. AHCIP and WCB billing with pre-submission rules checking."
+>
+  <Hero />
+
+  <Section bg="surface" id="calculator">
+    <Container>
+      <Calculator client:visible />
+    </Container>
+  </Section>
+
+  <ThreePillars />
+  <ThursdayCycle />
+  <ObjectionBusters />
+  <SocialProof />
+  <FinalCTA />
+</PageLayout>

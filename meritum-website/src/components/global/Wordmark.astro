@@ -1,0 +1,10 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<a href="/" class:list={["inline-block font-display font-bold tracking-[0.04em] text-primary no-underline", className]} aria-label="Meritum — Home">
+  Meritum
+</a>

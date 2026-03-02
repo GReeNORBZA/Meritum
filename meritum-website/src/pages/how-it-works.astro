@@ -1,0 +1,106 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import OnboardingSteps from '../components/how-it-works/OnboardingSteps.astro';
+import DailyWorkflow from '../components/how-it-works/DailyWorkflow';
+import ThursdayCycleDetail from '../components/how-it-works/ThursdayCycleDetail.astro';
+import AfterSubmission from '../components/how-it-works/AfterSubmission.astro';
+import { getCurrentRate, formatCAD } from '../config/pricing';
+import { siteConfig } from '../config/site';
+
+const rate = getCurrentRate();
+---
+
+<PageLayout
+  title="How It Works — Meritum"
+  description="Set up in ten minutes, submit your first claims on Thursday. See how Meritum's onboarding, daily workflow, rules engine, and post-submission tracking work for Alberta physicians."
+>
+  <!-- Section 1: Page Header -->
+  <Section>
+    <Container class="text-center">
+      <SectionHeading tag="h1" size="5xl" class="max-w-3xl mx-auto">
+        Set up in ten minutes. Submit your first claims on Thursday.
+      </SectionHeading>
+      <p class="mt-6 text-lg lg:text-xl text-text-muted max-w-2xl mx-auto font-body">
+        Meritum is built around the way Alberta physicians already work. You configure your billing profile once, capture claims during your clinical day, and the platform handles rules checking, submission, and reconciliation on the weekly Thursday cycle. Nothing about your clinical workflow needs to change.
+      </p>
+    </Container>
+  </Section>
+
+  <!-- Section 2: Onboarding -->
+  <OnboardingSteps />
+
+  <!-- Section 3: Daily Workflow -->
+  <Section id="daily-workflow">
+    <Container>
+      <SectionHeading tag="h2" size="3xl" class="max-w-2xl">
+        Meritum fits into your clinical day. It doesn't replace it.
+      </SectionHeading>
+      <p class="mt-4 max-w-2xl text-base text-text-muted">
+        The goal is to capture claims with as little disruption to patient care as possible. How that looks depends on how you work.
+      </p>
+      <div class="mt-10">
+        <DailyWorkflow client:visible />
+      </div>
+      <p class="mt-8 max-w-2xl text-base text-text-muted italic">
+        However your claims enter the system, they all end up in the same place: queued, validated, and ready for Thursday.
+      </p>
+    </Container>
+  </Section>
+
+  <!-- Section 4: Thursday Cycle Detail -->
+  <ThursdayCycleDetail />
+
+  <!-- Section 5: After Submission -->
+  <AfterSubmission />
+
+  <!-- Section 6: What Doesn't Change -->
+  <Section bg="surface" id="what-doesnt-change">
+    <Container>
+      <SectionHeading tag="h2" size="3xl" class="max-w-2xl">
+        Your patients. Your clinical judgement. Your workflow. Meritum handles the billing; everything else stays the same.
+      </SectionHeading>
+      <div class="mt-6 max-w-2xl space-y-4">
+        <p class="text-base leading-relaxed text-text">
+          You don't change EMRs. You don't change how you see patients. You don't attend a training session or block out an afternoon for onboarding. The learning curve is closer to switching pharmacies than switching software systems: the first week takes a little attention, and after that it's just how you bill.
+        </p>
+        <p class="text-base leading-relaxed text-text">
+          If someone else currently manages your billing, you can invite them as a delegate with controlled permissions. They see only what you choose to share, and you can revoke access at any time. The transition doesn't require you to do everything yourself; it requires you to own the process.
+        </p>
+      </div>
+    </Container>
+  </Section>
+
+  <!-- Section 7: CTA -->
+  <Section id="cta">
+    <Container class="text-center">
+      <SectionHeading tag="h2" size="3xl">
+        Ten minutes to set up. Thursday to see it work.
+      </SectionHeading>
+      <p class="mt-4 text-lg text-text-muted max-w-xl mx-auto">
+        Everything included, cancel anytime, and your data is always yours.
+      </p>
+      <div class="mt-8">
+        <a
+          href={siteConfig.ctaUrl}
+          class="inline-flex items-center justify-center rounded-md bg-accent px-8 py-4 text-lg font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          Start today — {formatCAD(rate.monthly)}/month
+        </a>
+      </div>
+      <p class="mt-4 text-sm text-text-muted">
+        Plus 5% GST. Cancel anytime.
+      </p>
+      <p class="mt-3">
+        <a
+          href="/#calculator"
+          class="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+        >
+          See what you'd save &rarr;
+        </a>
+      </p>
+    </Container>
+  </Section>
+</PageLayout>

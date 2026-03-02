@@ -1,0 +1,787 @@
+{
+  "domainNumber": "11",
+  "domainName": "Onboarding",
+  "manifestFile": "domain-11-onboarding.tasks",
+  "promptPrefix": "d11",
+  "modulePath": "apps/api/src/domains/onboarding",
+  "sections": [
+    {
+      "title": "Domain 11: Onboarding — Shared Types & Constants",
+      "tasks": [
+        {
+          "id": "D11-001",
+          "description": "Onboarding constants: step enums, BA statuses, IMA template version, tour stops, audit actions",
+          "verify": "pnpm --filter shared build",
+          "build": [
+            "Create `packages/shared/src/constants/onboarding.constants.ts` with all onboarding constants:",
+            "",
+            "**OnboardingStep enum (7 steps):**",
+            "- PROFESSIONAL_IDENTITY = 1",
+            "- SPECIALTY_TYPE = 2",
+            "- BUSINESS_ARRANGEMENT = 3",
+            "- PRACTICE_LOCATION = 4",
+            "- WCB_CONFIGURATION = 5",
+            "- SUBMISSION_PREFERENCES = 6",
+            "- IMA_ACKNOWLEDGEMENT = 7",
+            "",
+            "**Required steps (onboarding completes when ALL required steps done):**",
+            "- Steps 1, 2, 3, 4, 7 are REQUIRED",
+            "- Steps 5, 6 are OPTIONAL (can be deferred)",
+            "",
+            "**BA Linkage Status enum:**",
+            "- PENDING — AHC11236 submitted, awaiting Alberta Health processing (2–4 weeks)",
+            "- ACTIVE — Alberta Health confirmed linkage, claims can be submitted via H-Link",
+            "- INACTIVE — BA deactivated",
+            "",
+            "**IMA template version:** Current version string (e.g., '1.0.0'). Used to detect template updates requiring re-acknowledgement.",
+            "",
+            "**Guided tour stops (6 stops):**",
+            "- DASHBOARD_OVERVIEW, CREATE_CLAIM, AI_COACH, THURSDAY_BATCH, NOTIFICATIONS, HELP",
+            "",
+            "**Audit action identifiers:**",
+            "- onboarding.started, onboarding.step_completed, onboarding.completed",
+            "- onboarding.ima_acknowledged, onboarding.ima_downloaded",
+            "- onboarding.ahc11236_downloaded, onboarding.pia_downloaded",
+            "- onboarding.patient_import_completed",
+            "- onboarding.guided_tour_completed, onboarding.guided_tour_dismissed",
+            "- onboarding.ba_status_updated",
+            "",
+            "Export all as frozen objects / TypeScript enums."
+          ],
+          "frd": [
+            "Domain 11 Section 2.1: 7-step wizard. Steps 1–4 and 7 required. Steps 5–6 optional. Platform blocks claim creation until onboarding_completed = true.",
+            "Domain 11 Section 4.2: BA Linkage Status — PENDING, ACTIVE, INACTIVE. Claims can be created and queued while PENDING but not transmitted until ACTIVE.",
+            "Domain 11 Section 6: Post-onboarding guided tour with 6 stops. Dismissible. Does not reappear."
+          ]
+        },
+        {
+          "id": "D11-002",
+          "description": "Drizzle schema for onboarding_progress table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D11-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/db/onboarding.schema.ts` with the onboarding_progress table.",
+            "",
+            "**onboarding_progress table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| progress_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, UNIQUE, FK → providers | One progress record per provider |",
+            "| step_1_completed | BOOLEAN | NOT NULL, DEFAULT false | Professional Identity |",
+            "| step_2_completed | BOOLEAN | NOT NULL, DEFAULT false | Specialty & Type |",
+            "| step_3_completed | BOOLEAN | NOT NULL, DEFAULT false | Business Arrangement |",
+            "| step_4_completed | BOOLEAN | NOT NULL, DEFAULT false | Practice Location |",
+            "| step_5_completed | BOOLEAN | NOT NULL, DEFAULT false | WCB Configuration (optional) |",
+            "| step_6_completed | BOOLEAN | NOT NULL, DEFAULT false | Submission Preferences (optional) |",
+            "| step_7_completed | BOOLEAN | NOT NULL, DEFAULT false | IMA Acknowledgement |",
+            "| patient_import_completed | BOOLEAN | NOT NULL, DEFAULT false | Optional patient import |",
+            "| guided_tour_completed | BOOLEAN | NOT NULL, DEFAULT false | Post-onboarding tour |",
+            "| guided_tour_dismissed | BOOLEAN | NOT NULL, DEFAULT false | Tour dismissed without completing |",
+            "| started_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | When onboarding began |",
+            "| completed_at | TIMESTAMPTZ | NULLABLE | When onboarding completed (all required steps done) |",
+            "",
+            "**Indexes:** unique on provider_id.",
+            "",
+            "Export the table and its inferred types (InsertOnboardingProgress, SelectOnboardingProgress)."
+          ],
+          "frd": [
+            "Domain 11 Section 7.1: onboarding_progress table with per-step boolean columns, tour tracking, and completion timestamp."
+          ]
+        },
+        {
+          "id": "D11-003",
+          "description": "Drizzle schema for ima_records table",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D11-002"],
+          "build": [
+            "Add to `packages/shared/src/schemas/db/onboarding.schema.ts`:",
+            "",
+            "**ima_records table:**",
+            "",
+            "| Column | Type | Constraints | Notes |",
+            "|--------|------|-------------|-------|",
+            "| ima_id | UUID | PK | Default: gen_random_uuid() |",
+            "| provider_id | UUID FK | NOT NULL, FK → providers | Multiple rows possible (re-acknowledgement after template update) |",
+            "| template_version | VARCHAR(20) | NOT NULL | IMA template version used |",
+            "| document_hash | VARCHAR(64) | NOT NULL | SHA-256 hash of rendered IMA document at acknowledgement time |",
+            "| acknowledged_at | TIMESTAMPTZ | NOT NULL | Timestamp of acknowledgement |",
+            "| ip_address | VARCHAR(45) | NOT NULL | IP at acknowledgement |",
+            "| user_agent | VARCHAR(500) | NOT NULL | Browser user agent at acknowledgement |",
+            "",
+            "**Indexes:** (provider_id, acknowledged_at DESC) for finding latest acknowledgement.",
+            "",
+            "Export the table and its inferred types (InsertImaRecord, SelectImaRecord)."
+          ],
+          "frd": [
+            "Domain 11 Section 3.3: IMA digital acknowledgement stores ima_id, provider_id, template_version, document_hash (SHA-256), acknowledged_at, ip_address, user_agent. One row per acknowledgement — multiple if re-acknowledged after template update."
+          ],
+          "security": [
+            "IMA document hash (SHA-256) provides tamper evidence — the rendered document at acknowledgement time can be verified against the stored hash.",
+            "IP address and user agent captured for audit trail of the regulatory acknowledgement.",
+            "The rendered IMA PDF is stored immutably. Existing acknowledgements are never modified."
+          ]
+        },
+        {
+          "id": "D11-004",
+          "description": "Zod validation schemas for onboarding step inputs and API responses",
+          "verify": "pnpm --filter shared build",
+          "depends": ["D11-001"],
+          "build": [
+            "Create `packages/shared/src/schemas/onboarding.schema.ts` with Zod schemas for all onboarding endpoints:",
+            "",
+            "**Step 1 — Professional Identity:**",
+            "- step1Schema: { billing_number: string().regex(/^\\d{5}$/) (5-digit AHCIP practitioner ID), cpsa_number: string().min(1).max(20), legal_first_name: string().min(1).max(100), legal_last_name: string().min(1).max(100) }",
+            "",
+            "**Step 2 — Specialty & Type:**",
+            "- step2Schema: { specialty_code: string().min(1).max(10) (validated against Reference Data), physician_type: enum(['gp', 'specialist', 'locum']) }",
+            "",
+            "**Step 3 — Business Arrangement:**",
+            "- step3Schema: { primary_ba_number: string().min(1).max(20), is_pcpcm_enrolled: boolean(), pcpcm_ba_number: string().max(20).optional(), ffs_ba_number: string().max(20).optional() }",
+            "- Refinement: if is_pcpcm_enrolled is true, both pcpcm_ba_number and ffs_ba_number are required.",
+            "",
+            "**Step 4 — Practice Location:**",
+            "- step4Schema: { location_name: string().min(1).max(200), functional_centre_code: string().min(1).max(10), facility_number: string().max(20).optional(), address: addressSchema, community_code: string().min(1).max(10) }",
+            "- addressSchema: { street: string().min(1).max(200), city: string().min(1).max(100), province: string().length(2).default('AB'), postal_code: string().regex(/^[A-Z]\\d[A-Z]\\s?\\d[A-Z]\\d$/i) }",
+            "",
+            "**Step 5 — WCB Configuration:**",
+            "- step5Schema: { contract_id: string().min(1).max(20), role: string().min(1).max(50), skill_code: string().min(1).max(10) }",
+            "",
+            "**Step 6 — Submission Preferences:**",
+            "- step6Schema: { ahcip_mode: enum(['auto_clean', 'require_approval']).default('auto_clean'), wcb_mode: enum(['auto_clean', 'require_approval']).default('require_approval') }",
+            "",
+            "**Step number param:**",
+            "- stepNumberParamSchema: { step_number: coerce.number().int().min(1).max(7) }",
+            "",
+            "**IMA acknowledge:**",
+            "- imaAcknowledgeSchema: { document_hash: string().length(64) } — client sends hash of displayed document; server verifies match.",
+            "",
+            "**Response schemas:**",
+            "- onboardingProgressResponseSchema: progress object with all step booleans, started_at, completed_at",
+            "",
+            "Export all schemas and inferred types."
+          ],
+          "frd": [
+            "Domain 11 Section 2.1: Step 1 requires billing number (5-digit numeric), CPSA number, legal name. Step 2: specialty code from AHCIP list, physician type GP/Specialist/Locum. Step 3: BA number, optional PCPCM dual-BA. Step 4: location with functional centre code, facility number, address, community code.",
+            "Domain 11 Section 3.3: IMA acknowledgement stores document_hash (SHA-256 of rendered IMA)."
+          ]
+        },
+        {
+          "id": "D11-005",
+          "description": "Generate and apply database migration for onboarding tables",
+          "verify": "cd apps/api && pnpm drizzle-kit generate 2>&1 && pnpm drizzle-kit migrate 2>&1",
+          "depends": ["D11-002", "D11-003"],
+          "build": [
+            "Run the Drizzle migration generator for the onboarding tables:",
+            "",
+            "```bash",
+            "cd apps/api",
+            "pnpm drizzle-kit generate",
+            "pnpm drizzle-kit migrate",
+            "```",
+            "",
+            "Verify that the migration file was created in `apps/api/drizzle/migrations/`.",
+            "Verify that both tables exist in the test database: onboarding_progress, ima_records.",
+            "Verify all indexes and constraints are applied.",
+            "Verify FK references to providers table resolve correctly."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 11: Onboarding — Repository Layer",
+      "tasks": [
+        {
+          "id": "D11-010",
+          "description": "Repository: onboarding progress CRUD",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts",
+          "depends": ["D11-005"],
+          "build": [
+            "Create `apps/api/src/domains/onboarding/onboarding.repository.ts`:",
+            "",
+            "**Onboarding progress operations:**",
+            "- `createProgress(providerId: string)` — insert new progress record with all steps false and started_at = now(). Enforce unique provider_id.",
+            "- `findProgressByProviderId(providerId: string)` — return progress record or null.",
+            "- `markStepCompleted(providerId: string, stepNumber: number)` — set step_{n}_completed = true. Return updated progress.",
+            "- `markOnboardingCompleted(providerId: string)` — set completed_at = now(). Only callable when all required steps (1,2,3,4,7) are true.",
+            "- `markPatientImportCompleted(providerId: string)` — set patient_import_completed = true.",
+            "- `markGuidedTourCompleted(providerId: string)` — set guided_tour_completed = true.",
+            "- `markGuidedTourDismissed(providerId: string)` — set guided_tour_dismissed = true.",
+            "",
+            "All queries scoped by provider_id (which maps to the physician's provider record)."
+          ],
+          "security": [
+            "All progress queries are scoped to the provider_id derived from the authenticated user's context — no cross-physician access.",
+            "markOnboardingCompleted checks required steps server-side; client cannot bypass by setting completed_at directly."
+          ],
+          "tests": [
+            "createProgress creates record with all steps false",
+            "createProgress rejects duplicate provider_id",
+            "findProgressByProviderId returns progress for existing provider",
+            "findProgressByProviderId returns null for non-existent provider",
+            "markStepCompleted sets specific step to true",
+            "markStepCompleted is idempotent (re-completing a step is no-op)",
+            "markOnboardingCompleted sets completed_at when required steps done",
+            "markOnboardingCompleted throws when required steps incomplete",
+            "markGuidedTourCompleted sets tour completed",
+            "markGuidedTourDismissed sets tour dismissed"
+          ]
+        },
+        {
+          "id": "D11-011",
+          "description": "Repository: IMA records (append-only acknowledgements)",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts",
+          "depends": ["D11-005"],
+          "build": [
+            "Add to `apps/api/src/domains/onboarding/onboarding.repository.ts`:",
+            "",
+            "**IMA record operations:**",
+            "- `createImaRecord(data: { providerId, templateVersion, documentHash, ipAddress, userAgent })` — insert IMA acknowledgement record with acknowledged_at = now().",
+            "- `findLatestImaRecord(providerId: string)` — return the most recent IMA record for this provider (by acknowledged_at DESC). Used to check if current template version is acknowledged.",
+            "- `listImaRecords(providerId: string)` — return all IMA records for this provider in reverse chronological order.",
+            "",
+            "**CRITICAL:** IMA records are append-only. No UPDATE or DELETE operations. Each re-acknowledgement creates a new row."
+          ],
+          "security": [
+            "IMA records are append-only — no update or delete. This preserves the regulatory audit trail.",
+            "All IMA queries are scoped to provider_id — no cross-physician access.",
+            "document_hash provides tamper evidence for the acknowledged IMA document."
+          ],
+          "tests": [
+            "createImaRecord inserts record with correct fields and acknowledged_at",
+            "findLatestImaRecord returns most recent for provider",
+            "findLatestImaRecord returns null for provider with no IMA records",
+            "listImaRecords returns all records in reverse chronological order",
+            "ima_records has no update function",
+            "ima_records has no delete function"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 11: Onboarding — Service Layer",
+      "tasks": [
+        {
+          "id": "D11-020",
+          "description": "Service: onboarding progress management and step completion",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts",
+          "depends": ["D11-010"],
+          "build": [
+            "Create `apps/api/src/domains/onboarding/onboarding.service.ts` with onboarding orchestration logic:",
+            "",
+            "- `getOrCreateProgress(providerId: string)` — find existing progress or create new one. Return progress with computed fields: current_step (first incomplete required step), is_complete, required_steps_remaining.",
+            "- `getOnboardingStatus(userId: string)` — look up provider for user. Return onboarding status: { has_provider: boolean, progress: OnboardingProgress | null, is_complete: boolean, ba_status: string | null }. Used by middleware to enforce onboarding gate.",
+            "",
+            "- `completeStep1(providerId: string, data: Step1Input)` — validate billing number format (5-digit numeric). Create or update provider record in Provider Management (calls provider service). Mark step 1 complete. Emit onboarding.step_completed audit event.",
+            "- `completeStep2(providerId: string, data: Step2Input)` — validate specialty_code against Reference Data. Update provider with specialty and physician_type. Mark step 2 complete. Emit audit event.",
+            "- `completeStep3(providerId: string, data: Step3Input)` — validate BA number format. If PCPCM enrolled, enforce both pcpcm_ba_number and ffs_ba_number present. Create BA record(s) in Provider Management with status PENDING. Pre-generate AHC11236 data. Mark step 3 complete. Emit audit event.",
+            "- `completeStep4(providerId: string, data: Step4Input)` — validate functional_centre_code and community_code against Reference Data. Calculate RRNP eligibility from community code. Create practice location in Provider Management. Mark step 4 complete. Emit audit event.",
+            "- `completeStep5(providerId: string, data: Step5Input)` — create WCB configuration in Provider Management. Auto-populate permitted form types from role/skill. Mark step 5 complete. Emit audit event.",
+            "- `completeStep6(providerId: string, data: Step6Input)` — set submission preferences in Provider Management. Mark step 6 complete. Emit audit event.",
+            "- `completeStep7(providerId: string, ipAddress: string, userAgent: string)` — called after IMA acknowledgement (see D11-021). Mark step 7 complete. Check if all required steps done → if so, call markOnboardingCompleted. Emit onboarding.completed if complete.",
+            "",
+            "**Step navigation:** Physician can go back to edit completed steps. Re-completing a step updates the underlying provider data.",
+            "**Progress persistence:** Each step writes immediately on completion. No transaction across multiple steps."
+          ],
+          "frd": [
+            "Domain 11 Section 2.1: Steps 1–4 and 7 required. Steps 5–6 optional. Each step writes to Provider Management tables.",
+            "Domain 11 Section 2.2: Progress persistence — completed steps saved immediately, resume on next login at first incomplete required step."
+          ],
+          "security": [
+            "All step completions are scoped to the authenticated physician's provider_id.",
+            "Reference Data validation (specialty codes, functional centre codes, community codes) prevents injection of invalid codes.",
+            "Billing number format validation (5-digit numeric) prevents malformed AHCIP practitioner IDs."
+          ],
+          "tests": [
+            "getOrCreateProgress creates new progress on first call",
+            "getOrCreateProgress returns existing progress on subsequent calls",
+            "getOnboardingStatus returns is_complete false when steps incomplete",
+            "completeStep1 creates provider record and marks step complete",
+            "completeStep1 validates billing number format (rejects non-5-digit)",
+            "completeStep2 validates specialty_code against Reference Data",
+            "completeStep3 creates BA record with PENDING status",
+            "completeStep3 with PCPCM enforces dual-BA present",
+            "completeStep3 without PCPCM allows single BA",
+            "completeStep4 validates functional_centre_code against Reference Data",
+            "completeStep4 calculates RRNP eligibility from community code",
+            "completeStep5 creates WCB configuration (optional step)",
+            "completeStep6 sets submission preferences (optional step)",
+            "completing steps 1,2,3,4,7 sets onboarding_completed",
+            "completing steps 1,2,3,4 without 7 does NOT set onboarding_completed",
+            "re-completing a step updates provider data"
+          ]
+        },
+        {
+          "id": "D11-021",
+          "description": "Service: IMA generation, acknowledgement, and document downloads",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts",
+          "depends": ["D11-011", "D11-020"],
+          "build": [
+            "Add to `apps/api/src/domains/onboarding/onboarding.service.ts`:",
+            "",
+            "**IMA operations:**",
+            "- `renderIma(providerId: string)` — generate IMA document from template. Pre-fill physician's legal name, CPSA number, BA number(s), Meritum corporate details, effective date. Return rendered HTML/text content and SHA-256 hash.",
+            "- `acknowledgeIma(providerId: string, clientHash: string, ipAddress: string, userAgent: string)` — render the IMA, compute server-side hash, verify clientHash matches. Create IMA record. Generate and store IMA PDF immutably (DigitalOcean Spaces). Call completeStep7. Emit onboarding.ima_acknowledged audit event. Return IMA record.",
+            "- `downloadImaPdf(providerId: string)` — retrieve stored IMA PDF from Spaces. Emit onboarding.ima_downloaded audit event. Return PDF buffer.",
+            "- `checkImaCurrentVersion(providerId: string)` — find latest IMA record. Compare template_version to current IMA_TEMPLATE_VERSION. Return { is_current: boolean, needs_reacknowledgement: boolean }.",
+            "",
+            "**AHC11236 operations:**",
+            "- `generateAhc11236Pdf(providerId: string)` — pre-fill AHC11236 form with physician's billing number, BA number, Meritum submitter prefix. Generate PDF. Emit onboarding.ahc11236_downloaded audit event. Return PDF buffer.",
+            "",
+            "**PIA operations:**",
+            "- `downloadPiaPdf()` — return PIA appendix PDF (static document, same for all physicians). Emit onboarding.pia_downloaded audit event.",
+            "",
+            "**IMA template:** Stored as a Handlebars/Mustache template in the codebase. Template version tracked in constants."
+          ],
+          "frd": [
+            "Domain 11 Section 3: IMA generated from template pre-filled with physician details. Digital acknowledgement stores timestamp, hash, IP, user agent. Rendered PDF stored immutably.",
+            "Domain 11 Section 3.4: PIA appendix downloadable PDF. Informational, no acknowledgement required.",
+            "Domain 11 Section 4: AHC11236 pre-filled with physician details and Meritum submitter prefix. PDF for download, print, wet signature, and mail/fax."
+          ],
+          "security": [
+            "IMA document hash verified on both client and server — prevents tampering between render and acknowledgement.",
+            "IMA PDF stored immutably in DigitalOcean Spaces — cannot be modified after acknowledgement.",
+            "AHC11236 PDF must not expose Meritum's internal system details beyond the submitter prefix.",
+            "All document downloads are scoped to the authenticated physician's provider_id."
+          ],
+          "tests": [
+            "renderIma pre-fills physician details correctly",
+            "renderIma returns consistent SHA-256 hash for same input",
+            "acknowledgeIma verifies client hash matches server hash",
+            "acknowledgeIma rejects mismatched hash",
+            "acknowledgeIma creates IMA record with correct fields",
+            "acknowledgeIma stores PDF to Spaces",
+            "acknowledgeIma triggers step 7 completion",
+            "downloadImaPdf returns stored PDF",
+            "checkImaCurrentVersion detects outdated template version",
+            "generateAhc11236Pdf pre-fills correct physician and submitter details",
+            "downloadPiaPdf returns static PIA document"
+          ]
+        },
+        {
+          "id": "D11-022",
+          "description": "Service: guided tour and patient import orchestration",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/onboarding.test.ts",
+          "depends": ["D11-010", "D11-020"],
+          "build": [
+            "Add to `apps/api/src/domains/onboarding/onboarding.service.ts`:",
+            "",
+            "**Guided tour:**",
+            "- `completeGuidedTour(providerId: string)` — mark tour completed. Emit onboarding.guided_tour_completed audit event.",
+            "- `dismissGuidedTour(providerId: string)` — mark tour dismissed. Emit onboarding.guided_tour_dismissed audit event.",
+            "- `shouldShowGuidedTour(providerId: string)` — return true if onboarding is complete AND tour is neither completed nor dismissed.",
+            "",
+            "**Patient import during onboarding:**",
+            "- `completePatientImport(providerId: string)` — mark patient_import_completed on progress. Emit onboarding.patient_import_completed audit event.",
+            "- The actual CSV import logic is in Domain 6 (Patient Registry). This service only tracks that the import step was completed during onboarding.",
+            "",
+            "**BA status update:**",
+            "- `confirmBaActive(providerId: string, baId: string)` — update BA status from PENDING to ACTIVE in Provider Management. Emit onboarding.ba_status_updated audit event. This is the manual confirmation endpoint used after Alberta Health processes the AHC11236."
+          ],
+          "frd": [
+            "Domain 11 Section 5: Optional patient import during onboarding. Same CSV import as Domain 6, surfaced as convenience.",
+            "Domain 11 Section 6: Guided tour with 6 stops. Dismissible. Does not reappear. Replay from settings.",
+            "Domain 11 Section 4.2: BA status tracking. PENDING after AHC11236 submitted. Manual confirm to ACTIVE."
+          ],
+          "tests": [
+            "completeGuidedTour marks tour completed",
+            "completeGuidedTour is idempotent",
+            "dismissGuidedTour marks tour dismissed",
+            "shouldShowGuidedTour returns true when onboarding complete and tour not done",
+            "shouldShowGuidedTour returns false when tour completed",
+            "shouldShowGuidedTour returns false when tour dismissed",
+            "shouldShowGuidedTour returns false when onboarding not complete",
+            "completePatientImport marks import completed on progress",
+            "confirmBaActive updates BA status from PENDING to ACTIVE",
+            "confirmBaActive rejects if BA not in PENDING state"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 11: Onboarding — Routes & Integration Tests",
+      "tasks": [
+        {
+          "id": "D11-030",
+          "description": "Routes: onboarding progress, step completion, and middleware gate",
+          "verify": "pnpm --filter api vitest run test/integration/onboarding/",
+          "depends": ["D11-020"],
+          "build": [
+            "Create `apps/api/src/domains/onboarding/onboarding.routes.ts` and `onboarding.handlers.ts`.",
+            "",
+            "**Routes:**",
+            "",
+            "| Method | Path | Auth | Description |",
+            "|--------|------|------|-------------|",
+            "| GET | /api/v1/onboarding/progress | Physician | Get current onboarding progress |",
+            "| POST | /api/v1/onboarding/steps/:step_number | Physician | Complete a step with step-specific data |",
+            "",
+            "**GET /progress** returns:",
+            "- All step booleans (step_1_completed through step_7_completed)",
+            "- patient_import_completed, guided_tour_completed, guided_tour_dismissed",
+            "- started_at, completed_at",
+            "- Computed: current_step, is_complete, required_steps_remaining",
+            "",
+            "**POST /steps/:step_number** handler:",
+            "- Parse step_number from params (1-7)",
+            "- Validate body against step-specific Zod schema",
+            "- Call corresponding completeStepN service method",
+            "- Return updated progress",
+            "",
+            "**Onboarding gate middleware:**",
+            "- Register a Fastify onRequest hook on all non-onboarding API routes",
+            "- Check onboarding status for authenticated physician users",
+            "- If onboarding not complete, return 403 with { error: 'onboarding_required', current_step: N }",
+            "- Skip for: onboarding routes themselves, auth routes, subscription routes",
+            "- Skip for: delegate users (they don't go through onboarding)",
+            "- Skip for: admin users"
+          ],
+          "frd": [
+            "Domain 11 Section 9: GET /api/v1/onboarding/progress and POST /api/v1/onboarding/steps/{step_number}.",
+            "Domain 11 Section 2.1: Platform blocks claim creation until onboarding_completed = true."
+          ],
+          "security": [
+            "Onboarding routes require physician role — delegates cannot modify onboarding state.",
+            "Step completion validates input server-side — client cannot skip validation.",
+            "Onboarding gate middleware prevents access to platform features until onboarding is complete."
+          ],
+          "tests": [
+            "GET /progress returns onboarding status for authenticated physician",
+            "GET /progress returns 404 if no provider record exists",
+            "POST /steps/1 with valid data marks step 1 complete",
+            "POST /steps/1 with invalid billing number returns 400",
+            "POST /steps/3 with PCPCM but missing dual-BA returns 400",
+            "POST /steps/8 returns 400 (invalid step number)",
+            "Completing steps 1,2,3,4,7 in sequence sets onboarding complete",
+            "Onboarding gate blocks /api/v1/claims when onboarding incomplete",
+            "Onboarding gate allows /api/v1/onboarding routes through",
+            "Onboarding gate skips check for delegate users"
+          ]
+        },
+        {
+          "id": "D11-031",
+          "description": "Routes: IMA, AHC11236, PIA document endpoints",
+          "verify": "pnpm --filter api vitest run test/integration/onboarding/",
+          "depends": ["D11-021", "D11-030"],
+          "build": [
+            "Add to `apps/api/src/domains/onboarding/onboarding.routes.ts`:",
+            "",
+            "| Method | Path | Auth | Description |",
+            "|--------|------|------|-------------|",
+            "| GET | /api/v1/onboarding/ima | Physician | Get rendered IMA document content and hash |",
+            "| POST | /api/v1/onboarding/ima/acknowledge | Physician | Record IMA acknowledgement |",
+            "| GET | /api/v1/onboarding/ima/download | Physician | Download acknowledged IMA as PDF |",
+            "| GET | /api/v1/onboarding/ahc11236/download | Physician | Download pre-filled AHC11236 as PDF |",
+            "| GET | /api/v1/onboarding/pia/download | Physician | Download PIA appendix as PDF |",
+            "",
+            "**GET /ima** handler: render IMA, return { content: string, hash: string, template_version: string }.",
+            "**POST /ima/acknowledge** handler: validate body (document_hash). Call acknowledgeIma with IP and user agent from request. Return IMA record.",
+            "**GET /ima/download** handler: retrieve stored PDF. Set Content-Type: application/pdf and Content-Disposition: attachment. Return buffer.",
+            "**GET /ahc11236/download** handler: generate AHC11236 PDF. Return with PDF headers.",
+            "**GET /pia/download** handler: return static PIA PDF with PDF headers.",
+            "",
+            "Create integration tests in `apps/api/test/integration/onboarding/onboarding-documents.integration.ts`."
+          ],
+          "frd": [
+            "Domain 11 Section 9: All IMA, AHC11236, and PIA endpoints.",
+            "Domain 11 Section 3.3: IMA acknowledge stores hash, timestamp, IP, user agent."
+          ],
+          "security": [
+            "IMA download only returns PDFs belonging to the authenticated physician's provider.",
+            "IMA acknowledge verifies hash match before storing — prevents acknowledging a tampered document.",
+            "All document downloads require authentication — no public access."
+          ],
+          "tests": [
+            "GET /ima returns rendered IMA with hash",
+            "POST /ima/acknowledge with matching hash creates IMA record",
+            "POST /ima/acknowledge with mismatched hash returns 400",
+            "GET /ima/download returns PDF for provider with acknowledged IMA",
+            "GET /ima/download returns 404 if no IMA acknowledged",
+            "GET /ahc11236/download returns pre-filled PDF",
+            "GET /ahc11236/download after step 3 includes correct BA number",
+            "GET /pia/download returns PIA PDF"
+          ]
+        },
+        {
+          "id": "D11-032",
+          "description": "Routes: guided tour, patient import, BA status confirmation",
+          "verify": "pnpm --filter api vitest run test/integration/onboarding/",
+          "depends": ["D11-022", "D11-030"],
+          "build": [
+            "Add to `apps/api/src/domains/onboarding/onboarding.routes.ts`:",
+            "",
+            "| Method | Path | Auth | Description |",
+            "|--------|------|------|-------------|",
+            "| POST | /api/v1/onboarding/guided-tour/complete | Physician | Mark guided tour completed |",
+            "| POST | /api/v1/onboarding/guided-tour/dismiss | Physician | Mark guided tour dismissed |",
+            "| POST | /api/v1/onboarding/patient-import/complete | Physician | Mark patient import completed during onboarding |",
+            "| POST | /api/v1/onboarding/ba/:ba_id/confirm-active | Physician | Manually confirm BA is active with Alberta Health |",
+            "",
+            "**Handlers:** Thin wrappers calling corresponding service methods. Return updated progress.",
+            "",
+            "Create integration tests in `apps/api/test/integration/onboarding/onboarding-supplementary.integration.ts`."
+          ],
+          "frd": [
+            "Domain 11 Section 6: Guided tour complete/dismiss endpoints.",
+            "Domain 11 Section 5: Patient import completion tracking during onboarding.",
+            "Domain 11 Section 4.2: BA status manual confirmation from PENDING to ACTIVE."
+          ],
+          "tests": [
+            "POST /guided-tour/complete marks tour completed",
+            "POST /guided-tour/complete is idempotent",
+            "POST /guided-tour/dismiss marks tour dismissed",
+            "POST /patient-import/complete marks import completed",
+            "POST /ba/:ba_id/confirm-active updates BA to ACTIVE",
+            "POST /ba/:ba_id/confirm-active with non-PENDING BA returns 400",
+            "POST /ba/:ba_id/confirm-active with other physician's BA returns 404"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 11: Onboarding — Security Tests",
+      "tasks": [
+        {
+          "id": "D11-040",
+          "description": "Security: authentication enforcement on every onboarding route",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.authn.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.authn.security.ts`.",
+            "",
+            "Test every authenticated route in the Onboarding domain returns 401 without a valid session cookie:",
+            "",
+            "- GET /api/v1/onboarding/progress",
+            "- POST /api/v1/onboarding/steps/1",
+            "- POST /api/v1/onboarding/steps/2",
+            "- POST /api/v1/onboarding/steps/3",
+            "- POST /api/v1/onboarding/steps/4",
+            "- POST /api/v1/onboarding/steps/5",
+            "- POST /api/v1/onboarding/steps/6",
+            "- POST /api/v1/onboarding/steps/7",
+            "- GET /api/v1/onboarding/ima",
+            "- POST /api/v1/onboarding/ima/acknowledge",
+            "- GET /api/v1/onboarding/ima/download",
+            "- GET /api/v1/onboarding/ahc11236/download",
+            "- GET /api/v1/onboarding/pia/download",
+            "- POST /api/v1/onboarding/guided-tour/complete",
+            "- POST /api/v1/onboarding/guided-tour/dismiss",
+            "- POST /api/v1/onboarding/patient-import/complete",
+            "- POST /api/v1/onboarding/ba/:ba_id/confirm-active",
+            "",
+            "For each route: send request with no cookie, with expired cookie, and with tampered cookie. All must return 401 with no data leakage in the response body."
+          ],
+          "security": [
+            "401 responses must not contain any data in the response body beyond the error object.",
+            "Tampered cookies must be rejected (invalid signature / hash mismatch).",
+            "Expired sessions must return 401 (not 200 with stale data)."
+          ]
+        },
+        {
+          "id": "D11-041",
+          "description": "Security: authorization and role enforcement for onboarding",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.authz.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.authz.security.ts`.",
+            "",
+            "**Delegate cannot access onboarding routes:**",
+            "- POST /onboarding/steps/1 as delegate → 403",
+            "- POST /onboarding/ima/acknowledge as delegate → 403",
+            "- POST /onboarding/guided-tour/complete as delegate → 403",
+            "- POST /onboarding/ba/:ba_id/confirm-active as delegate → 403",
+            "- GET /onboarding/progress as delegate → 403",
+            "",
+            "**Onboarding gate enforcement:**",
+            "- Physician with incomplete onboarding accessing /api/v1/claims → 403 with onboarding_required error",
+            "- Physician with incomplete onboarding accessing /api/v1/patients → 403 with onboarding_required error",
+            "- Physician with complete onboarding accessing /api/v1/claims → allowed (2xx or other expected code)",
+            "- Delegate accessing /api/v1/claims with complete physician context → allowed (gate skipped for delegates)",
+            "",
+            "**Step sequence not enforced via authorization (physician can go back):**",
+            "- Physician can POST /steps/3 then POST /steps/1 (editing earlier step) → 200"
+          ]
+        },
+        {
+          "id": "D11-042",
+          "description": "Security: cross-physician isolation (tenant scoping)",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.scoping.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.scoping.security.ts`.",
+            "",
+            "Create two physician accounts (physician1, physician2) using createSecurityPair fixture.",
+            "",
+            "**Onboarding progress isolation:**",
+            "- Physician1 GET /progress returns only physician1's progress",
+            "- Physician1 cannot see physician2's onboarding progress",
+            "",
+            "**Step completion isolation:**",
+            "- Physician1 completing step 1 does not affect physician2's progress",
+            "- Physician1 cannot complete steps for physician2",
+            "",
+            "**IMA isolation:**",
+            "- Physician1 GET /ima returns IMA pre-filled with physician1's details only",
+            "- Physician1 GET /ima/download returns only physician1's IMA PDF",
+            "- Physician1 cannot download physician2's IMA",
+            "",
+            "**AHC11236 isolation:**",
+            "- Physician1 GET /ahc11236/download returns PDF with physician1's details only",
+            "",
+            "**BA confirmation isolation:**",
+            "- Physician1 POST /ba/:ba_id/confirm-active with physician2's BA ID → 404 (not 403)",
+            "",
+            "**Important:** All cross-physician access attempts return 404, not 403 (do not confirm resource existence)."
+          ]
+        },
+        {
+          "id": "D11-043",
+          "description": "Security: input validation and injection prevention",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.input.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.input.security.ts`.",
+            "",
+            "**SQL injection payloads on string inputs:**",
+            "- billing_number: `' OR 1=1--`, `12345; DROP TABLE providers;--`",
+            "- cpsa_number: SQL injection payloads",
+            "- legal_first_name, legal_last_name: SQL injection payloads",
+            "- ba_number: SQL injection payloads",
+            "- location_name: SQL injection payloads",
+            "",
+            "**XSS payloads on stored text fields:**",
+            "- legal_first_name: `<script>alert(1)</script>`",
+            "- location_name: `<img onerror=alert(1) src=x>`",
+            "- All text fields echoed back in IMA template must be escaped",
+            "",
+            "**Format validation:**",
+            "- billing_number with 4 digits → 400",
+            "- billing_number with 6 digits → 400",
+            "- billing_number with letters → 400",
+            "- step_number with 0 → 400",
+            "- step_number with 8 → 400",
+            "- step_number with non-integer → 400",
+            "- postal_code with invalid format → 400",
+            "",
+            "**Type coercion attacks:**",
+            "- Send number where string expected",
+            "- Send array where string expected",
+            "- Send null where required field expected",
+            "- Send step body for wrong step number (step 1 body to step 3)",
+            "",
+            "**UUID parameter validation:**",
+            "- Non-UUID in ba_id path param → 400",
+            "",
+            "**IMA hash tampering:**",
+            "- POST /ima/acknowledge with empty hash → 400",
+            "- POST /ima/acknowledge with wrong-length hash → 400",
+            "- POST /ima/acknowledge with valid-format but wrong hash → 400"
+          ]
+        },
+        {
+          "id": "D11-044",
+          "description": "Security: data leakage prevention",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.leakage.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.leakage.security.ts`.",
+            "",
+            "**PHI not in error responses:**",
+            "- 400 validation errors do not echo back the invalid input values (especially billing_number, CPSA number)",
+            "- 403 responses contain generic 'Insufficient permissions' only",
+            "- 404 responses do not confirm resource existence",
+            "- 500 errors expose no stack traces, SQL errors, or internal details",
+            "",
+            "**Header checks:**",
+            "- No X-Powered-By header",
+            "- No Server header revealing version",
+            "- HSTS header present",
+            "- PDF download responses have correct Content-Type and Content-Disposition",
+            "",
+            "**IMA document security:**",
+            "- IMA rendering does not leak other physicians' details",
+            "- AHC11236 PDF does not expose internal system IDs or database identifiers",
+            "- PIA download does not reveal physician-specific information (it is a static document)",
+            "",
+            "**Sensitive data not in responses:**",
+            "- GET /progress does not expose provider internal IDs beyond what's needed",
+            "- IMA record responses do not include other physicians' IMA data",
+            "- Error responses from step completion do not reveal provider data from other steps"
+          ]
+        },
+        {
+          "id": "D11-045",
+          "description": "Security: audit trail completeness for onboarding",
+          "verify": "pnpm --filter api vitest run test/security/onboarding/onboarding.audit.security.ts",
+          "depends": ["D11-030", "D11-031", "D11-032"],
+          "build": [
+            "Create `apps/api/test/security/onboarding/onboarding.audit.security.ts`.",
+            "",
+            "Verify that each onboarding action produces an audit record. Run the action, then query the audit log and verify the entry exists with correct fields.",
+            "",
+            "**Onboarding lifecycle events:**",
+            "- Start onboarding → onboarding.started with provider_id",
+            "- Complete step 1 → onboarding.step_completed with step_number: 1",
+            "- Complete step 2 → onboarding.step_completed with step_number: 2",
+            "- Complete step 3 → onboarding.step_completed with step_number: 3, ba_number(s)",
+            "- Complete step 4 → onboarding.step_completed with step_number: 4",
+            "- Complete step 5 → onboarding.step_completed with step_number: 5 (optional)",
+            "- Complete step 6 → onboarding.step_completed with step_number: 6 (optional)",
+            "- Complete all required steps → onboarding.completed",
+            "",
+            "**IMA events:**",
+            "- IMA acknowledged → onboarding.ima_acknowledged with template_version, document_hash",
+            "- IMA downloaded → onboarding.ima_downloaded",
+            "",
+            "**Document events:**",
+            "- AHC11236 downloaded → onboarding.ahc11236_downloaded",
+            "- PIA downloaded → onboarding.pia_downloaded",
+            "",
+            "**Supplementary events:**",
+            "- Patient import completed → onboarding.patient_import_completed",
+            "- Guided tour completed → onboarding.guided_tour_completed",
+            "- Guided tour dismissed → onboarding.guided_tour_dismissed",
+            "- BA status confirmed active → onboarding.ba_status_updated with ba_id, new_status",
+            "",
+            "**Audit log integrity:**",
+            "- Audit entries for onboarding are scoped to the physician's user_id",
+            "- Audit detail field does not contain PHI beyond what's necessary (no patient data)"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Domain 11: Onboarding — Final Validation",
+      "tasks": [
+        {
+          "id": "D11-099",
+          "description": "Full domain test suite: all unit + integration + security tests",
+          "verify": "pnpm --filter api vitest run src/domains/onboarding/ test/integration/onboarding/ test/security/onboarding/",
+          "depends": ["D11-040", "D11-041", "D11-042", "D11-043", "D11-044", "D11-045"],
+          "build": [
+            "Run the complete test suite for Domain 11 Onboarding. Do NOT write new code unless tests fail.",
+            "",
+            "1. Run all unit tests: `pnpm --filter api vitest run src/domains/onboarding/`",
+            "2. Run all integration tests: `pnpm --filter api vitest run test/integration/onboarding/`",
+            "3. Run all security tests: `pnpm --filter api vitest run test/security/onboarding/`",
+            "",
+            "If any tests fail: read the failure, fix the source code (not the tests unless the test is wrong), re-run.",
+            "",
+            "After all pass, run the full suite one final time:",
+            "```bash",
+            "pnpm --filter api vitest run src/domains/onboarding/ test/integration/onboarding/ test/security/onboarding/",
+            "```",
+            "",
+            "Verify these security test files exist and are non-empty:",
+            "- test/security/onboarding/onboarding.authn.security.ts",
+            "- test/security/onboarding/onboarding.authz.security.ts",
+            "- test/security/onboarding/onboarding.scoping.security.ts",
+            "- test/security/onboarding/onboarding.input.security.ts",
+            "- test/security/onboarding/onboarding.leakage.security.ts",
+            "- test/security/onboarding/onboarding.audit.security.ts"
+          ]
+        }
+      ]
+    }
+  ]
+}

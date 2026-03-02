@@ -1,0 +1,134 @@
+---
+---
+
+<form
+  id="contact-form"
+  method="POST"
+  action="/api/contact"
+  class="space-y-6"
+>
+  <!-- Honeypot field for spam prevention -->
+  <div class="absolute -left-[9999px]" aria-hidden="true">
+    <label for="website">Website</label>
+    <input
+      type="text"
+      id="website"
+      name="website"
+      tabindex="-1"
+      autocomplete="off"
+    />
+  </div>
+
+  <div>
+    <label for="name" class="block font-body text-sm font-medium text-text">
+      Name <span class="text-accent">*</span>
+    </label>
+    <input
+      type="text"
+      id="name"
+      name="name"
+      required
+      autocomplete="name"
+      class="mt-1.5 block w-full rounded-md border border-surface bg-white px-4 py-3 font-body text-text placeholder:text-text-muted/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
+      placeholder="Dr. Jane Smith"
+    />
+  </div>
+
+  <div>
+    <label for="email" class="block font-body text-sm font-medium text-text">
+      Email <span class="text-accent">*</span>
+    </label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      required
+      autocomplete="email"
+      class="mt-1.5 block w-full rounded-md border border-surface bg-white px-4 py-3 font-body text-text placeholder:text-text-muted/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
+      placeholder="jane@example.com"
+    />
+  </div>
+
+  <div>
+    <label for="message" class="block font-body text-sm font-medium text-text">
+      Message <span class="text-accent">*</span>
+    </label>
+    <textarea
+      id="message"
+      name="message"
+      required
+      rows="5"
+      class="mt-1.5 block w-full rounded-md border border-surface bg-white px-4 py-3 font-body text-text placeholder:text-text-muted/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors resize-y"
+      placeholder="How can we help?"
+    ></textarea>
+  </div>
+
+  <div>
+    <button
+      type="submit"
+      class="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      Send Message
+    </button>
+  </div>
+
+  <!-- Success message -->
+  <div
+    id="contact-success"
+    class="hidden rounded-md bg-green-50 border border-green-200 p-4"
+    role="alert"
+  >
+    <p class="font-body text-sm text-green-800">
+      Thank you for reaching out. We'll get back to you shortly.
+    </p>
+  </div>
+
+  <!-- Error message -->
+  <div
+    id="contact-error"
+    class="hidden rounded-md bg-red-50 border border-red-200 p-4"
+    role="alert"
+  >
+    <p class="font-body text-sm text-red-800">
+      Something went wrong. Please try again or email us directly at
+      <a href="mailto:hello@meritum.ca" class="underline">hello@meritum.ca</a>.
+    </p>
+  </div>
+</form>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const successEl = document.getElementById('contact-success')!;
+  const errorEl = document.getElementById('contact-error')!;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    successEl.classList.add('hidden');
+    errorEl.classList.add('hidden');
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        successEl.classList.remove('hidden');
+        form.reset();
+      } else {
+        errorEl.classList.remove('hidden');
+      }
+    } catch {
+      errorEl.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send Message';
+    }
+  });
+</script>

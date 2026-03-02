@@ -1,0 +1,248 @@
+
+MERITUM HEALTH TECHNOLOGIES
+Pricing Page Copy
+February 2026 · Working Draft v3
+
+Production-ready copy for the Meritum pricing page.
+v3 changes: corrected annual pricing math (5% discount), added PCPCM and advice engine throughout, added self-serve software comparison, generalised CTAs beyond early bird, rewritten free trial FAQ, clinic admin scope clarified, SaaS continuous updates in features list.
+
+SECTION 1
+Pricing Header
+Implementation note: Direct and confident. The pricing page reader is here to make a decision.
+
+Flat monthly rate. No percentage of your billings. Ever.
+One plan, one price, everything included. The only choices are how you want to pay and whether your practice has five or more physicians.
+
+SECTION 2
+Individual Pricing
+Implementation note: Two cards side by side. Early bird card visually emphasised while spots remain. When early bird spots fill, this section shows only the standard cards.
+
+Implementation note: Display the early bird counter here, e.g. “82 of 100 early bird spots remaining.”
+
+Card A: Early Bird
+Badge or label: “Early Bird — First 100 Physicians”
+
+Monthly: $199/month
+Annual: $2,388/year  ($199/month, paid annually)
+Your rate is locked for 12 months from the date you sign up, regardless of billing frequency. After 12 months, your subscription renews at the standard rate.
+
+Supporting line on the card:
+“Everything included. AHCIP claims, WCB claims, PCPCM tracking, rules engine, advice engine, rejection analytics, mobile claim entry, EMR imports, email support, and every future platform update. No tiers, no add-ons, no surprises.”
+
+[ Start today — $199/month → ]
+Plus 5% GST. Cancel anytime.
+
+Card B: Standard
+This card is secondary while early bird spots remain. It becomes primary once all 100 spots are filled.
+
+Monthly: $279/month
+Annual: $3,181/year  (~$265/month, save 5%)
+Same platform, same features, same support. The annual plan saves you $167 per year compared to monthly billing and gives you a predictable annual cost.
+
+Supporting line on the card:
+“Everything included. AHCIP claims, WCB claims, PCPCM tracking, rules engine, advice engine, rejection analytics, mobile claim entry, EMR imports, email support, and every future platform update. No tiers, no add-ons, no surprises.”
+
+[ Start today — $279/month → ]
+Plus 5% GST. Cancel anytime.
+
+SECTION 3
+Practice Pricing
+Implementation note: Sits below individual pricing. Clearly separate but not hidden.
+
+Running a practice with five or more physicians?
+One account, one invoice, every physician on the platform. The practice tier gives you 10% off the standard per-physician rate, with annual billing adding a further 5% for a total of up to 15% off list price.
+
+
+Per physician, monthly
+Per physician, annually
+Practice tier (5+ physicians)
+$251.10/month (10% off)
+$2,863/year (~$239/month, ~15% off)
+
+Every physician on the practice account gets the full platform: their own dashboard, their own rules engine and advice engine, their own claims data. The practice administrator manages seats and receives a single consolidated invoice, but does not have access to individual physician billing data or claim details. Your billing performance is your own.
+
+Physicians can be added at any time, prorated to your billing cycle. If a physician leaves, they’re removed at the end of the current calendar month. If the practice drops below five physicians, each remaining subscription reverts to the standard individual rate.
+
+Plus 5% GST. Same features, same support, same continuous updates as individual subscriptions.
+
+[ Get started with practice pricing → ]
+
+SECTION 4
+What’s Included
+Implementation note: Single list, applies to every subscription. No feature grid, no checkmarks, no “pro” tier. The point is: you get everything.
+
+One plan. Everything included. Every update, forever.
+There’s no “pro” tier, no feature gating, and no upsell. Every physician on Meritum gets the full platform from day one, and every improvement made to the platform is included in your subscription automatically.
+
+AHCIP fee-for-service claims and WCB Alberta claims with full support for both billing streams, regardless of your EMR or system configuration.
+PCPCM panel tracking and payment reconciliation handled as a separate billing stream from fee-for-service, with its own enrolment tracking and reconciliation workflow.
+Pre-submission rules engine that checks every claim against applicable AHCIP governing rules before it goes out: modifier eligibility, time-period requirements, duplicate detection, age-based benefits, and RRNP premiums.
+Advice engine that identifies codes and modifiers you may have missed and analyses your billing patterns to surface revenue recovery opportunities across your claim history.
+Real-time claim tracking and rejection analytics so you see what’s paid, what’s held, and what’s refused, with reason codes in plain language.
+Mobile claim entry for ED shifts, after-hours work, and anywhere else you need to log a claim at the point of care.
+EMR encounter imports through system file exports from supported EMRs, so you’re not re-entering what you’ve already documented.
+Automated Thursday submission via H-Link on Alberta Health’s weekly cycle, with no manual batching required.
+RRNP auto-calculation from your practice location and specialty, applied automatically to every eligible claim.
+Full data export at any time at no charge. Your billing data is yours, and it leaves with you if you decide to go.
+Email support with a one-business-day response commitment and a help centre built around Alberta-specific billing guidance.
+HIA-compliant Canadian hosting on DigitalOcean Toronto, with an Information Manager Agreement under HIA s.66.
+Every future platform update included at no additional cost. When AHCIP governing rules change, Meritum’s rules engine updates automatically. When new features ship, they’re available to every physician on the platform. Your subscription covers the platform as it is today and everything it becomes.
+
+SECTION 5
+How Meritum Compares
+Implementation note: Two comparison blocks. The first compares Meritum to a billing agent (Path A audience). The second compares Meritum to existing self-serve software (Path B audience). Both should be factual and non-hostile.
+
+Meritum vs. a Billing Agent
+
+Billing Agent
+Meritum
+Cost
+3–5% of annual billings. On $400K, that’s $12,000–$20,000/year.
+$279/month standard ($3,348/year) or $265/month annual ($3,181/year). Same price whether you bill $200K or $2M.
+Pricing model
+Percentage-based. The more you earn, the more you pay.
+Flat rate. Your billings go up, your cost stays the same.
+Revenue visibility
+Often a monthly summary or PDF. Rejection details may require follow-up.
+Real-time dashboard with claim status, rejection patterns, and assessment results.
+Rules checking
+Depends on the agent’s knowledge. Errors caught after assessment, if at all.
+Automated pre-submission validation against every applicable governing rule, on every claim.
+Billing optimisation
+Depends on the agent proactively reviewing your billing patterns. Many don’t.
+Advice engine identifies missed codes and modifiers and analyses billing patterns for revenue recovery opportunities.
+Submission timing
+On the agent’s schedule. Claims may batch up during busy periods or leave.
+Automated Thursday cycle via H-Link. Claims go out on schedule regardless.
+WCB billing
+Often separate or at additional cost. Some agents don’t handle WCB.
+Included. AHCIP and WCB in the same platform, for every physician.
+PCPCM
+Varies. Not all agents handle panel-based payment tracking and reconciliation.
+PCPCM panel tracking and payment reconciliation included as a separate billing stream.
+Your data
+Lives in the agent’s system. Leaving often means starting from scratch.
+Full export at any time, at no charge.
+Continuity risk
+If your billing person retires, gets sick, or leaves, your revenue operations are disrupted.
+The rules are encoded in the platform. No single point of failure.
+Data residency
+Varies. Not all agents can confirm where patient data is stored.
+DigitalOcean Toronto. HIA-compliant. IMA under s.66.
+Updates
+Depends on the agent staying current with rule changes. You may not know if they haven’t.
+Platform updates automatically when governing rules change. Every physician benefits immediately.
+
+Meritum vs. Existing Self-Serve Software
+Implementation note: This comparison targets physicians already using tools like Med Access billing, Wolf Medical, or Accuro. The argument is not about cost (they’re already self-serve); it’s about what their current software misses.
+
+
+Existing Self-Serve Tools
+Meritum
+Pre-submission rules checking
+Limited or absent. Most tools submit what you enter without validating against governing rules.
+Every claim checked against every applicable AHCIP governing rule before submission.
+Billing optimisation
+Not available. You’re responsible for knowing which codes and modifiers apply.
+Advice engine flags missed codes and modifiers and analyses billing patterns for recovery opportunities.
+RRNP calculation
+Usually requires manual configuration. Miss the setup and eligible premiums don’t get applied.
+Auto-calculated from your practice location and specialty on every eligible claim.
+After-hours modifiers
+Typically manual. You select the modifier and hope you chose the right time-period rate.
+Calculated automatically from your documented start and end times.
+WCB billing
+Inconsistent. Some EMR-based tools have WCB modules that don’t work for all physicians.
+AHCIP and WCB billing both work for every physician, regardless of EMR.
+PCPCM
+Rarely integrated. Panel tracking and reconciliation are typically manual or absent.
+Panel enrolment tracking and payment reconciliation built in as a separate billing stream.
+Rejection analytics
+Basic or absent. You see the refusal code; understanding patterns is on you.
+Rejection patterns analysed across your claim history, with reason codes in plain language.
+Rule updates
+You may need to wait for software updates from the vendor, which may lag behind AHCIP changes.
+Rules engine updates when governing rules change. Included in your subscription.
+Alberta-specific depth
+Most tools serve multiple provinces or countries. Alberta-specific features are often bolted on, not native.
+Built from the ground up for Alberta billing. AHCIP, WCB, RRNP, PCPCM, Thursday cycle, SOMB rules.
+
+SECTION 6
+The Math
+Implementation note: Two worked examples. The first is for a GP comparing against a billing agent. The second is for a specialist comparing against a billing agent at scale, to show the value proposition at higher billing volumes.
+
+A rural GP billing $400,000 annually
+
+Billing agent at 4%
+Meritum (standard annual)
+$16,000/year
+$3,181/year
+
+Annual saving: $12,819
+
+A specialist billing $800,000 annually
+
+Billing agent at 3%
+Meritum (standard annual)
+$24,000/year
+$3,181/year
+
+Annual saving: $20,819
+
+The flat rate means the savings grow with your billings. A billing agent’s percentage fee scales with your revenue; Meritum’s subscription stays the same. And beyond the cost comparison, the rules engine and advice engine are catching errors and identifying missed revenue that the billing agent comparison doesn’t even account for.
+
+[ Run the numbers with your own billings → ]
+Links to the homepage calculator.
+
+SECTION 7
+Referral Program
+Implementation note: Bonus section, not a primary selling point. Can sit as a callout module between the math and the FAQ.
+
+Know a colleague who’s overpaying?
+Refer a physician who signs up for Meritum, and you’ll receive one month’s subscription free once they complete their first billing cycle. You can refer up to three physicians per year, and each successful referral earns you another month at no charge.
+
+Implementation note: During the early bird window, the referrer gets a free month and the referred physician accesses the early bird rate. After the early bird window closes, referred physicians also receive their first month free.
+
+SECTION 8
+Pricing FAQ
+
+“Why isn’t there a free trial?”
+Medical billing isn’t something you trial; it’s something you commit to. Setting up Meritum means configuring your practitioner profile, connecting your rules engine, and submitting real claims to Alberta Health. That’s onboarding, not a test drive. We charge from day one because the platform is built to be worth the cost from the first Thursday cycle, and the pricing is structured to make that commitment straightforward.
+
+“What happens after my early bird rate expires?”
+Your early bird rate of $199/month is locked for 12 months from signup. After that, your subscription renews at the standard rate: $279/month or $3,181/year. You’ll get advance notice before the rate change, and you can cancel at any time.
+
+“Is there a contract or commitment?”
+No contract and no minimum term on monthly billing; you can cancel at the end of any month. Annual billing comes with a lower effective rate, and in exchange we ask for a six-month commitment: cancellations within the first six months forfeit the remaining balance, while cancellations after six months receive a prorated refund for unused months. Either way, your full billing data is exported at no charge when you leave.
+
+“Does the price go up if I bill more?”
+It does not. Meritum is a flat rate regardless of your billing volume. Whether you’re billing $200,000 or $2,000,000 annually, your subscription cost is the same. This is the fundamental difference from the billing agent model: their fee scales with your revenue, while ours stays fixed.
+
+“Can I switch between monthly and annual billing?”
+Yes, at any renewal date. If you start on monthly and decide to move to annual, the change takes effect at the start of your next billing period. The annual plan saves you 5% compared to monthly billing.
+
+“Is this per physician or per clinic?”
+Per physician. Each subscription covers one practitioner with their own claims, rules engine, advice engine, and dashboard. This keeps your billing data separate and your compliance clean under the Health Information Act. If you’re a practice with five or more physicians, the practice tier gives you 10% off the standard per-physician rate, with a further 5% for annual billing.
+
+“How does the referral program work?”
+Refer a colleague who signs up and completes their first billing cycle, and you receive one month’s subscription credited to your next invoice. You can earn up to three referral credits per year, applied one per billing period. Referrals must be physicians outside your own practice account. If you’re on a practice tier, you choose whether the credit applies to your practice’s invoice or is banked against a future individual subscription in your name.
+
+“Do I get future updates and features?”
+Every platform update, feature addition, and governing rule change is included in your subscription at no additional cost. When AHCIP rules are updated (including the annual April 1 fee schedule change), Meritum’s rules engine reflects the changes automatically. You don’t need to request updates or pay for a new version; the platform you’re using today gets better over time, and your subscription covers all of it.
+
+“What payment methods do you accept?”
+Payment is handled through Stripe in Canadian dollars. Visa, Mastercard, and American Express are accepted. All prices are in CAD with 5% GST applied at checkout.
+
+SECTION 9
+Pricing Page CTA
+Implementation note: Bottom of page. This CTA should work regardless of whether the early bird window is open or closed. During early bird, it shows the early bird rate; after, it shows the standard rate.
+
+The math is simple. The decision should be too.
+Everything included, cancel anytime, and your data is always yours.
+
+Implementation note: Display the current applicable rate dynamically. During early bird: “Start today — $199/month.” After early bird: “Start today — $279/month, or save 5% with annual billing.”
+
+[ Start today → ]
+
+
+End of document. Pricing decisions and interaction rules are maintained in the Pricing Strategy document (internal). Changes there should be reflected here.

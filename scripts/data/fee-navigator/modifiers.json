@@ -1,0 +1,1428 @@
+[
+  {
+    "modifierCode": "AGE",
+    "name": "AGE",
+    "description": "Identifies specific services which are payable at different rates depending upon the age of the patient. Identifies specific services which are payable at different rates depending upon the age of the patient. Description: OVER 2 YEARSThe patient is 2 years of age or older. The patient is 2 years of age or older. The patient is 2 years of age or older. OVER 65 YEARSThe patient is 65 years of age or older. The patient is 65 years of age or older. The patient is 65 years of age or older. OVER 75 YEARSThe patient is 75 years of age or older The patient is 75 years of age or older The patient is 75 years of age or older OVER 75 YEARSThe patient is 75 years of age or older. This modifier allows physicians with the skill of GP to be paid for HSC 03.03A or 03.03AZ at 20% above the GP rate. The patient is 75 years of age or older. This modifier allows physicians with the skill of GP to be paid for HSC 03.03A or 03.03AZ at 20% above the GP rate. The patient is 75 years of age or older. This modifier allows physicians with the skill of GP to be paid for HSC 03.03A or 03.03AZ at 20% above the GP rate. UNDER 1 YEARThe patient is 12 months of age or younger. The patient is 12 months of age or younger. The patient is 12 months of age or younger. UNDER 10 YEARSThe patient has not reached their 10th birthday. The patient has not reached their 10th birthday. The patient has not reached their 10th birthday. UNDER 11 YEARSThe patient has not reached their 11th birthday. The patient has not reached their 11th birthday. The patient has not reached their 11th birthday. UNDER 13 YEARSThe patient has not reached their 13th birthday. The patient has not reached their 13th birthday. The patient has not reached their 13th birthday. UNDER 30 DAYS,ROLE OF SURGEONThe patient is 30 days of age or younger. Applies only to cardiovascular and thoracic surgery. The patient is 30 days of age or younger. Applies only to cardiovascular and thoracic surgery. The patient is 30 days of age or younger. Applies only to cardiovascular and thoracic surgery. UNDER 4 YEARSThe patient has not reached their 4th birthday. The patient has not reached their 4th birthday. The patient has not reached their 4th birthday. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "G2",
+        "description": "OVER 2 YEARSThe patient is 2 years of age or older."
+      },
+      {
+        "code": "G65",
+        "description": "OVER 65 YEARSThe patient is 65 years of age or older."
+      },
+      {
+        "code": "G75",
+        "description": "OVER 75 YEARSThe patient is 75 years of age or older"
+      },
+      {
+        "code": "G75GP",
+        "description": "OVER 75 YEARSThe patient is 75 years of age or older. This modifier allows physicians with the skill of GP to be paid for HSC 03.03A or 03.03AZ at 20% above the GP rate."
+      },
+      {
+        "code": "L1",
+        "description": "UNDER 1 YEARThe patient is 12 months of age or younger."
+      },
+      {
+        "code": "L10",
+        "description": "UNDER 10 YEARSThe patient has not reached their 10th birthday."
+      },
+      {
+        "code": "L11",
+        "description": "UNDER 11 YEARSThe patient has not reached their 11th birthday."
+      },
+      {
+        "code": "L13",
+        "description": "UNDER 13 YEARSThe patient has not reached their 13th birthday."
+      },
+      {
+        "code": "L30",
+        "description": "UNDER 30 DAYS,ROLE OF SURGEONThe patient is 30 days of age or younger. Applies only to cardiovascular and thoracic surgery."
+      },
+      {
+        "code": "L4",
+        "description": "UNDER 4 YEARSThe patient has not reached their 4th birthday."
+      }
+    ]
+  },
+  {
+    "modifierCode": "ANEU",
+    "name": "ANESTHETIC LISTED RATE UNITS",
+    "description": "This modifier is system derived from the information in the calls field for multiple services of same Health Service Code when the anesthetic role modifier (ANE) is used. This modifier is system derived from the information in the calls field for multiple services of same Health Service Code when the anesthetic role modifier (ANE) is used. Description: ANESTHETIC LISTED RATE UNITS Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ANEU",
+        "description": "ANESTHETIC LISTED RATE UNITS"
+      }
+    ]
+  },
+  {
+    "modifierCode": "ANU",
+    "name": "ANESTHETIC TIME UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Anesthetic Time role modifier (ANEST) is used. EACH UNIT REPRESENTS 5 MINUTES. ADDITIONAL 5 MINUTE UNITS MAY NOT BE CLAIMED UNLESS A FULL 5 MINUTES HAS ELAPSED. This modifier is system derived from the information entered in the calls field when the Anesthetic Time role modifier (ANEST) is used. EACH UNIT REPRESENTS 5 MINUTES. ADDITIONAL 5 MINUTE UNITS MAY NOT BE CLAIMED UNLESS A FULL 5 MINUTES HAS ELAPSED. Description: ANESTHETIC TIME UNITSFor anesthetic claimed on a time basis, claim the entire elapsed time against the primary procedure code, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). 2 hours equals 24 calls. For anesthetic claimed on a time basis, claim the entire elapsed time against the primary procedure code, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). 2 hours equals 24 calls. For anesthetic claimed on a time basis, claim the entire elapsed time against the primary procedure code, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). 2 hours equals 24 calls. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ANU",
+        "description": "ANESTHETIC TIME UNITSFor anesthetic claimed on a time basis, claim the entire elapsed time against the primary procedure code, even if multiple procedures are done.  (Example:  if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only).  2 hours equals 24 calls."
+      }
+    ]
+  },
+  {
+    "modifierCode": "ARFC",
+    "name": "AUTOMATIC RAPID FILM CHANGER",
+    "description": "Increases rate of a procedure with automatic rapid film changer. Increases rate of a procedure with automatic rapid film changer. Description: AUTO RAPID FILM CHANGERExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ARFC",
+        "description": "AUTO RAPID FILM CHANGERExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "BMI",
+    "name": "BMI",
+    "description": "This modifier is used to support the additional payment of 25% for selected procedures, obstetrical services, anesthesia, second qualified surgeon and surgical assistant services for adult patients who meet requirements indicated in the Governing Rules and patients under 18 years of age who are above the 97th percentile for BMI on an approved pediatric growth curve. This modifier is used to support the additional payment of 25% for selected procedures, obstetrical services, anesthesia, second qualified surgeon and surgical assistant services for adult patients who meet requirements indicated in the Governing Rules and patients under 18 years of age who are above the 97th percentile for BMI on an approved pediatric growth curve. It is not acceptable to round the patient's BMI up to 40 for adults or 97% on the pediatric growth curve for patients under 18 years of age in order to claim the higher fee. It is not acceptable to round the patient's BMI up to 40 for adults or 97% on the pediatric growth curve for patients under 18 years of age in order to claim the higher fee. Description: Body Mass Index, ANESTHETIC BY DEFINITIONExplicitThe physician functions as the Anesthetist and is claiming a Health Service Code (HSC) which is an anesthetic by definition and does not have modifier ANE.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming a Health Service Code (HSC) which is an anesthetic by definition and does not have modifier ANE.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming a Health Service Code (HSC) which is an anesthetic by definition and does not have modifier ANE. Please refer to Governing Rule 18.1 for more information. Body Mass Index, ANESTHETISTExplicitThe physician functions as the Anesthetist and is claiming the listed anesthetic benefit.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming the listed anesthetic benefit.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming the listed anesthetic benefit. Please refer to Governing Rule 18.1 for more information. Body Mass Index, ANESTHETIST TRCExplicitThe physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information. The physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic. Please refer to Governing Rule 18.1 for more information. Body Mass Index, SURGEON/SECOND QUALIFIED SURGEON/SURGICAL ASSISTANTExplicitThe physician functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. The physician functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. The physician functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. Body Mass Index, SURGEON/SECOND QUALIFIED SURGEON/SURGICAL ASSISTANTExplicitThe oral maxillofacial surgeon functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. This modifier may only be claimed by oral maxillofacial surgeons.Please refer to Governing Rule 18.1 for more information. The oral maxillofacial surgeon functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. This modifier may only be claimed by oral maxillofacial surgeons.Please refer to Governing Rule 18.1 for more information. The oral maxillofacial surgeon functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. This modifier may only be claimed by oral maxillofacial surgeons. Please refer to Governing Rule 18.1 for more information. Body Mass Index, ANESTHETIST TRC 2ExplicitThe physician functions as the anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information. The physician functions as the anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information. The physician functions as the anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic. Please refer to Governing Rule 18.1 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "BMIABD",
+        "description": "Body Mass Index, ANESTHETIC BY DEFINITIONExplicitThe physician functions as the Anesthetist and is claiming a Health Service Code (HSC) which is an anesthetic by definition and does not have modifier ANE.Please refer to Governing Rule 18.1 for more information."
+      },
+      {
+        "code": "BMIANE",
+        "description": "Body Mass Index,  ANESTHETISTExplicitThe physician functions as the Anesthetist and is claiming the listed anesthetic benefit.Please refer to Governing Rule 18.1 for more information."
+      },
+      {
+        "code": "BMIANT",
+        "description": "Body Mass Index, ANESTHETIST TRCExplicitThe physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information."
+      },
+      {
+        "code": "BMIPRO",
+        "description": "Body Mass Index, SURGEON/SECOND QUALIFIED SURGEON/SURGICAL ASSISTANTExplicitThe physician functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit."
+      },
+      {
+        "code": "BMISRG",
+        "description": "Body Mass Index, SURGEON/SECOND QUALIFIED SURGEON/SURGICAL ASSISTANTExplicitThe oral maxillofacial surgeon functions as the Surgeon, Second Qualified Surgeon, or as a Surgical Assistant and is claiming the listed applicable benefit. This modifier may only be claimed by oral maxillofacial surgeons.Please refer to Governing Rule 18.1 for more information."
+      },
+      {
+        "code": "BMI2AN",
+        "description": "Body Mass Index, ANESTHETIST TRC 2ExplicitThe physician functions as the anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic.Please refer to Governing Rule 18.1 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "CAGE",
+    "name": "CORRECTED AGE",
+    "description": "This modifier is used to support the additional payment of 25% for specific general surgery procedures and specific anesthetic services for patients with a \"corrected\" age of up to 3 months. This modifier is used to support the additional payment of 25% for specific general surgery procedures and specific anesthetic services for patients with a \"corrected\" age of up to 3 months. Description: CORRECTED AGE, ROLE OF ANESTHETISTExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed at the listed anesthetist benefit. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed at the listed anesthetist benefit. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed at the listed anesthetist benefit. CORRECTED AGE, ROLE OF ANESTHETIST TRCExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed on the duration of the anesthetic. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed on the duration of the anesthetic. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed on the duration of the anesthetic. CORRECTED AGE, ROLE OF SURGEONExplicitInfants up to 3 months \"corrected age\". Applies only to specific general surgery procedures. Infants up to 3 months \"corrected age\". Applies only to specific general surgery procedures. Infants up to 3 months \"corrected age\". Applies only to specific general surgery procedures. CORRECTED AGE, ROLE OF ANESTHETIST TRC 2ExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic time premium units based on the duration of the anesthetic. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic time premium units based on the duration of the anesthetic. Infants up to 3 months \"corrected age\". Applies only to specific anesthetic time premium units based on the duration of the anesthetic. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CAANE",
+        "description": "CORRECTED AGE, ROLE OF ANESTHETISTExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed at the listed anesthetist benefit."
+      },
+      {
+        "code": "CAANT",
+        "description": "CORRECTED AGE, ROLE OF ANESTHETIST TRCExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic services that are being claimed on the duration of the anesthetic."
+      },
+      {
+        "code": "CASRG",
+        "description": "CORRECTED AGE, ROLE OF SURGEONExplicitInfants up to 3 months \"corrected age\". Applies only to specific general surgery procedures."
+      },
+      {
+        "code": "CA2AN",
+        "description": "CORRECTED AGE, ROLE OF ANESTHETIST TRC 2ExplicitInfants up to 3 months \"corrected age\". Applies only to specific anesthetic time premium units based on the duration of the anesthetic."
+      }
+    ]
+  },
+  {
+    "modifierCode": "CALL",
+    "name": "CALLS UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field for multiple services. The calls field indicates the number of services claimed. The modifier value code indicates what each unit/call represents (time, size, number). This modifier is system derived from the information entered in the calls field for multiple services. The calls field indicates the number of services claimed. The modifier value code indicates what each unit/call represents (time, size, number). Description: This modifier allows payment of an additional percentage for patients less than 1 year of age. This modifier allows payment of an additional percentage for patients less than 1 year of age. This modifier allows payment of an additional percentage for patients less than 10 years of age. This modifier allows payment of an additional percentage for patients less than 10 years of age. This modifier allows payment of an additional percentage for the second and subsequent calls for patients less than 13 years of age. This modifier allows payment of an additional percentage for the second and subsequent calls for patients less than 13 years of age. PER 2.5cmFor use by Dentists only. Per layer, each 2.5 cm represents 1 unit. For use by Dentists only. Per layer, each 2.5 cm represents 1 unit. For use by Dentists only. Per layer, each 2.5 cm represents 1 unit. COMPREHENSIVE GERIATRIC ASSESSMENT PER 1 1/2 HOURS + EACH ADDITIONAL 1/4 HOURFirst unit represents 1 1/2 hours, each subsequent unit represents 15 minutes. First unit represents 1 1/2 hours, each subsequent unit represents 15 minutes. First unit represents 1 1/2 hours, each subsequent unit represents 15 minutes. PER FACE 2.5 cm or BODY 5 cmEach 2.5 cm of the face or 5 cm of the body involving a single layer represent 1 unit. For additional layers requiring suturing, each 2.5 cm of the face or 5 cm of the body represents 1 unit. Each 2.5 cm of the face or 5 cm of the body involving a single layer represent 1 unit. For additional layers requiring suturing, each 2.5 cm of the face or 5 cm of the body represents 1 unit. Each 2.5 cm of the face or 5 cm of the body involving a single layer represent 1 unit. For additional layers requiring suturing, each 2.5 cm of the face or 5 cm of the body represents 1 unit. PER HOUREach unit represents 60 minutes. Each unit represents 60 minutes. Each unit represents 60 minutes. PER 1 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 60 minutes, each subsequent unit represents 15 minutes. First unit represents 60 minutes, each subsequent unit represents 15 minutes. First unit represents 60 minutes, each subsequent unit represents 15 minutes. PER 5 MINUTESEach unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. Each unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. Each unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. PER 1/4 HOUREach unit represents 15 minutes. Each unit represents 15 minutes. Each unit represents 15 minutes. M15NPMThis implicit modifier allows physicians with the implicit skill of NPM to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List This implicit modifier allows physicians with the implicit skill of NPM to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List This implicit modifier allows physicians with the implicit skill of NPM to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List M15PDCThis implicit modifier allows physicians with the implicit skill modifier of PEDC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PEDC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PEDC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. M15PDGThis implicit modifier allows physicians with the implicit skill modifier of PDGE to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PDGE to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PDGE to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. M15PDNThis implicit modifier allows physicians with the implicit skill modifier of PEDN to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PEDN to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PEDN to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. M15PDSThis implicit modifier allows physicians with the implicit skill modifier of PDSG to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PDSG to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PDSG to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. M15PEDThis implicit modifier allows physicians with the implicit skill modifier of PED to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PED to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PED to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. M15PSYThis implicit modifier allows physicians with the implicit skill modifier of PSYC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PSYC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. This implicit modifier allows physicians with the implicit skill modifier of PSYC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List. PER 1/2 HOUREach unit represents 30 minutes. Each unit represents 30 minutes. Each unit represents 30 minutes. PER 1/2 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 30 minutes, each subsequent unit represents 15 minutes. First unit represents 30 minutes, each subsequent unit represents 15 minutes. First unit represents 30 minutes, each subsequent unit represents 15 minutes. PER 35 MINUTES + EACH ADDITIONAL 5 MINUTESFirst unit represents 35 minutes, each subsequent unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. First unit represents 35 minutes, each subsequent unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. First unit represents 35 minutes, each subsequent unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed. PER 3/4 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 45 minutes, each subsequent unit represents 15 minutes. First unit represents 45 minutes, each subsequent unit represents 15 minutes. First unit represents 45 minutes, each subsequent unit represents 15 minutes. Per 90 MINUTES + EACH ADDITIONAL 1/4 HOURFirst unit represents 90 minutes, each subsequent unit represents 15 minutes. First unit represents 90 minutes, each subsequent unit represents 15 minutes. First unit represents 90 minutes, each subsequent unit represents 15 minutes. NUMBER OF DAYSEach unit represents 1 day. Each unit represents 1 day. Each unit represents 1 day. NUMBER OF MONTHSEach unit represents 1 month. Each unit represents 1 month. Each unit represents 1 month. NUMBER OF SERVICESEach unit represents 1 service. Each unit represents 1 service. Each unit represents 1 service. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CALL01",
+        "description": "This modifier allows payment of an additional percentage for patients less than 1 year of age."
+      },
+      {
+        "code": "CALL10",
+        "description": "This modifier allows payment of an additional percentage for patients less than 10 years of age."
+      },
+      {
+        "code": "CALL13",
+        "description": "This modifier allows payment of an additional percentage for the second and subsequent calls for patients less than 13 years of age."
+      },
+      {
+        "code": "CM2.5D",
+        "description": "PER 2.5cmFor use by Dentists only.  Per layer, each 2.5 cm represents 1 unit."
+      },
+      {
+        "code": "COMGER",
+        "description": "COMPREHENSIVE GERIATRIC ASSESSMENT  PER 1 1/2 HOURS + EACH ADDITIONAL 1/4 HOURFirst unit represents 1 1/2 hours, each subsequent unit represents 15 minutes."
+      },
+      {
+        "code": "F2.5B5",
+        "description": "PER FACE 2.5 cm or BODY 5 cmEach 2.5 cm of the face or 5 cm of the body involving a single layer represent 1 unit.  For additional layers requiring suturing, each 2.5 cm of the face or 5 cm of the body represents 1 unit."
+      },
+      {
+        "code": "H1",
+        "description": "PER HOUREach unit represents 60 minutes."
+      },
+      {
+        "code": "H1M15",
+        "description": "PER 1 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 60 minutes, each subsequent unit represents 15 minutes."
+      },
+      {
+        "code": "M05",
+        "description": "PER 5 MINUTESEach unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed."
+      },
+      {
+        "code": "M15",
+        "description": "PER 1/4 HOUREach unit represents 15 minutes."
+      },
+      {
+        "code": "M15NPM",
+        "description": "M15NPMThis implicit modifier allows physicians with the implicit skill of NPM to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List"
+      },
+      {
+        "code": "M15PDC",
+        "description": "M15PDCThis implicit modifier allows physicians with the implicit skill modifier of PEDC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M15PDG",
+        "description": "M15PDGThis implicit modifier allows physicians with the implicit skill modifier of PDGE to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M15PDN",
+        "description": "M15PDNThis implicit modifier allows physicians with the implicit skill modifier of PEDN to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M15PDS",
+        "description": "M15PDSThis implicit modifier allows physicians with the implicit skill modifier of PDSG to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M15PED",
+        "description": "M15PEDThis implicit modifier allows physicians with the implicit skill modifier of PED to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M15PSY",
+        "description": "M15PSYThis implicit modifier allows physicians with the implicit skill modifier of PSYC to be paid for HSC 08.45 or 08.45Z according to the rates listed in the Price List."
+      },
+      {
+        "code": "M30",
+        "description": "PER 1/2 HOUREach unit represents 30 minutes."
+      },
+      {
+        "code": "M30M15",
+        "description": "PER 1/2 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 30 minutes, each subsequent unit represents 15 minutes."
+      },
+      {
+        "code": "M35M05",
+        "description": "PER 35 MINUTES + EACH ADDITIONAL 5 MINUTESFirst unit represents 35 minutes, each subsequent unit represents 5 minutes. Additional calls for anesthetic may not be claimed unless a full 5 minutes has elapsed."
+      },
+      {
+        "code": "M45M15",
+        "description": "PER 3/4 HOUR + EACH ADDITIONAL 1/4 HOURFirst unit represents 45 minutes, each subsequent unit represents 15 minutes."
+      },
+      {
+        "code": "M90M15",
+        "description": "Per 90 MINUTES + EACH ADDITIONAL 1/4 HOURFirst unit represents 90 minutes, each subsequent unit represents 15 minutes."
+      },
+      {
+        "code": "NBRDAY",
+        "description": "NUMBER OF DAYSEach unit represents 1 day."
+      },
+      {
+        "code": "NBRMON",
+        "description": "NUMBER OF MONTHSEach unit represents 1 month."
+      },
+      {
+        "code": "NBRSER",
+        "description": "NUMBER OF SERVICESEach unit represents 1 service."
+      }
+    ]
+  },
+  {
+    "modifierCode": "CARE",
+    "name": "COMPLEX PATIENT CARE",
+    "description": "Used to indicate complex patient care. Used to indicate complex patient care. Description: COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care.May only be claimed for HSCs 03.04A, 03.04AZ, 03.04B, 03.04C, 03.04D, 03.04E, 03.04F, 03.04FA, 03.04FB, 03.04G, 03.04GA, 03.04GB,03.04H, 03.04HA, 03.04HB, 03.04M, 03.08A, 03.08AZ, 03.08B, 03.08BZ, 03.08C, 03.08CV, 03.08F, 03.08H, 03.08K, 03.08NZ and 03.09A.May be claimed with HSC 03.08A, 03.08AZ when claiming prolonged consultations, i.e. HSCs 03.08I, 03.08IZ, 03.08J, 03.08JZ, 03.08L, 03.08M. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care.May only be claimed for HSCs 03.04A, 03.04AZ, 03.04B, 03.04C, 03.04D, 03.04E, 03.04F, 03.04FA, 03.04FB, 03.04G, 03.04GA, 03.04GB,03.04H, 03.04HA, 03.04HB, 03.04M, 03.08A, 03.08AZ, 03.08B, 03.08BZ, 03.08C, 03.08CV, 03.08F, 03.08H, 03.08K, 03.08NZ and 03.09A.May be claimed with HSC 03.08A, 03.08AZ when claiming prolonged consultations, i.e. HSCs 03.08I, 03.08IZ, 03.08J, 03.08JZ, 03.08L, 03.08M. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care. COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 15 minutes or more on management of the patient's care. Refer to modifier CMXV30 for visits taking 30 minutes or more. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 15 minutes or more on management of the patient's care. Refer to modifier CMXV30 for visits taking 30 minutes or more. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 15 minutes or more on management of the patient's care. Refer to modifier CMXV30 for visits taking 30 minutes or more. May only be claimed by: COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 20 minutes or more on management of the patient's care. Refer to modifier CMXV35 for visits taking 35 minutes or more. May be claimed by groups other than those eligible for the CMXV15, CMXV30 modifiers for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 20 minutes or more on management of the patient's care. Refer to modifier CMXV35 for visits taking 35 minutes or more. May be claimed by groups other than those eligible for the CMXV15, CMXV30 modifiers for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 20 minutes or more on management of the patient's care. Refer to modifier CMXV35 for visits taking 35 minutes or more. May be claimed by groups other than those eligible for the CMXV15, CMXV30 modifiers for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care. May only be claimed by: CMXV35 COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 35 minutes or more on management of the patient's care. May be claimed by groups other than those eligible for the CMXV30 modifier for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 35 minutes or more on management of the patient's care. May be claimed by groups other than those eligible for the CMXV30 modifier for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. This modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 35 minutes or more on management of the patient's care. May be claimed by groups other than those eligible for the CMXV30 modifier for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met. COMPLEX INPATIENT CAREExplicitThis modifier is used to indicate management of a complex hospital inpatient, or a long term care (LTC) patient for palliative care or intercurrent illness when the conditions to claim HSCs 03.03D or 03.03AR are met.May only be claimed once per patient, per physician, per day.May only be claimed for the management of complex hospital inpatients with multi-system disease:whose co-morbidities contribute to complicating or increasing the care required by the claiming physicians involved in the care of the patient; andwhose care requires that the physician spend 20 minutes or more per day on management of the patient's ongoing care.May not be claimed for transfer of care where the receiving physician requires time to familiarize him/herself with the patient unless the conditions outlined in (2) above are met. This modifier is used to indicate management of a complex hospital inpatient, or a long term care (LTC) patient for palliative care or intercurrent illness when the conditions to claim HSCs 03.03D or 03.03AR are met.May only be claimed once per patient, per physician, per day.May only be claimed for the management of complex hospital inpatients with multi-system disease:whose co-morbidities contribute to complicating or increasing the care required by the claiming physicians involved in the care of the patient; andwhose care requires that the physician spend 20 minutes or more per day on management of the patient's ongoing care.May not be claimed for transfer of care where the receiving physician requires time to familiarize him/herself with the patient unless the conditions outlined in (2) above are met. This modifier is used to indicate management of a complex hospital inpatient, or a long term care (LTC) patient for palliative care or intercurrent illness when the conditions to claim HSCs 03.03D or 03.03AR are met. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CMXC30",
+        "description": "COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care.May only be claimed for HSCs 03.04A, 03.04AZ, 03.04B, 03.04C, 03.04D, 03.04E, 03.04F, 03.04FA, 03.04FB, 03.04G, 03.04GA, 03.04GB,03.04H, 03.04HA, 03.04HB, 03.04M, 03.08A, 03.08AZ, 03.08B, 03.08BZ, 03.08C, 03.08CV, 03.08F, 03.08H, 03.08K, 03.08NZ and 03.09A.May be claimed with HSC 03.08A, 03.08AZ when claiming prolonged consultations, i.e. HSCs 03.08I, 03.08IZ, 03.08J, 03.08JZ, 03.08L, 03.08M."
+      },
+      {
+        "code": "CMXV15",
+        "description": "COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 15 minutes or more on management of the patient's care. Refer to modifier CMXV30 for visits taking 30 minutes or more. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK."
+      },
+      {
+        "code": "CMXV20",
+        "description": "COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 20 minutes or more on management of the patient's care. Refer to modifier CMXV35 for visits taking 35 minutes or more. May be claimed by groups other than those eligible for the CMXV15, CMXV30 modifiers for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03CV, 03.03F, 03.03FV, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met."
+      },
+      {
+        "code": "CMXV30",
+        "description": "COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 30 minutes or more on management of the patient's care. May only be claimed by:community medicine, geriatric medicine, occupational medicine, radiation oncology for HSCs 03.03A, 03.03AZ, 03.07A, 03.07AZ, 03.07B.cardiology, endocrinology/metabolism, hematology, infectious diseases, internal medicine, medical oncology, nephrology, pediatric cardiology, pediatrics, rheumatology for HSCs 03.03A, 03.03AZ, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B. Pediatrics may claim for HSC 03.05JK."
+      },
+      {
+        "code": "CMXV35",
+        "description": "CMXV35 COMPLEX PATIENT CONSULTATION/VISITExplicitThis modifier is used to indicate a complex patient consultation or visit requiring that the physician spend 35 minutes or more on management of the patient's care. May be claimed by groups other than those eligible for the CMXV30 modifier for HSCs 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03F, 03.03FZ, 03.07A, 03.07AZ, 03.07B, 03.07C as appropriate to the physician's specialty. This modifier may also be claimed by any physician for HSCs 03.05CN, 03.05CR, 03.05DN, 03.05DR, 03.05EN, 03.05ER, 03.05F, 03.05FA, 03.05FB, 03.05FC, 03.05FD, 03.05FE, 03.05FF, 03.05FG, 03.05FH, 03.05FR, 03.05GR, 03.05HR when location and time conditions (above) are met."
+      },
+      {
+        "code": "COINPT",
+        "description": "COMPLEX INPATIENT CAREExplicitThis modifier is used to indicate management of a complex hospital inpatient, or a long term care (LTC) patient for palliative care or intercurrent illness when the conditions to claim HSCs 03.03D or 03.03AR are met.May only be claimed once per patient, per physician, per day.May only be claimed for the management of complex hospital inpatients with multi-system disease:whose co-morbidities contribute to complicating or increasing the care required by the claiming physicians involved in the care of the patient; andwhose care requires that the physician spend 20 minutes or more per day on management of the patient's ongoing care.May not be claimed for transfer of care where the receiving physician requires time to familiarize him/herself with the patient unless the conditions outlined in (2) above are met."
+      }
+    ]
+  },
+  {
+    "modifierCode": "CMPD",
+    "name": "COMPOUND",
+    "description": "Used to indicate a compound fracture as described in GR 6.11.1. Used to indicate a compound fracture as described in GR 6.11.1. Description: COMPOUNDExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CMPD",
+        "description": "COMPOUNDExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "CMPX",
+    "name": "COMPLEX TIME",
+    "description": "This modifier type is used to indicate a complex patient visit payable in time units by general practitioners only. This modifier type is used to indicate a complex patient visit payable in time units by general practitioners only. When claiming a procedure and a visit service at the same encounter, the time spent completing the procedure cannot be used to calculate the time for complex modifiers (CMGP, CMXV, CMXC). For example, a patient might ask a physician to examine a sebaceous cyst, and the physician decides to excise the cyst.If the time spent examining the cyst was under 15 minutes, and the time removing the cyst took 25 minutes, the claim to the Alberta Health Care Insurance Plan could look like: 03.03A and 98.12C.The complexity modifier could not be claimed, as the time spent delivering the visit portion of the service was under 15 minutes. When claiming a procedure and a visit service at the same encounter, the time spent completing the procedure cannot be used to calculate the time for complex modifiers (CMGP, CMXV, CMXC). For example, a patient might ask a physician to examine a sebaceous cyst, and the physician decides to excise the cyst. If the time spent examining the cyst was under 15 minutes, and the time removing the cyst took 25 minutes, the claim to the Alberta Health Care Insurance Plan could look like: 03.03A and 98.12C. The complexity modifier could not be claimed, as the time spent delivering the visit portion of the service was under 15 minutes. Description: COMPLEX PATIENT VISITExplicitThis modifier is used to indicate a complex patient visit requiring that the physician spend 15 minutes or more on management of the patient's care. EACH ADDITIONAL UNIT REPRESENTS 10 MINUTES. ADDITIONAL UNITS MAY NOT BE CLAIMED UNLESS A FULL 10 MINUTES HAS ELAPSED. (Example: CMGP03 indicates a general practice physician has spent a minimum of 35 minutes with the patient and on patient management activities. The first unit represents 15 minutes and each subsequent unit represents 10 minutes.) A maximum of 10 calls may be claimed for HSCs 03.01J, 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03N, 03.03NA, 03.03NB, 03.03P, 03.03Q, 03.07A, 03.07AZ, and 03.07B by general practitioners. A maximum of 1 call (CMGP01) may be claimed for HSC 03.03CV by general practitioners. This modifier is used to indicate a complex patient visit requiring that the physician spend 15 minutes or more on management of the patient's care. EACH ADDITIONAL UNIT REPRESENTS 10 MINUTES. ADDITIONAL UNITS MAY NOT BE CLAIMED UNLESS A FULL 10 MINUTES HAS ELAPSED. (Example: CMGP03 indicates a general practice physician has spent a minimum of 35 minutes with the patient and on patient management activities. The first unit represents 15 minutes and each subsequent unit represents 10 minutes.) A maximum of 10 calls may be claimed for HSCs 03.01J, 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03N, 03.03NA, 03.03NB, 03.03P, 03.03Q, 03.07A, 03.07AZ, and 03.07B by general practitioners. A maximum of 1 call (CMGP01) may be claimed for HSC 03.03CV by general practitioners. This modifier is used to indicate a complex patient visit requiring that the physician spend 15 minutes or more on management of the patient's care. EACH ADDITIONAL UNIT REPRESENTS 10 MINUTES. ADDITIONAL UNITS MAY NOT BE CLAIMED UNLESS A FULL 10 MINUTES HAS ELAPSED. (Example: CMGP03 indicates a general practice physician has spent a minimum of 35 minutes with the patient and on patient management activities. The first unit represents 15 minutes and each subsequent unit represents 10 minutes.) A maximum of 10 calls may be claimed for HSCs 03.01J, 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03N, 03.03NA, 03.03NB, 03.03P, 03.03Q, 03.07A, 03.07AZ, and 03.07B by general practitioners. A maximum of 1 call (CMGP01) may be claimed for HSC 03.03CV by general practitioners. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CMGP",
+        "description": "COMPLEX PATIENT VISITExplicitThis modifier is used to indicate a complex patient visit requiring that the physician spend 15 minutes or more on management of the patient's care. EACH ADDITIONAL UNIT REPRESENTS 10 MINUTES. ADDITIONAL UNITS MAY NOT BE CLAIMED UNLESS A FULL 10 MINUTES HAS ELAPSED. (Example: CMGP03 indicates a general practice physician has spent a minimum of 35 minutes with the patient and on patient management activities. The first unit represents 15 minutes and each subsequent unit represents 10 minutes.) A maximum of 10 calls may be claimed for HSCs 03.01J, 03.03A, 03.03AZ, 03.03B, 03.03BZ, 03.03C, 03.03N, 03.03NA, 03.03NB, 03.03P, 03.03Q, 03.07A, 03.07AZ, and 03.07B by general practitioners. A maximum of 1 call (CMGP01) may be claimed for HSC 03.03CV by general practitioners."
+      }
+    ]
+  },
+  {
+    "modifierCode": "INCS",
+    "name": "INCISIONS",
+    "description": "This modifier is to be used for gynecological health service codes only to indicate multiple procedures were performed through a different incision. This modifier is to be used for gynecological health service codes only to indicate multiple procedures were performed through a different incision. Description: DIFFERENT INCISIONExplicitUsed to indicate that multiple gynecological procedures were performed through different incisions. Does not apply to anesthetic claims. Used to indicate that multiple gynecological procedures were performed through different incisions. Does not apply to anesthetic claims. Used to indicate that multiple gynecological procedures were performed through different incisions. Does not apply to anesthetic claims. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "DIFF",
+        "description": "DIFFERENT INCISIONExplicitUsed to indicate that multiple gynecological procedures were performed through different incisions. Does not apply to anesthetic claims."
+      }
+    ]
+  },
+  {
+    "modifierCode": "LEVL",
+    "name": "LEVEL",
+    "description": "Calculates the rate payable for consecutive hospital days. The modifier value code is a combination using \"level\" for the date range and \"skill\" for the rate variations. If the service provider does not have one of the skills listed in this level modifier list, the system defaults to the rates indicated in HD1 and HD2. The Calls field and the Hospital Admission Date/Originating Encounter Date field must be entered when hospital days are claimed. Calculates the rate payable for consecutive hospital days. The modifier value code is a combination using \"level\" for the date range and \"skill\" for the rate variations. If the service provider does not have one of the skills listed in this level modifier list, the system defaults to the rates indicated in HD1 and HD2. The Calls field and the Hospital Admission Date/Originating Encounter Date field must be entered when hospital days are claimed. Description: CARDIOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Cardiology. Combination of LEVL HD1 (1-7 days) and skill Cardiology. Combination of LEVL HD1 (1-7 days) and skill Cardiology. CARDIOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Cardiology. Combination of LEVL HD2 (8 and subsequent days) and skill Cardiology. Combination of LEVL HD2 (8 and subsequent days) and skill Cardiology. CLINICAL IMMUNOLOGY AND ALLERGY HD1Combination of LEVL HD1 (1-7 days) and skill Clinical Immunology and Allergy. Combination of LEVL HD1 (1-7 days) and skill Clinical Immunology and Allergy. Combination of LEVL HD1 (1-7 days) and skill Clinical Immunology and Allergy. CLINICAL IMMUNOLOGY AND ALLERGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Clinical Immunology and Allergy. Combination of LEVL HD2 (8 and subsequent days) and skill Clinical Immunology and Allergy. Combination of LEVL HD2 (8 and subsequent days) and skill Clinical Immunology and Allergy. CRITICAL CARE MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Critical Care Medicine. Combination of LEVL HD1 (1-7 days) and skill Critical Care Medicine. Combination of LEVL HD1 (1-7 days) and skill Critical Care Medicine. CRITICAL CARE MEDICINE HD2Combination of LEVL HD2 (8 and subsequent days) and skill Critical Care Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Critical Care Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Critical Care Medicine. DERMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Dermatology. Combination of LEVL HD1 (1-7 days) and skill Dermatology. Combination of LEVL HD1 (1-7 days) and skill Dermatology. DERMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Dermatology. Combination of LEVL HD2 (8 and subsequent days) and skill Dermatology. Combination of LEVL HD2 (8 and subsequent days) and skill Dermatology. ENDOCRINOLOGY/METABOLISM HD1Combination of LEVL HD1 (1-7 days) and skill Endocrinology/Metabolism. Combination of LEVL HD1 (1-7 days) and skill Endocrinology/Metabolism. Combination of LEVL HD1 (1-7 days) and skill Endocrinology/Metabolism. ENDOCRINOLOGY/METABOLISM HD2Combination of LEVL HD2 (8 and subsequent days) and skill Endocrinology/Metabolism. Combination of LEVL HD2 (8 and subsequent days) and skill Endocrinology/Metabolism. Combination of LEVL HD2 (8 and subsequent days) and skill Endocrinology/Metabolism. GASTROENTEROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Gastroenterology. Combination of LEVL HD1 (1-7 days) and skill Gastroenterology. Combination of LEVL HD1 (1-7 days) and skill Gastroenterology. GASTROENTEROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Gastroenterology. Combination of LEVL HD2 (8 and subsequent days) and skill Gastroenterology. Combination of LEVL HD2 (8 and subsequent days) and skill Gastroenterology. GENERAL SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill General Surgery. Combination of LEVL HD1 (1-7 days) and skill General Surgery. Combination of LEVL HD1 (1-7 days) and skill General Surgery. GENERAL SURGERY HD2Combination of LEVL HD2 (8 and subsequent days) and skill General Surgery. Combination of LEVL HD2 (8 and subsequent days) and skill General Surgery. Combination of LEVL HD2 (8 and subsequent days) and skill General Surgery. 1 - 7 days 1 - 7 days 8 and subsequent days HEMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Hematology. Combination of LEVL HD1 (1-7 days) and skill Hematology. Combination of LEVL HD1 (1-7 days) and skill Hematology. HEMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Hematology. Combination of LEVL HD2 (8 and subsequent days) and skill Hematology. Combination of LEVL HD2 (8 and subsequent days) and skill Hematology. INFECTIOUS DISEASES HD1Combination of LEVL HD1 (1-7 days) and skill Infectious diseases. Combination of LEVL HD1 (1-7 days) and skill Infectious diseases. Combination of LEVL HD1 (1-7 days) and skill Infectious diseases. INFECTIOUS DISEASES HD2Combination of LEVL HD2 (8 and subsequent days) and skill Infectious diseases. Combination of LEVL HD2 (8 and subsequent days) and skill Infectious diseases. Combination of LEVL HD2 (8 and subsequent days) and skill Infectious diseases. INTERNAL MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Internal Medicine. Combination of LEVL HD1 (1-7 days) and skill Internal Medicine. Combination of LEVL HD1 (1-7 days) and skill Internal Medicine. INTERNAL MEDICINE HD2Combination of LEVL HD2 (8 and subsequent days) and skill Internal Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Internal Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Internal Medicine. MEDICAL GENETICS HD1Combination of LEVL HD1 (1-7 days) and skill Medical Genetics. Combination of LEVL HD1 (1-7 days) and skill Medical Genetics. Combination of LEVL HD1 (1-7 days) and skill Medical Genetics. MEDICAL GENETICS HD2Combination of LEVL HD2 (8 and subsequent days) and skill Medical Genetics. Combination of LEVL HD2 (8 and subsequent days) and skill Medical Genetics. Combination of LEVL HD2 (8 and subsequent days) and skill Medical Genetics. MEDICAL ONCOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Medical Oncology. Combination of LEVL HD1 (1-7 days) and skill Medical Oncology. Combination of LEVL HD1 (1-7 days) and skill Medical Oncology. MEDICAL ONCOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Medical Oncology. Combination of LEVL HD2 (8 and subsequent days) and skill Medical Oncology. Combination of LEVL HD2 (8 and subsequent days) and skill Medical Oncology. NEPHROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Nephrology. Combination of LEVL HD1 (1-7 days) and skill Nephrology. Combination of LEVL HD1 (1-7 days) and skill Nephrology. NEPHROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Nephrology. Combination of LEVL HD2 (8 and subsequent days) and skill Nephrology. Combination of LEVL HD2 (8 and subsequent days) and skill Nephrology. NEUROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Neurology. Combination of LEVL HD1 (1-7 days) and skill Neurology. Combination of LEVL HD1 (1-7 days) and skill Neurology. NEUROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Neurology. Combination of LEVL HD2 (8 and subsequent days) and skill Neurology. Combination of LEVL HD2 (8 and subsequent days) and skill Neurology. NEONATAL PERINATAL MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Neonatal Perinatal Medicine. Combination of LEVL HD1 (1-7 days) and skill Neonatal Perinatal Medicine. Combination of LEVL HD1 (1-7 days) and skill Neonatal Perinatal Medicine. NEONATAL PERINATAL MEDICINE HD2Combination of LEVL HD2 (8 and subsequent days) and skill Neonatal Perinatal Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Neonatal Perinatal Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Neonatal Perinatal Medicine. ORAL PATHOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Oral Pathology Combination of LEVL HD1 (1-7 days) and skill Oral Pathology Combination of LEVL HD1 (1-7 days) and skill Oral Pathology ORAL PATHOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Oral Pathology Combination of LEVL HD2 (8 and subsequent days) and skill Oral Pathology Combination of LEVL HD2 (8 and subsequent days) and skill Oral Pathology ORAL SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill Oral Maxillofacial Surgery Combination of LEVL HD1 (1-7 days) and skill Oral Maxillofacial Surgery Combination of LEVL HD1 (1-7 days) and skill Oral Maxillofacial Surgery ORAL SURGERY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Oral Maxillofacial Surgery Combination of LEVL HD2 (8 and subsequent days) and skill Oral Maxillofacial Surgery Combination of LEVL HD2 (8 and subsequent days) and skill Oral Maxillofacial Surgery PEDIATRIC GASTROENTEROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Pediatric Gastroenterology. Combination of LEVL HD1 (1-7 days) and skill Pediatric Gastroenterology. Combination of LEVL HD1 (1-7 days) and skill Pediatric Gastroenterology. PEDIATRIC GASTROENTEROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Gastroenterology. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Gastroenterology. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Gastroenterology. PEDIATRIC CARDIOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Pediatric Cardiology. Combination of LEVL HD1 (1-7 days) and skill Pediatric Cardiology. Combination of LEVL HD1 (1-7 days) and skill Pediatric Cardiology. PEDIATRIC CARDIOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill of Pediatric Cardiology Combination of LEVL HD2 (8 and subsequent days) and skill of Pediatric Cardiology Combination of LEVL HD2 (8 and subsequent days) and skill of Pediatric Cardiology PEDIATRICS HD1Combination of LEVL HD1 (1-7 days) and skill Pediatrics. Combination of LEVL HD1 (1-7 days) and skill Pediatrics. Combination of LEVL HD1 (1-7 days) and skill Pediatrics. PEDIATRICS HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatrics. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatrics. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatrics. PEDIATRIC NEPHROLOGY HD1Combination of LEVL HD1 (1 - 7 days) and skill Pediatric Nephrology. Combination of LEVL HD1 (1 - 7 days) and skill Pediatric Nephrology. Combination of LEVL HD1 (1 - 7 days) and skill Pediatric Nephrology. PEDIATRIC NEPHROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Nephrology. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Nephrology. Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Nephrology. PHYSICAL MEDICINE AND REHABILITATION HD1Combination of LEVL HD1 (1-7 days) and skill Physical Medicine and Rehabilitation. Combination of LEVL HD1 (1-7 days) and skill Physical Medicine and Rehabilitation. Combination of LEVL HD1 (1-7 days) and skill Physical Medicine and Rehabilitation. PHYSICAL MEDICINE AND REHABILITATION HD2Combination of LEVL HD2 (8 and subsequent days) and skill Physical Medicine and Rehabilitation. Combination of LEVL HD2 (8 and subsequent days) and skill Physical Medicine and Rehabilitation. Combination of LEVL HD2 (8 and subsequent days) and skill Physical Medicine and Rehabilitation. PODIATRIC SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill Podiatric Surgery. Combination of LEVL HD1 (1-7 days) and skill Podiatric Surgery. Combination of LEVL HD1 (1-7 days) and skill Podiatric Surgery. PODIATRIC SURGERY HD2Combination of LEVL HD2 ( 8 and subsequent days) and skill Podiatric Surgery. Combination of LEVL HD2 ( 8 and subsequent days) and skill Podiatric Surgery. Combination of LEVL HD2 ( 8 and subsequent days) and skill Podiatric Surgery. RHEUMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Rheumatology. Combination of LEVL HD1 (1-7 days) and skill Rheumatology. Combination of LEVL HD1 (1-7 days) and skill Rheumatology. RHEUMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Rheumatology. Combination of LEVL HD2 (8 and subsequent days) and skill Rheumatology. Combination of LEVL HD2 (8 and subsequent days) and skill Rheumatology. RESPIRATORY MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Respiratory Medicine. Combination of LEVL HD1 (1-7 days) and skill Respiratory Medicine. Combination of LEVL HD1 (1-7 days) and skill Respiratory Medicine. RESPIRATORY MEDICINE - HD2Combination of LEVL HD2 (8 and subsequent days) and skill Respiratory Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Respiratory Medicine. Combination of LEVL HD2 (8 and subsequent days) and skill Respiratory Medicine. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CARDH1",
+        "description": "CARDIOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Cardiology."
+      },
+      {
+        "code": "CARDH2",
+        "description": "CARDIOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Cardiology."
+      },
+      {
+        "code": "CLIMH1",
+        "description": "CLINICAL IMMUNOLOGY AND ALLERGY HD1Combination of LEVL HD1 (1-7 days) and skill Clinical Immunology and Allergy."
+      },
+      {
+        "code": "CLIMH2",
+        "description": "CLINICAL IMMUNOLOGY AND ALLERGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Clinical Immunology and Allergy."
+      },
+      {
+        "code": "CRCMH1",
+        "description": "CRITICAL CARE MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Critical Care Medicine."
+      },
+      {
+        "code": "CRCMH2",
+        "description": "CRITICAL CARE MEDICINE  HD2Combination of LEVL HD2 (8 and subsequent days) and skill Critical Care Medicine."
+      },
+      {
+        "code": "DERMH1",
+        "description": "DERMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Dermatology."
+      },
+      {
+        "code": "DERMH2",
+        "description": "DERMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Dermatology."
+      },
+      {
+        "code": "E/M H1",
+        "description": "ENDOCRINOLOGY/METABOLISM HD1Combination of LEVL HD1 (1-7 days) and skill Endocrinology/Metabolism."
+      },
+      {
+        "code": "E/M H2",
+        "description": "ENDOCRINOLOGY/METABOLISM HD2Combination of LEVL HD2 (8 and subsequent days) and skill Endocrinology/Metabolism."
+      },
+      {
+        "code": "GASTH1",
+        "description": "GASTROENTEROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Gastroenterology."
+      },
+      {
+        "code": "GASTH2",
+        "description": "GASTROENTEROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Gastroenterology."
+      },
+      {
+        "code": "GNSGH1",
+        "description": "GENERAL SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill General Surgery."
+      },
+      {
+        "code": "GNSGH2",
+        "description": "GENERAL SURGERY HD2Combination of LEVL HD2 (8 and subsequent days) and skill General Surgery."
+      },
+      {
+        "code": "HD1",
+        "description": "1 - 7 days"
+      },
+      {
+        "code": "HD2",
+        "description": "8 and subsequent days"
+      },
+      {
+        "code": "HEMH1",
+        "description": "HEMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Hematology."
+      },
+      {
+        "code": "HEMH2",
+        "description": "HEMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Hematology."
+      },
+      {
+        "code": "IDISH1",
+        "description": "INFECTIOUS DISEASES HD1Combination of LEVL HD1 (1-7 days) and skill Infectious diseases."
+      },
+      {
+        "code": "IDISH2",
+        "description": "INFECTIOUS DISEASES HD2Combination of LEVL HD2 (8 and subsequent days) and skill Infectious diseases."
+      },
+      {
+        "code": "INMDH1",
+        "description": "INTERNAL MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Internal Medicine."
+      },
+      {
+        "code": "INMDH2",
+        "description": "INTERNAL MEDICINE HD2Combination of LEVL HD2 (8 and subsequent days) and skill Internal Medicine."
+      },
+      {
+        "code": "MDGNH1",
+        "description": "MEDICAL GENETICS HD1Combination of LEVL HD1 (1-7 days) and skill Medical Genetics."
+      },
+      {
+        "code": "MDGNH2",
+        "description": "MEDICAL GENETICS HD2Combination of LEVL HD2 (8 and subsequent days) and skill Medical Genetics."
+      },
+      {
+        "code": "MDONH1",
+        "description": "MEDICAL ONCOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Medical Oncology."
+      },
+      {
+        "code": "MDONH2",
+        "description": "MEDICAL ONCOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Medical Oncology."
+      },
+      {
+        "code": "NEPHH1",
+        "description": "NEPHROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Nephrology."
+      },
+      {
+        "code": "NEPHH2",
+        "description": "NEPHROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Nephrology."
+      },
+      {
+        "code": "NEURH1",
+        "description": "NEUROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Neurology."
+      },
+      {
+        "code": "NEURH2",
+        "description": "NEUROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Neurology."
+      },
+      {
+        "code": "NPMH1",
+        "description": "NEONATAL PERINATAL MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Neonatal Perinatal Medicine."
+      },
+      {
+        "code": "NPMH2",
+        "description": "NEONATAL PERINATAL MEDICINE  HD2Combination of LEVL HD2 (8 and subsequent days) and skill Neonatal Perinatal Medicine."
+      },
+      {
+        "code": "ORPAH1",
+        "description": "ORAL PATHOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Oral Pathology"
+      },
+      {
+        "code": "ORPAH2",
+        "description": "ORAL PATHOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Oral Pathology"
+      },
+      {
+        "code": "ORSGH1",
+        "description": "ORAL SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill Oral Maxillofacial Surgery"
+      },
+      {
+        "code": "ORSGH2",
+        "description": "ORAL SURGERY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Oral Maxillofacial Surgery"
+      },
+      {
+        "code": "PDGEH1",
+        "description": "PEDIATRIC GASTROENTEROLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Pediatric Gastroenterology."
+      },
+      {
+        "code": "PDGEH2",
+        "description": "PEDIATRIC GASTROENTEROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Gastroenterology."
+      },
+      {
+        "code": "PEDCH1",
+        "description": "PEDIATRIC CARDIOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Pediatric Cardiology."
+      },
+      {
+        "code": "PEDCH2",
+        "description": "PEDIATRIC CARDIOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill of Pediatric Cardiology"
+      },
+      {
+        "code": "PEDH1",
+        "description": "PEDIATRICS HD1Combination of LEVL HD1 (1-7 days) and skill Pediatrics."
+      },
+      {
+        "code": "PEDH2",
+        "description": "PEDIATRICS HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatrics."
+      },
+      {
+        "code": "PEDNH1",
+        "description": "PEDIATRIC NEPHROLOGY HD1Combination of LEVL HD1 (1 - 7 days) and skill Pediatric Nephrology."
+      },
+      {
+        "code": "PEDNH2",
+        "description": "PEDIATRIC NEPHROLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Pediatric Nephrology."
+      },
+      {
+        "code": "PHMDH1",
+        "description": "PHYSICAL MEDICINE AND REHABILITATION HD1Combination of LEVL HD1 (1-7 days) and skill Physical Medicine and Rehabilitation."
+      },
+      {
+        "code": "PHMDH2",
+        "description": "PHYSICAL MEDICINE AND REHABILITATION HD2Combination of LEVL HD2 (8 and subsequent days) and skill Physical Medicine and Rehabilitation."
+      },
+      {
+        "code": "POSGH1",
+        "description": "PODIATRIC SURGERY HD1Combination of LEVL HD1 (1-7 days) and skill Podiatric Surgery."
+      },
+      {
+        "code": "POSGH2",
+        "description": "PODIATRIC SURGERY HD2Combination of LEVL HD2 ( 8 and subsequent days) and skill Podiatric Surgery."
+      },
+      {
+        "code": "RHEUH1",
+        "description": "RHEUMATOLOGY HD1Combination of LEVL HD1 (1-7 days) and skill Rheumatology."
+      },
+      {
+        "code": "RHEUH2",
+        "description": "RHEUMATOLOGY HD2Combination of LEVL HD2 (8 and subsequent days) and skill Rheumatology."
+      },
+      {
+        "code": "RSMDH1",
+        "description": "RESPIRATORY MEDICINE HD1Combination of LEVL HD1 (1-7 days) and skill Respiratory Medicine."
+      },
+      {
+        "code": "RSMDH2",
+        "description": "RESPIRATORY MEDICINE - HD2Combination of LEVL HD2 (8 and subsequent days) and skill Respiratory Medicine."
+      }
+    ]
+  },
+  {
+    "modifierCode": "LMTS",
+    "name": "LIMITS",
+    "description": "This modifier is used to override restrictions for a service/procedure. This modifier is used to override restrictions for a service/procedure. Description: DISCHARGEDExplicitAs stated in GR 5.1.4, indicates payment for a patient who was discharged from an emergency department, AACC or UCC and returned the same day. As stated in GR 5.1.4, indicates payment for a patient who was discharged from an emergency department, AACC or UCC and returned the same day. As stated in GR 5.1.4, indicates payment for a patient who was discharged from an emergency department, AACC or UCC and returned the same day. UNDER 40 WEEKS CONCEPTUAL AGE, ROLE OF SURGEONExplicitInfants under 40 weeks of conceptual age. Applies only to specific general surgery procedures. Infants under 40 weeks of conceptual age. Applies only to specific general surgery procedures. Infants under 40 weeks of conceptual age. Applies only to specific general surgery procedures. UNDER 40 WEEKS CONCEPTUAL AGE, ROLE OF ANESTHETISTExplicitInfants under 40 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). Infants under 40 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). Infants under 40 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). UNDER 44 WEEKS CONCEPTUAL AGE, ROLE OF SURGEONExplicitInfants under 44 weeks of conceptual age. Applies only to cardiovascular and thoracic surgery. Infants under 44 weeks of conceptual age. Applies only to cardiovascular and thoracic surgery. Infants under 44 weeks of conceptual age. Applies only to cardiovascular and thoracic surgery. UNDER 44 WEEKS CONCEPTUAL AGE, ROLE OF ANESTHETISTExplicitInfants under 44 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). Infants under 44 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). Infants under 44 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES). NEW CONDITION FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services to an eligible resident for a new condition whose diagnostic code contains the same first three-digit root as a condition previously billed in the same benefit year. Indicates an Optometrist is providing optometric services to an eligible resident for a new condition whose diagnostic code contains the same first three-digit root as a condition previously billed in the same benefit year. Indicates an Optometrist is providing optometric services to an eligible resident for a new condition whose diagnostic code contains the same first three-digit root as a condition previously billed in the same benefit year. NEW EPISODE FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services to an eligible resident for a condition that was previously billed, but the resident incurred a new occurrence of the condition in the same benefit year. Indicates an Optometrist is providing optometric services to an eligible resident for a condition that was previously billed, but the resident incurred a new occurrence of the condition in the same benefit year. Indicates an Optometrist is providing optometric services to an eligible resident for a condition that was previously billed, but the resident incurred a new occurrence of the condition in the same benefit year. OPHTHALMOLOGY CO-MANAGEMENTExplicitused to identify ongoing co-management of eye care for an eligible resident between an Optometrist and an Ophthalmologist used to identify ongoing co-management of eye care for an eligible resident between an Optometrist and an Ophthalmologist used to identify ongoing co-management of eye care for an eligible resident between an Optometrist and an Ophthalmologist SPECIFIED DRUGS FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services as the patient is receiving treatment with the drug Chloroquine (Aralen), Ethambutol (Myambutol and Servambutol), Hydroxychloroquine Sulfate (Plaquenil), or Tamoxifen (Novaldex). Indicates an Optometrist is providing optometric services as the patient is receiving treatment with the drug Chloroquine (Aralen), Ethambutol (Myambutol and Servambutol), Hydroxychloroquine Sulfate (Plaquenil), or Tamoxifen (Novaldex). Indicates an Optometrist is providing optometric services as the patient is receiving treatment with the drug Chloroquine (Aralen), Ethambutol (Myambutol and Servambutol), Hydroxychloroquine Sulfate (Plaquenil), or Tamoxifen (Novaldex). TRANSFER OF CAREExplicitIndicates the care of a hospitalized patient was transferred to a second physician in the same facility. The physician receiving the transferred patient must use TOC. Indicates the care of a hospitalized patient was transferred to a second physician in the same facility. The physician receiving the transferred patient must use TOC. Indicates the care of a hospitalized patient was transferred to a second physician in the same facility. The physician receiving the transferred patient must use TOC. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "DSCH",
+        "description": "DISCHARGEDExplicitAs stated in GR 5.1.4, indicates payment for a patient who was discharged from an emergency department, AACC or UCC and returned the same day."
+      },
+      {
+        "code": "L40",
+        "description": "UNDER 40 WEEKS CONCEPTUAL AGE, ROLE OF SURGEONExplicitInfants under 40 weeks of conceptual age. Applies only to specific general surgery procedures."
+      },
+      {
+        "code": "L40ANE",
+        "description": "UNDER 40 WEEKS CONCEPTUAL AGE, ROLE OF ANESTHETISTExplicitInfants under 40 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES)."
+      },
+      {
+        "code": "L44",
+        "description": "UNDER 44 WEEKS CONCEPTUAL AGE, ROLE OF SURGEONExplicitInfants under 44 weeks of conceptual age. Applies only to cardiovascular and thoracic surgery."
+      },
+      {
+        "code": "L44ANE",
+        "description": "UNDER 44 WEEKS CONCEPTUAL AGE, ROLE OF ANESTHETISTExplicitInfants under 44 weeks of conceptual age. Applies only to specific anesthetic services. May also be claimed in addition to the time based anesthetic modifiers (ANEST/2ANES)."
+      },
+      {
+        "code": "NEWCON",
+        "description": "NEW CONDITION FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services to an eligible resident for a new condition whose diagnostic code contains the same first three-digit root as a condition previously billed in the same benefit year."
+      },
+      {
+        "code": "NEWEP",
+        "description": "NEW EPISODE FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services to an eligible resident for a condition that was previously billed, but the resident incurred a new occurrence of the condition in the same benefit year."
+      },
+      {
+        "code": "OPHTCO",
+        "description": "OPHTHALMOLOGY CO-MANAGEMENTExplicitused to identify ongoing co-management of eye care for an eligible resident between an Optometrist and an Ophthalmologist"
+      },
+      {
+        "code": "SPCDRG",
+        "description": "SPECIFIED DRUGS FOR OPTOMETRYExplicitIndicates an Optometrist is providing optometric services as the patient is receiving treatment with the drug Chloroquine (Aralen), Ethambutol (Myambutol and Servambutol), Hydroxychloroquine Sulfate (Plaquenil), or Tamoxifen (Novaldex)."
+      },
+      {
+        "code": "TOC",
+        "description": "TRANSFER OF CAREExplicitIndicates the care of a hospitalized patient was transferred to a second physician in the same facility. The physician receiving the transferred patient must use TOC."
+      }
+    ]
+  },
+  {
+    "modifierCode": "LVP",
+    "name": "LESSER VALUE PROCEDURE",
+    "description": "Indicates that the procedure should be processed at a reduced rate. IF BASE RATE AMOUNTS ARE EQUAL ON THE HSCS CLAIMED, LVP50 OR LVP75 ARE NOT TO BE USED. Indicates that the procedure should be processed at a reduced rate. IF BASE RATE AMOUNTS ARE EQUAL ON THE HSCS CLAIMED, LVP50 OR LVP75 ARE NOT TO BE USED. Description: ADDITIONALSExplicitIndicates that the procedure is paid in addition to a specific procedure at a specified rate. Indicates that the procedure is paid in addition to a specific procedure at a specified rate. Indicates that the procedure is paid in addition to a specific procedure at a specified rate. ADDITIONAL SECOND CALLExplicitUsed to replace ADD modifier if two of the same procedures were performed. Used to replace ADD modifier if two of the same procedures were performed. Used to replace ADD modifier if two of the same procedures were performed. LESSER VALUE PROCEDURE AT 50%ExplicitIndicates the procedure of lesser value so that the General Rules to pay the second procedure at a reduced rate can be applied. Indicates the procedure of lesser value so that the General Rules to pay the second procedure at a reduced rate can be applied. Indicates the procedure of lesser value so that the General Rules to pay the second procedure at a reduced rate can be applied. LESSER VALUE PROCEDURE AT 75%ExplicitIndicates the procedure of lesser value.Please refer to Governing Rules 6.9.1, 6.9.2, and 6.9.3 for more information. Indicates the procedure of lesser value.Please refer to Governing Rules 6.9.1, 6.9.2, and 6.9.3 for more information. Indicates the procedure of lesser value. Please refer to Governing Rules 6.9.1, 6.9.2, and 6.9.3 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ADD",
+        "description": "ADDITIONALSExplicitIndicates that the procedure is paid in addition to a specific procedure at a specified rate."
+      },
+      {
+        "code": "ADD2",
+        "description": "ADDITIONAL SECOND CALLExplicitUsed to replace ADD modifier if two of the same procedures were performed."
+      },
+      {
+        "code": "LVP50",
+        "description": "LESSER VALUE PROCEDURE AT 50%ExplicitIndicates the procedure of lesser value so that the General Rules to pay the second procedure at a reduced rate can be applied."
+      },
+      {
+        "code": "LVP75",
+        "description": "LESSER VALUE PROCEDURE AT 75%ExplicitIndicates the procedure of lesser value.Please refer to Governing Rules 6.9.1, 6.9.2,  and 6.9.3 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "NBPG",
+    "name": "NUMBER OF PATIENTS IN GROUP",
+    "description": "Used to indicate the number of people in a psychiatric, or teaching group. A two digit numeric character must be added to the modifiers' alpha character, Example: NBPG08. This two digit numeric character represents the number of people participating in the psychiatric or teaching group. Depending on the skill indicated the rate is divided by the number of people to determine the rate per person per 15 minutes.This modifier will be used in conjunction with the appropriate units modifier that is based on time, and is derived from the calls field used if the visit exceeds 15 minutes. Used to indicate the number of people in a psychiatric, or teaching group. A two digit numeric character must be added to the modifiers' alpha character, Example: NBPG08. This two digit numeric character represents the number of people participating in the psychiatric or teaching group. Depending on the skill indicated the rate is divided by the number of people to determine the rate per person per 15 minutes. This modifier will be used in conjunction with the appropriate units modifier that is based on time, and is derived from the calls field used if the visit exceeds 15 minutes. Description: NUMBER OF PATIENTS IN GROUPExplicitUsed by both, Fee-for-Service and Mental Health Sessional Practitioners on sessional payments to indicate the number of people participating in group psychotherapy, or teaching services.Example: NBPG10, divide the rate by the number of people to determine the rate per patient per 15 minutes. Used by both, Fee-for-Service and Mental Health Sessional Practitioners on sessional payments to indicate the number of people participating in group psychotherapy, or teaching services.Example: NBPG10, divide the rate by the number of people to determine the rate per patient per 15 minutes. Used by both, Fee-for-Service and Mental Health Sessional Practitioners on sessional payments to indicate the number of people participating in group psychotherapy, or teaching services. Example: NBPG10, divide the rate by the number of people to determine the rate per patient per 15 minutes. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "NBPG",
+        "description": "NUMBER OF PATIENTS IN GROUPExplicitUsed by both, Fee-for-Service and Mental Health Sessional Practitioners on sessional payments to indicate the number of people participating in group psychotherapy, or teaching services.Example: NBPG10, divide the rate by the number of people to determine the rate per patient per 15 minutes."
+      }
+    ]
+  },
+  {
+    "modifierCode": "NBTR",
+    "name": "NUMBER OF TRAYS",
+    "description": "Used to indicate that multiple trays were used as described in Governing Rules 14.1, 14.2, 14.3, 14.3.1, 14.3.2 and 14.3.3. This modifier code must have a two digit numeric character attached indicating the number of trays used (Example: NBTR02). Used to indicate that multiple trays were used as described in Governing Rules 14.1, 14.2, 14.3, 14.3.1, 14.3.2 and 14.3.3. This modifier code must have a two digit numeric character attached indicating the number of trays used (Example: NBTR02). Description: NUMBER OF TRAYSExplicitIndicates the number of trays used, system defaults to one if modifier not used.Please refer to Governing Rules 14.3.1, 14.3.2, and 14.3.3 for more information. Indicates the number of trays used, system defaults to one if modifier not used.Please refer to Governing Rules 14.3.1, 14.3.2, and 14.3.3 for more information. Indicates the number of trays used, system defaults to one if modifier not used. Please refer to Governing Rules 14.3.1, 14.3.2, and 14.3.3 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "NBTR",
+        "description": "NUMBER OF TRAYSExplicitIndicates the number of trays used, system defaults to one if modifier not used.Please refer to Governing Rules 14.3.1, 14.3.2,  and 14.3.3 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "NOFL",
+    "name": "WITHOUT FLUOROSCOPY",
+    "description": "Used to indicate an xray which usually requires fluoroscopy was performed without the fluoroscopy component. Used to indicate an xray which usually requires fluoroscopy was performed without the fluoroscopy component. Description: WITHOUT FLUOROSCOPYExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "NOFLSP",
+        "description": "WITHOUT FLUOROSCOPYExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "RECO",
+    "name": "RECONSTRUCTION",
+    "description": "Used to indicate the type of tissue repair or if a procedure was performed through an open incision. Used to indicate the type of tissue repair or if a procedure was performed through an open incision. Description: COMPOSITE TISSUE RESECTIONExplicitUsed to indicate a composite tissue resection (including bone).Please refer to Governing Rule 12.4.2 for more information. Used to indicate a composite tissue resection (including bone).Please refer to Governing Rule 12.4.2 for more information. Used to indicate a composite tissue resection (including bone). Please refer to Governing Rule 12.4.2 for more information. FLAP FUNCTIONAL AREAExplicitUsed to indicate a flap in a functional area.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a flap in a functional area.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a flap in a functional area. Please refer to Governing Rule 12.4.2 for more information. INCISIONExplicitUsed to indicate that a procedure was performed through an open incision, therefore is payable at a modified rate.Please refer to Governing Rule 12.4.2 for more information. Used to indicate that a procedure was performed through an open incision, therefore is payable at a modified rate.Please refer to Governing Rule 12.4.2 for more information. Used to indicate that a procedure was performed through an open incision, therefore is payable at a modified rate. Please refer to Governing Rule 12.4.2 for more information. OPEN SECOND CALLExplicitUsed to replace open modifier if two of the same procedures were performed.Please refer to Governing Rule 12.4.2 for more information. Used to replace open modifier if two of the same procedures were performed.Please refer to Governing Rule 12.4.2 for more information. Used to replace open modifier if two of the same procedures were performed. Please refer to Governing Rule 12.4.2 for more information. PERIPROSTHETIC FRACTUREExplicitUsed to indicate an open reduction of a periprosthetic fracture of a long bone or closed reduction with intramedullary nail fixation, when no revision arthroplasty of the same long bone is performed in the same surgical procedure. Applies only to the surgical component of a HSC.Please refer to Governing Rule 12.4.2 for more information. Used to indicate an open reduction of a periprosthetic fracture of a long bone or closed reduction with intramedullary nail fixation, when no revision arthroplasty of the same long bone is performed in the same surgical procedure. Applies only to the surgical component of a HSC.Please refer to Governing Rule 12.4.2 for more information. Used to indicate an open reduction of a periprosthetic fracture of a long bone or closed reduction with intramedullary nail fixation, when no revision arthroplasty of the same long bone is performed in the same surgical procedure. Applies only to the surgical component of a HSC. Please refer to Governing Rule 12.4.2 for more information. Y GRAFT ANESTHETICExplicitUsed to indicate a full Y graft. Applies only to anesthetic services. Used to indicate a full Y graft. Applies only to anesthetic services. Used to indicate a full Y graft. Applies only to anesthetic services. FLAP 5-10cm OR DOUBLE Z PLASTYExplicitUsed to indicate a functional area flap or a double Z plasty.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a functional area flap or a double Z plasty.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a functional area flap or a double Z plasty. Please refer to Governing Rule 12.4.2 for more information. FLAP GREATER THAN 10cm OR TRIPLE Z PLASTYExplicitUsed to indicate a functional area flap or a triple Z plasty.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a functional area flap or a triple Z plasty.Please refer to Governing Rule 12.4.2 for more information. Used to indicate a functional area flap or a triple Z plasty. Please refer to Governing Rule 12.4.2 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CMPRSC",
+        "description": "COMPOSITE TISSUE RESECTIONExplicitUsed to indicate a composite tissue resection (including bone).Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "FNCAR",
+        "description": "FLAP FUNCTIONAL AREAExplicitUsed to indicate a flap in a functional area.Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "OPEN",
+        "description": "INCISIONExplicitUsed to indicate that a procedure was performed through an open incision, therefore is payable at a modified rate.Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "OPEN2",
+        "description": "OPEN SECOND CALLExplicitUsed to replace open modifier if two of the same procedures were performed.Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "PROSTH",
+        "description": "PERIPROSTHETIC FRACTUREExplicitUsed to indicate an open reduction of a periprosthetic fracture of a long bone or closed reduction with intramedullary nail fixation, when no revision arthroplasty of the same long bone is performed in the same surgical procedure. Applies only to the surgical component of a HSC.Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "YGRFTA",
+        "description": "Y GRAFT ANESTHETICExplicitUsed to indicate a full Y graft. Applies only to anesthetic services."
+      },
+      {
+        "code": "2ZPL",
+        "description": "FLAP 5-10cm OR DOUBLE Z PLASTYExplicitUsed to indicate a functional area flap or a double Z plasty.Please refer to Governing Rule 12.4.2 for more information."
+      },
+      {
+        "code": "3ZPL",
+        "description": "FLAP GREATER THAN 10cm OR TRIPLE Z PLASTYExplicitUsed to indicate a functional area flap or a triple Z plasty.Please refer to Governing Rule 12.4.2 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "REDO",
+    "name": "REDO PROCEDURE",
+    "description": "Cardiac, Vascular, and Thoracic surgery as described in GR 6.15, re-operation for specific general surgery or ophthalmology procedures, or orthopedic procedures as listed in GR 6.17.1. Cardiac, Vascular, and Thoracic surgery as described in GR 6.15, re-operation for specific general surgery or ophthalmology procedures, or orthopedic procedures as listed in GR 6.17.1. Description: COMPLETEExplicitUsed to indicate a procedure is performed entirely through a previous incision. Applies to both the surgical and anesthetic components of a HSC. Used to indicate a procedure is performed entirely through a previous incision. Applies to both the surgical and anesthetic components of a HSC. Used to indicate a procedure is performed entirely through a previous incision. Applies to both the surgical and anesthetic components of a HSC. NON UNION OF FRACTUREExplicitUsed to indicate the open reduction of a fracture with demonstrated radiographic non-union at least 12 weeks from the date of the initial fracture. Applies only to the surgical component of a HSC. Used to indicate the open reduction of a fracture with demonstrated radiographic non-union at least 12 weeks from the date of the initial fracture. Applies only to the surgical component of a HSC. Used to indicate the open reduction of a fracture with demonstrated radiographic non-union at least 12 weeks from the date of the initial fracture. Applies only to the surgical component of a HSC. ORTHOPEDIC REDOExplicitUsed to indicate redo orthopedic surgery on or relating to the same joint or muscle structure on which the patient has previously had an orthopedic surgical intervention. Applies only to the surgical component of a HSC. Used to indicate redo orthopedic surgery on or relating to the same joint or muscle structure on which the patient has previously had an orthopedic surgical intervention. Applies only to the surgical component of a HSC. Used to indicate redo orthopedic surgery on or relating to the same joint or muscle structure on which the patient has previously had an orthopedic surgical intervention. Applies only to the surgical component of a HSC. PARTIALExplicitUsed to indicate part of a procedure is performed through a previous incision. Applies to both the surgical and anesthetic components of a HSC. Used to indicate part of a procedure is performed through a previous incision. Applies to both the surgical and anesthetic components of a HSC. Used to indicate part of a procedure is performed through a previous incision. Applies to both the surgical and anesthetic components of a HSC. PODIATRIC SURGERY REDOExplicitUsed to indicate redo podiatric surgery on or relating to the same joint or muscle structure on which the patient has previously had a podiatric surgical intervention. Applies only to the surgical component of a HSC. Used to indicate redo podiatric surgery on or relating to the same joint or muscle structure on which the patient has previously had a podiatric surgical intervention. Applies only to the surgical component of a HSC. Used to indicate redo podiatric surgery on or relating to the same joint or muscle structure on which the patient has previously had a podiatric surgical intervention. Applies only to the surgical component of a HSC. ANESTHESIA FOR RE-OPERATIONExplicitUsed to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the anesthetic benefit payable. Applies only to the anesthetic component of a HSC. Used to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the anesthetic benefit payable. Applies only to the anesthetic component of a HSC. Used to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the anesthetic benefit payable. Applies only to the anesthetic component of a HSC. FIRST REDO UTILIZING SAME INCISIONExplicitUsed to indicate the first redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the first redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the first redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. SECOND REDO UTILIZING SAME INCISIONExplicitUsed to indicate the second redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the second redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the second redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. THIRD REDO UTILIZING SAME INCISIONExplicitUsed to indicate the third redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the third redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the third redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. FOURTH REDO UTILIZING SAME INCISIONExplicitUsed to indicate the fourth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the fourth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the fourth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. FIFTH REDO UTILIZING SAME INCISIONExplicitUsed to indicate the fifth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the fifth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. Used to indicate the fifth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC. RE-OPERATIONExplicitUsed to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the procedure benefit payable. Applies only to the surgical component of a HSC. Used to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the procedure benefit payable. Applies only to the surgical component of a HSC. Used to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the procedure benefit payable. Applies only to the surgical component of a HSC. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "COMPLT",
+        "description": "COMPLETEExplicitUsed to indicate a procedure is performed entirely through a previous incision. Applies to both the surgical and anesthetic components of a HSC."
+      },
+      {
+        "code": "NUFRAC",
+        "description": "NON UNION OF FRACTUREExplicitUsed to indicate the open reduction of a fracture with demonstrated radiographic non-union at least 12 weeks from the date of the initial fracture. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "ORREDO",
+        "description": "ORTHOPEDIC REDOExplicitUsed to indicate redo orthopedic surgery on or relating to the same joint or muscle structure on which the patient has previously had an orthopedic surgical intervention. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "PART",
+        "description": "PARTIALExplicitUsed to indicate part of a procedure is performed through a previous incision. Applies to both the surgical and anesthetic components of a HSC."
+      },
+      {
+        "code": "PDREDO",
+        "description": "PODIATRIC SURGERY REDOExplicitUsed to indicate redo podiatric surgery on or relating to the same joint or muscle structure on which the patient has previously had a podiatric surgical intervention. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REANE",
+        "description": "ANESTHESIA FOR RE-OPERATIONExplicitUsed to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the anesthetic benefit payable. Applies only to the anesthetic component of a HSC."
+      },
+      {
+        "code": "REDO1",
+        "description": "FIRST REDO UTILIZING SAME INCISIONExplicitUsed to indicate the first redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REDO2",
+        "description": "SECOND REDO UTILIZING SAME INCISIONExplicitUsed to indicate the second redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REDO3",
+        "description": "THIRD REDO UTILIZING SAME INCISIONExplicitUsed to indicate the third redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REDO4",
+        "description": "FOURTH REDO UTILIZING SAME INCISIONExplicitUsed to indicate the fourth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REDO5",
+        "description": "FIFTH REDO UTILIZING SAME INCISIONExplicitUsed to indicate the fifth redo utilizing the same incision (whole or partial) according to GR 6.15.4. Applies only to the surgical component of a HSC."
+      },
+      {
+        "code": "REOP",
+        "description": "RE-OPERATIONExplicitUsed to indicate that for specific ophthalmology or general surgery re-operations, a specified rate is paid in addition to the procedure benefit payable. Applies only to the surgical component of a HSC."
+      }
+    ]
+  },
+  {
+    "modifierCode": "REPT",
+    "name": "REPEAT",
+    "description": "Indicates the same service was performed previously and therefore this service is payable at a modified rate. Indicates the same service was performed previously and therefore this service is payable at a modified rate. REPT modifier is only billable by the surgeon. It is not payable on claims for surgical assist, second qualified surgical assist or anesthetic services. REPT modifier is only billable by the surgeon. It is not payable on claims for surgical assist, second qualified surgical assist or anesthetic services. Description: OPPOSITE SIDEExplicitIndicates the service was performed previously but on the other side of the body. Indicates the service was performed previously but on the other side of the body. Indicates the service was performed previously but on the other side of the body. REPEATExplicitIndicates the service was performed previously and therefore this service is payable at a modified rate. Indicates the service was performed previously and therefore this service is payable at a modified rate. Indicates the service was performed previously and therefore this service is payable at a modified rate. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "OPST",
+        "description": "OPPOSITE SIDEExplicitIndicates the service was performed previously but on the other side of the body."
+      },
+      {
+        "code": "REPT",
+        "description": "REPEATExplicitIndicates the service was performed previously and therefore this service is payable at a modified rate."
+      }
+    ]
+  },
+  {
+    "modifierCode": "ROLE",
+    "name": "ROLE",
+    "description": "This modifier indicates the capacity in which the service provider is functioning. This is an explicit modifier, however if no role modifier is identified, the system will assume the service provider functioned as the surgeon.The surgical assistant (SA) modifier may not be claimed with the following role modifiers by the same physician for the same service for the same patient during the same encounter. ASIC, MSURG2, MSRGN, MSRGP, SAQS, SSOS, SSCVT, SSSTThe following modifiers are to be used when: This modifier indicates the capacity in which the service provider is functioning. This is an explicit modifier, however if no role modifier is identified, the system will assume the service provider functioned as the surgeon. The surgical assistant (SA) modifier may not be claimed with the following role modifiers by the same physician for the same service for the same patient during the same encounter. ASIC, MSURG2, MSRGN, MSRGP, SAQS, SSOS, SSCVT, SSST The following modifiers are to be used when: Description: ANESTHETISTExplicitThe physician functions as the Anesthetist and is claiming the listed anesthetic benefit. The physician functions as the Anesthetist and is claiming the listed anesthetic benefit. The physician functions as the Anesthetist and is claiming the listed anesthetic benefit. ANESTHETIST TRCExplicitThe physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic. The physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic. The physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic. ASSISTANCE INTERVENTIONAL CARDIOLOGIST SECOND SURGEONExplicitThe physician is an interventional cardiologist providing assistance at a percutaneous coronary angioplasty or percutaneous closure of ASD. The physician is an interventional cardiologist providing assistance at a percutaneous coronary angioplasty or percutaneous closure of ASD. The physician is an interventional cardiologist providing assistance at a percutaneous coronary angioplasty or percutaneous closure of ASD. SECOND NEUROSURGEON MICROSURGERYExplicitA second neurosurgeon utilizing microsurgical technique to perform a specific surgical procedure. A second neurosurgeon utilizing microsurgical technique to perform a specific surgical procedure. A second neurosurgeon utilizing microsurgical technique to perform a specific surgical procedure. SECOND PLASTIC SURGEON MICROSURGERYExplicitA second plastic surgeon utilizing microsurgical technique to perform a specific surgical procedure. A second plastic surgeon utilizing microsurgical technique to perform a specific surgical procedure. A second plastic surgeon utilizing microsurgical technique to perform a specific surgical procedure. 2ND MICROSURGERYExplicitA second surgical specialist utilizing microsurgical technique to perform a specific surgical procedure. A second surgical specialist utilizing microsurgical technique to perform a specific surgical procedure. A second surgical specialist utilizing microsurgical technique to perform a specific surgical procedure. SURGICAL ASSISTANTExplicitService provider functions as a surgical assistant for a surgical procedure. This modifier may be claimed when hospital regulations or bylaws require an assistant for a particular surgical procedure. Service provider functions as a surgical assistant for a surgical procedure. This modifier may be claimed when hospital regulations or bylaws require an assistant for a particular surgical procedure. Service provider functions as a surgical assistant for a surgical procedure. This modifier may be claimed when hospital regulations or bylaws require an assistant for a particular surgical procedure. SURGICAL ASSISTANT QUALIFIED SECOND SURGEONExplicitA surgical specialist provides surgical assistance in unusual circumstances. This modifier may be claimed when the complexities of a particular surgical procedure on a particular patient require a second qualified, surgical specialist assisting. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. A surgical specialist provides surgical assistance in unusual circumstances. This modifier may be claimed when the complexities of a particular surgical procedure on a particular patient require a second qualified, surgical specialist assisting. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. A surgical specialist provides surgical assistance in unusual circumstances. This modifier may be claimed when the complexities of a particular surgical procedure on a particular patient require a second qualified, surgical specialist assisting. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. SECOND ORAL SURGERY SURGEONExplicitA qualified oral and maxillofacial surgeon functions as a second surgeon during complex oral and maxillofacial surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second oral and maxillofacial surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. A qualified oral and maxillofacial surgeon functions as a second surgeon during complex oral and maxillofacial surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second oral and maxillofacial surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. A qualified oral and maxillofacial surgeon functions as a second surgeon during complex oral and maxillofacial surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second oral and maxillofacial surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. SECOND SURGEON CARDIOVASCULAR OR THORACIC SURGEONExplicitA cardiovascular or thoracic surgeon functions as a second surgeon on a cardiovascular thoracic surgical team. A cardiovascular or thoracic surgeon functions as a second surgeon on a cardiovascular thoracic surgical team. A cardiovascular or thoracic surgeon functions as a second surgeon on a cardiovascular thoracic surgical team. SECOND SURGEON ORTHOPEDIC SURGEONExplicitAn orthopedic surgeon functions as a second surgeon during complex orthopedic surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. An orthopedic surgeon functions as a second surgeon during complex orthopedic surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. An orthopedic surgeon functions as a second surgeon during complex orthopedic surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used. SECOND SURGEON PODIATRIC SURGEONExplicitA podiatric surgeon functions as a second surgeon during complex podiatric surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. A podiatric surgeon functions as a second surgeon during complex podiatric surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. A podiatric surgeon functions as a second surgeon during complex podiatric surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. SECOND SURGEON SURGICAL TEAMExplicitA surgical specialist functions as a second surgeon of a second surgical team. A surgical specialist functions as a second surgeon of a second surgical team. A surgical specialist functions as a second surgeon of a second surgical team. ANESTHETIST TRC 2ExplicitThe physician functions as the Anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic. The physician functions as the Anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic. The physician functions as the Anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ANE",
+        "description": "ANESTHETISTExplicitThe physician functions as the Anesthetist and is claiming the listed anesthetic benefit."
+      },
+      {
+        "code": "ANEST",
+        "description": "ANESTHETIST TRCExplicitThe physician functions as the Anesthetist and is claiming a benefit based on the duration of the anesthetic."
+      },
+      {
+        "code": "ASIC",
+        "description": "ASSISTANCE INTERVENTIONAL CARDIOLOGIST SECOND SURGEONExplicitThe physician is an interventional cardiologist providing assistance at a percutaneous coronary angioplasty or percutaneous closure of ASD."
+      },
+      {
+        "code": "MSRGN",
+        "description": "SECOND NEUROSURGEON MICROSURGERYExplicitA second neurosurgeon utilizing microsurgical technique to perform a specific surgical procedure."
+      },
+      {
+        "code": "MSRGP",
+        "description": "SECOND PLASTIC SURGEON MICROSURGERYExplicitA second plastic surgeon utilizing microsurgical technique to perform a specific surgical procedure."
+      },
+      {
+        "code": "MSURG2",
+        "description": "2ND MICROSURGERYExplicitA second surgical specialist utilizing microsurgical technique to perform a specific surgical procedure."
+      },
+      {
+        "code": "SA",
+        "description": "SURGICAL ASSISTANTExplicitService provider functions as a surgical assistant for a surgical procedure. This modifier may be claimed when hospital regulations or bylaws require an assistant for a particular surgical procedure."
+      },
+      {
+        "code": "SAQS",
+        "description": "SURGICAL ASSISTANT QUALIFIED SECOND SURGEONExplicitA surgical specialist provides surgical assistance in unusual circumstances. This modifier may be claimed when the complexities of a particular surgical procedure on a particular patient require a second qualified, surgical specialist assisting. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used."
+      },
+      {
+        "code": "SOSS",
+        "description": "SECOND ORAL SURGERY SURGEONExplicitA qualified oral and maxillofacial surgeon functions as a second surgeon during complex oral and maxillofacial surgery.  This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure.  Only the second oral and maxillofacial surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time."
+      },
+      {
+        "code": "SSCVT",
+        "description": "SECOND SURGEON CARDIOVASCULAR OR THORACIC SURGEONExplicitA cardiovascular or thoracic surgeon functions as a second surgeon on a cardiovascular thoracic surgical team."
+      },
+      {
+        "code": "SSOS",
+        "description": "SECOND SURGEON ORTHOPEDIC SURGEONExplicitAn orthopedic surgeon functions as a second surgeon during complex orthopedic surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. May only be billed when the surgery requires the assistance of a qualified surgeon who is currently in an active surgical practice. If the surgery does not require a qualified surgeon, the SA (Surgical Assistant) modifier should be used."
+      },
+      {
+        "code": "SSPS",
+        "description": "SECOND SURGEON PODIATRIC SURGEONExplicitA podiatric surgeon functions as a second surgeon during complex podiatric surgery. This modifier may be claimed when the second surgeon has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time."
+      },
+      {
+        "code": "SSST",
+        "description": "SECOND SURGEON SURGICAL TEAMExplicitA surgical specialist functions as a second surgeon of a second surgical team."
+      },
+      {
+        "code": "2ANES",
+        "description": "ANESTHETIST TRC 2ExplicitThe physician functions as the Anesthetist and is claiming anesthetic time premium units based on the duration of the anesthetic."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SAQU",
+    "name": "SURGICAL ASSISTANT QUALIFIED SECOND SURGEON UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Surgical Assistant Qualified Second Surgeon role modifier (SAQS) is used. EACH UNIT REPRESENTS 15 MINUTES. This modifier is system derived from the information entered in the calls field when the Surgical Assistant Qualified Second Surgeon role modifier (SAQS) is used. EACH UNIT REPRESENTS 15 MINUTES. Description: SURGICAL ASSISTANT QUALIFIED SECOND SURGEON UNITSurgical Assistant Qualified Second Surgeons are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: If procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAQU each call covers 15 minutes, therefore 2 hours equal 8 calls.Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Surgical Assistant Qualified Second Surgeons are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: If procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAQU each call covers 15 minutes, therefore 2 hours equal 8 calls.Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Surgical Assistant Qualified Second Surgeons are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: If procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAQU each call covers 15 minutes, therefore 2 hours equal 8 calls. Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SAQU",
+        "description": "SURGICAL ASSISTANT QUALIFIED SECOND SURGEON UNITSurgical Assistant Qualified Second Surgeons are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: If procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAQU each call covers 15 minutes, therefore 2 hours equal 8 calls.Please refer to Governing Rules 13.1, 13.2,  and 13.4 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SAU",
+    "name": "SURGICAL ASSIST UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Surgical Assist role modifier (SA) is used. THE FIRST UNIT REPRESENTS 1 HOUR, EACH SUBSEQUENT UNIT REPRESENTS 15 MINUTES. This modifier is system derived from the information entered in the calls field when the Surgical Assist role modifier (SA) is used. THE FIRST UNIT REPRESENTS 1 HOUR, EACH SUBSEQUENT UNIT REPRESENTS 15 MINUTES. Description: SURGICAL ASSIST UNITSSurgical Assists are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAU the first call covers the first hour, therefore 2 hours equal 5 calls.Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Surgical Assists are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAU the first call covers the first hour, therefore 2 hours equal 5 calls.Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Surgical Assists are claimed on a time basis. Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only). For SAU the first call covers the first hour, therefore 2 hours equal 5 calls. Please refer to Governing Rules 13.1, 13.2, and 13.4 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SAU",
+        "description": "SURGICAL ASSIST UNITSSurgical Assists are claimed on a time basis.  Claim the entire elapsed time against the primary procedure, even if multiple procedures are done. (Example:  if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only).  For SAU the first call covers the first hour, therefore 2 hours equal 5 calls.Please refer to Governing Rules 13.1, 13.2,  and 13.4 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SESU",
+    "name": "SESSIONAL UNITS",
+    "description": "This modifier is used to indicate the duration of a psychiatric service to be paid on a sessional basis. The modifier is system derived from the information entered in the calls field when skill GNMH or SPMH are used. EACH UNIT REPRESENTS ONE 15 MINUTE PERIOD. The skill (GNMH or SPMH) must be used with this modifier to determine amount payable. This modifier is used to indicate the duration of a psychiatric service to be paid on a sessional basis. The modifier is system derived from the information entered in the calls field when skill GNMH or SPMH are used. EACH UNIT REPRESENTS ONE 15 MINUTE PERIOD. The skill (GNMH or SPMH) must be used with this modifier to determine amount payable. Description: SESSIONAL UNITS Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SESU",
+        "description": "SESSIONAL UNITS"
+      }
+    ]
+  },
+  {
+    "modifierCode": "SKLL",
+    "name": "SKILL",
+    "description": "The SKILL modifier designates the discipline and specialty/accreditation under which the service provider provided the service. This is an implicit modifier, however if using another skill, it is an explicit modifier and it is derived from the skill field on the claim instead of the default skill. The SKILL modifier designates the discipline and specialty/accreditation under which the service provider provided the service. This is an implicit modifier, however if using another skill, it is an explicit modifier and it is derived from the skill field on the claim instead of the default skill. Description: ANESTHETIST ANATOMICAL PATHOLOGY CARDIOLOGY CLINICAL IMMUNOLOGY AND ALLERGY COMMUNITY MEDICINE SPECIALIST CRITICAL CARE MEDICINE CARDIAC SURGEON CARDIOVASCULAR AND THORACIC DERMATOLOGY DIAGNOSTIC RADIOLOGY ENDOCRINOLOGY/METABOLISM EMERGENCY MEDICINE FULL TIME EMERGENCY ROOM GASTROENTEROLOGY GENERALISTS RATES FOR MENTAL HEALTH PHYSICIANS GENERAL SURGERY GENERAL PRACTICE HEMATOLOGY HEMATOLOGICAL PATHOLOGY INFECTIOUS DISEASES INTERNAL MEDICINE MEDICAL BIOCHEMISTRY MEDICAL GENETICS MEDICAL MICROBIOLOGY MEDICAL ONCOLOGY NUCLEAR MEDICINE NEPHROLOGY NEUROLOGY NEONATAL PERINATAL MEDICINE NEUROPATHOLOGY NEUROSURGERY OBSTETRICS AND GYNECOLOGY OCCUPATIONAL MEDICINE SPECIALTY OPHTHALMOLOGY ORAL PATHOLOGY ORAL SURGERY ORTHOPEDIC OTOLARYNGOLOGY OCULO - VISUAL ASSESSMENT CERTIFICATION GENERAL PATHOLOGY PEDIATRIC GASTROENTEROLOGY PEDIATRIC NEUROLOGY PEDIATRIC GENERAL SURGERY PEDIATRICS PEDIATRIC CARDIOLOGY PEDIATRIC NEPHROLOGY PHYSICAL MEDICINE AND REHABILITATION PLASTIC SURGERY PODIATRIC SURGERY PROSTHODONTICS PSYCHIATRY RHEUMATOLOGY RADIATION ONCOLOGY RESPIRATORY MEDICINE SPECIALIST RATES FOR MENTAL HEALTH PHYSICIANS THORACIC SURGERY UROLOGY VASCULAR SURGERY Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ANES",
+        "description": "ANESTHETIST"
+      },
+      {
+        "code": "ANPA",
+        "description": "ANATOMICAL PATHOLOGY"
+      },
+      {
+        "code": "CARD",
+        "description": "CARDIOLOGY"
+      },
+      {
+        "code": "CLIM",
+        "description": "CLINICAL IMMUNOLOGY AND ALLERGY"
+      },
+      {
+        "code": "CMSP",
+        "description": "COMMUNITY MEDICINE SPECIALIST"
+      },
+      {
+        "code": "CRCM",
+        "description": "CRITICAL CARE MEDICINE"
+      },
+      {
+        "code": "CRSG",
+        "description": "CARDIAC SURGEON"
+      },
+      {
+        "code": "CTSG",
+        "description": "CARDIOVASCULAR AND THORACIC"
+      },
+      {
+        "code": "DERM",
+        "description": "DERMATOLOGY"
+      },
+      {
+        "code": "DIRD",
+        "description": "DIAGNOSTIC RADIOLOGY"
+      },
+      {
+        "code": "E/M",
+        "description": "ENDOCRINOLOGY/METABOLISM"
+      },
+      {
+        "code": "EMSP",
+        "description": "EMERGENCY MEDICINE"
+      },
+      {
+        "code": "FTER",
+        "description": "FULL TIME EMERGENCY ROOM"
+      },
+      {
+        "code": "GAST",
+        "description": "GASTROENTEROLOGY"
+      },
+      {
+        "code": "GNMH",
+        "description": "GENERALISTS RATES FOR MENTAL HEALTH PHYSICIANS"
+      },
+      {
+        "code": "GNSG",
+        "description": "GENERAL SURGERY"
+      },
+      {
+        "code": "GP",
+        "description": "GENERAL PRACTICE"
+      },
+      {
+        "code": "HEM",
+        "description": "HEMATOLOGY"
+      },
+      {
+        "code": "HEPA",
+        "description": "HEMATOLOGICAL PATHOLOGY"
+      },
+      {
+        "code": "IDIS",
+        "description": "INFECTIOUS DISEASES"
+      },
+      {
+        "code": "INMD",
+        "description": "INTERNAL MEDICINE"
+      },
+      {
+        "code": "MDBI",
+        "description": "MEDICAL BIOCHEMISTRY"
+      },
+      {
+        "code": "MDGN",
+        "description": "MEDICAL GENETICS"
+      },
+      {
+        "code": "MDMI",
+        "description": "MEDICAL MICROBIOLOGY"
+      },
+      {
+        "code": "MDON",
+        "description": "MEDICAL ONCOLOGY"
+      },
+      {
+        "code": "NCMD",
+        "description": "NUCLEAR MEDICINE"
+      },
+      {
+        "code": "NEPH",
+        "description": "NEPHROLOGY"
+      },
+      {
+        "code": "NEUR",
+        "description": "NEUROLOGY"
+      },
+      {
+        "code": "NPM",
+        "description": "NEONATAL PERINATAL MEDICINE"
+      },
+      {
+        "code": "NUPA",
+        "description": "NEUROPATHOLOGY"
+      },
+      {
+        "code": "NUSG",
+        "description": "NEUROSURGERY"
+      },
+      {
+        "code": "OBGY",
+        "description": "OBSTETRICS AND GYNECOLOGY"
+      },
+      {
+        "code": "OCMD",
+        "description": "OCCUPATIONAL MEDICINE SPECIALTY"
+      },
+      {
+        "code": "OPHT",
+        "description": "OPHTHALMOLOGY"
+      },
+      {
+        "code": "ORPA",
+        "description": "ORAL PATHOLOGY"
+      },
+      {
+        "code": "ORSG",
+        "description": "ORAL SURGERY"
+      },
+      {
+        "code": "ORTH",
+        "description": "ORTHOPEDIC"
+      },
+      {
+        "code": "OTOL",
+        "description": "OTOLARYNGOLOGY"
+      },
+      {
+        "code": "OVAC",
+        "description": "OCULO - VISUAL ASSESSMENT CERTIFICATION"
+      },
+      {
+        "code": "PATH",
+        "description": "GENERAL PATHOLOGY"
+      },
+      {
+        "code": "PDGE",
+        "description": "PEDIATRIC GASTROENTEROLOGY"
+      },
+      {
+        "code": "PDNR",
+        "description": "PEDIATRIC NEUROLOGY"
+      },
+      {
+        "code": "PDSG",
+        "description": "PEDIATRIC GENERAL SURGERY"
+      },
+      {
+        "code": "PED",
+        "description": "PEDIATRICS"
+      },
+      {
+        "code": "PEDC",
+        "description": "PEDIATRIC CARDIOLOGY"
+      },
+      {
+        "code": "PEDN",
+        "description": "PEDIATRIC NEPHROLOGY"
+      },
+      {
+        "code": "PHMD",
+        "description": "PHYSICAL MEDICINE AND REHABILITATION"
+      },
+      {
+        "code": "PLAS",
+        "description": "PLASTIC SURGERY"
+      },
+      {
+        "code": "PODS",
+        "description": "PODIATRIC SURGERY"
+      },
+      {
+        "code": "PROS",
+        "description": "PROSTHODONTICS"
+      },
+      {
+        "code": "PSYC",
+        "description": "PSYCHIATRY"
+      },
+      {
+        "code": "RHEU",
+        "description": "RHEUMATOLOGY"
+      },
+      {
+        "code": "ROSP",
+        "description": "RADIATION ONCOLOGY"
+      },
+      {
+        "code": "RSMD",
+        "description": "RESPIRATORY MEDICINE"
+      },
+      {
+        "code": "SPMH",
+        "description": "SPECIALIST RATES FOR MENTAL HEALTH PHYSICIANS"
+      },
+      {
+        "code": "THOR",
+        "description": "THORACIC SURGERY"
+      },
+      {
+        "code": "UROL",
+        "description": "UROLOGY"
+      },
+      {
+        "code": "VSSG",
+        "description": "VASCULAR SURGERY"
+      }
+    ]
+  },
+  {
+    "modifierCode": "SOSU",
+    "name": "SECOND ORAL SURGERY SURGEON UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used. THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. This modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used. THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. Description: SECOND ORAL SURGERY SURGEON UNITThis modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used. THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. This modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used. THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. This modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used. THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SOSU",
+        "description": "SECOND ORAL SURGERY SURGEON UNITThis modifier is system derived from the information entered in the calls field when the Second Oral Surgery Surgeon role modifier (SOSS) is used.  THE FIRST UNIT (SOSS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SOSU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SSOU",
+    "name": "SECOND SURGEON ORTHOPEDIC SURGEON UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Second Surgeon Orthopedic Surgeon role modifier (SSOS) is used. THE FIRST UNIT (SSOS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SSOU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. This modifier is system derived from the information entered in the calls field when the Second Surgeon Orthopedic Surgeon role modifier (SSOS) is used. THE FIRST UNIT (SSOS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SSOU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. Description: SECOND SURGEON ORTHOPEDIC SURGEON UNITAn orthopedic surgeon functioning as a second surgeon during complex orthopedic surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSOU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls.Please refer to Governing Rule 6.14.5 for more information. An orthopedic surgeon functioning as a second surgeon during complex orthopedic surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSOU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls.Please refer to Governing Rule 6.14.5 for more information. An orthopedic surgeon functioning as a second surgeon during complex orthopedic surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSOU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls. Please refer to Governing Rule 6.14.5 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SSOU",
+        "description": "SECOND SURGEON ORTHOPEDIC SURGEON UNITAn orthopedic surgeon functioning as a second surgeon during complex orthopedic surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second orthopedic surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSOU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls.Please refer to Governing Rule 6.14.5 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SSPU",
+    "name": "SECOND SURGEON PODIATRIC SURGEON UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Second Surgeon Podiatric Surgeon role modifier (SSPS) is used. THE FIRST UNIT (SSPS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SSPU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. This modifier is system derived from the information entered in the calls field when the Second Surgeon Podiatric Surgeon role modifier (SSPS) is used. THE FIRST UNIT (SSPS) REPRESENTS 45 MINUTES; EACH SUBSEQUENT UNIT (SSPU) REPRESENTS 15 MINUTES OR THE MAJOR PORTION THEREOF. Description: SECOND SURGEON PODIATRIC SURGEON UNITA podiatric surgeon functioning as a second surgeon during complex podiatric surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSPU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls. A podiatric surgeon functioning as a second surgeon during complex podiatric surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSPU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls. A podiatric surgeon functioning as a second surgeon during complex podiatric surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSPU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "SSPU",
+        "description": "SECOND SURGEON PODIATRIC SURGEON UNITA podiatric surgeon functioning as a second surgeon during complex podiatric surgery may claim for his/her services on a time basis when he/she has actively participated in the planning for and performance of the procedure. Only the second podiatric surgeon's surgical time may be claimed; time spent in planning the procedure may not be included in the claimed time. The entire surgical time is to be claimed against the primary procedure even if multiple procedures are performed. For example, if procedure A and B take a combined total of 2 hours, claim 2 hours against procedure A only. For SSPU, the first call covers the first 45 minutes, therefore, 2 hours equals 6 calls."
+      }
+    ]
+  },
+  {
+    "modifierCode": "SUBD",
+    "name": "SUBD SUBDIVISION",
+    "description": "This modifier type is used with visit health service codes to indicate during which time period the service recipient/service provider encounter took place. These modifiers are applicable during the evening on weekdays, during the day and evening on weekends and statutory holidays, and during the night on any day. A fee is added to the base rate as indicated by the modifier.For home visits and hospice visits, the SUBD modifier should be claimed based on the time at which the encounter commences and the physician responds on an unscheduled basis within a 24 hour period from the time of the call. The time of the initial call as well as time of service must be documented in patient's record. This modifier type is used with visit health service codes to indicate during which time period the service recipient/service provider encounter took place. These modifiers are applicable during the evening on weekdays, during the day and evening on weekends and statutory holidays, and during the night on any day. A fee is added to the base rate as indicated by the modifier. For home visits and hospice visits, the SUBD modifier should be claimed based on the time at which the encounter commences and the physician responds on an unscheduled basis within a 24 hour period from the time of the call. The time of the initial call as well as time of service must be documented in patient's record. The SUBD modifier MAY ONLY be claimed on home visits when a call for attendance by the physician has been made AND the physician responds on a priority basis within 24 hours of the call. The time of the call and the time of the physician attendance at the location of the patient must be recorded in the patient record. The SUBD modifier MAY ONLY be claimed on home visits when a call for attendance by the physician has been made AND the physician responds on a priority basis within 24 hours of the call. The time of the call and the time of the physician attendance at the location of the patient must be recorded in the patient record. Description: 1700 - 2200 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit 0700 - 2200 HOURS - SATURDAY, SUNDAY, STATUTORY HOLIDAY - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit 2400 - 0700 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit 2200 - 2400 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit 1700 - 2200 HOURS - HOSPITAL ADMISSIONExplicit 0700 - 2200 HOURS - SATURDAY, SUNDAY, STATUTORY HOLIDAY HOSPITAL ADMISSIONExplicit 2400 - 0700 HOURS - HOSPITAL ADMISSIONExplicit 2200 - 2400 HOURS - HOSPITAL ADMISSIONExplicit 1700 - 2200 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit 0700 - 2200 HOURS - HOME VISIT SATURDAY, SUNDAY, STATUTORY HOLIDAY OR INTERRUPTION OF OFFICE HOURS, EMERGENCY OR CALLBACK TO CLOSED OFFICEExplicit 2400 - 0700 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit 2200 - 2400 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "BNEV",
+        "description": "1700 - 2200 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit"
+      },
+      {
+        "code": "BNEVWK",
+        "description": "0700 - 2200 HOURS - SATURDAY, SUNDAY, STATUTORY HOLIDAY - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit"
+      },
+      {
+        "code": "BNNTAM",
+        "description": "2400 - 0700 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit"
+      },
+      {
+        "code": "BNNTPM",
+        "description": "2200 - 2400 HOURS - BUNDLED EMERGENCY HOME VISIT WITH A HOSPITAL ADMISSION AND A HOSPITAL VISIT ON THE SAME DAYExplicit"
+      },
+      {
+        "code": "HAEV",
+        "description": "1700 - 2200 HOURS - HOSPITAL ADMISSIONExplicit"
+      },
+      {
+        "code": "HAEVWK",
+        "description": "0700 - 2200 HOURS - SATURDAY, SUNDAY, STATUTORY HOLIDAY HOSPITAL ADMISSIONExplicit"
+      },
+      {
+        "code": "HANTAM",
+        "description": "2400 - 0700 HOURS - HOSPITAL ADMISSIONExplicit"
+      },
+      {
+        "code": "HANTPM",
+        "description": "2200 - 2400 HOURS - HOSPITAL ADMISSIONExplicit"
+      },
+      {
+        "code": "OFEV",
+        "description": "1700 - 2200 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit"
+      },
+      {
+        "code": "OFEVWK",
+        "description": "0700 - 2200 HOURS - HOME VISIT SATURDAY, SUNDAY, STATUTORY HOLIDAY OR INTERRUPTION OF OFFICE HOURS, EMERGENCY OR CALLBACK TO CLOSED OFFICEExplicit"
+      },
+      {
+        "code": "OFNTAM",
+        "description": "2400 - 0700 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit"
+      },
+      {
+        "code": "OFNTPM",
+        "description": "2200 - 2400 HOURS - HOME VISIT OR CALLBACK TO CLOSED OFFICEExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "SURC",
+    "name": "SERVICES UNSCHEDULED",
+    "description": "This modifier type is used for services listed in the GRs to indicate during which time period a service provider provided unscheduled in-patient or out-patient services for a hospital service recipient. A fee is added to the base rate as indicated by the modifier. For visits, refer to the subdivision modifier. This modifier type is used for services listed in the GRs to indicate during which time period a service provider provided unscheduled in-patient or out-patient services for a hospital service recipient. A fee is added to the base rate as indicated by the modifier. For visits, refer to the subdivision modifier. Description: DENTAL WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit DENTAL NIGHT MORNING - Between 2400 and 0700 hours.Explicit DENTAL NIGHT EVENING - Between 2200 and 2400 hours.Explicit DENTAL WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit NIGHT MORNING - Between 2400 and 0700 hours.Explicit NIGHT EVENING - Between 2200 and 2400 hours.Explicit PODIATRIC SURGERY WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit PODIATRIC SURGERY NIGHT MORNING - Between 2400 and 0700 hours.Explicit PODIATRIC SURGERY NIGHT EVENING - Between 2200 and 2400 hours.Explicit PODIATRIC SURGERY WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "DEV",
+        "description": "DENTAL WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit"
+      },
+      {
+        "code": "DNTAM",
+        "description": "DENTAL NIGHT MORNING - Between 2400 and 0700 hours.Explicit"
+      },
+      {
+        "code": "DNTPM",
+        "description": "DENTAL NIGHT EVENING - Between 2200 and 2400 hours.Explicit"
+      },
+      {
+        "code": "DWK",
+        "description": "DENTAL WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit"
+      },
+      {
+        "code": "EV",
+        "description": "WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit"
+      },
+      {
+        "code": "NTAM",
+        "description": "NIGHT MORNING - Between 2400 and 0700 hours.Explicit"
+      },
+      {
+        "code": "NTPM",
+        "description": "NIGHT EVENING - Between 2200 and 2400 hours.Explicit"
+      },
+      {
+        "code": "PEV",
+        "description": "PODIATRIC SURGERY WEEKDAY EVENING - Between 1700 and 2200 hours.Explicit"
+      },
+      {
+        "code": "PNTAM",
+        "description": "PODIATRIC SURGERY NIGHT MORNING - Between 2400 and 0700 hours.Explicit"
+      },
+      {
+        "code": "PNTPM",
+        "description": "PODIATRIC SURGERY NIGHT EVENING - Between 2200 and 2400 hours.Explicit"
+      },
+      {
+        "code": "PWK",
+        "description": "PODIATRIC SURGERY WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit"
+      },
+      {
+        "code": "WK",
+        "description": "WEEKEND AND STATUTORY HOLIDAY - Between 0700 and 2200 hours.Explicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "SURT",
+    "name": "AFTER HOURS TIME PREMIUM",
+    "description": "This modifier type is used to indicate after hours time units for services provided to patients in active treatment hospitals, AACCs, UCCs, nursing homes and auxiliary hospitals. This modifier is payable in 15 minute blocks to a maximum of 4 per hour, per physician. It is to be billed beginning at the time of contact with the patient and may only be claimed for direct patient care time related to the provision of an insured service. The after-hours time premium units may not be claimed for stand by time, e.g. time spent waiting for results of diagnostic tests. In the event that one 15 minute period covers two time periods, the modifier claimed will be based on the time period where the majority of the 15 minute period was spent. In the event that the time spent with the patient covers more than one time period, additional SURT modifiers may be claimed, each according to the time spent with the patient in that particular time period. This modifier type is used to indicate after hours time units for services provided to patients in active treatment hospitals, AACCs, UCCs, nursing homes and auxiliary hospitals. This modifier is payable in 15 minute blocks to a maximum of 4 per hour, per physician. It is to be billed beginning at the time of contact with the patient and may only be claimed for direct patient care time related to the provision of an insured service. The after-hours time premium units may not be claimed for stand by time, e.g. time spent waiting for results of diagnostic tests. In the event that one 15 minute period covers two time periods, the modifier claimed will be based on the time period where the majority of the 15 minute period was spent. In the event that the time spent with the patient covers more than one time period, additional SURT modifiers may be claimed, each according to the time spent with the patient in that particular time period. Description: PODIATRIC SURGERY AFTER HOURS TIME PREMIUM ANY DAY NIGHT MORNING - Between 2400 and 0700 hoursExplicit PODIATRIC SURGERY AFTER HOURS TIME PREMIUM ANY DAY NIGHT EVENING - Between 2200 and 2400 hoursExplicit PODIATRIC SURGERY AFTER HOURS TIME PREMIUM WEEKDAY EVENING - Between 1700 and 2200 hoursExplicit PODIATRIC SURGERY AFTER HOURS TIME PREMIUM STATUTORY HOLIDAYS - Between 0700 and 2200 hoursExplicit PODIATRIC SURGERY AFTER HOURS TIME PREMIUM WEEKEND - Between 0700 and 2200 hoursExplicit AFTER HOURS TIME PREMIUM DESIGNATED HOLIDAYS - Between 0700 and 2200 hoursExplicit AFTER HOURS TIME PREMIUM WEEKDAY EVENING - Between 1700 and 2200 hoursExplicit AFTER HOURS TIME PREMIUM ANY DAY NIGHT MORNING - Between 2400 and 0700 hoursExplicit AFTER HOURS TIME PREMIUM ANY DAY NIGHT EVENING - Between 2200 and 2400 hoursExplicit AFTER HOURS TIME PREMIUM STATUTORY HOLIDAYS - Between 0700 and 2200 hoursExplicit AFTER HOURS TIME PREMIUM WEEKEND - Between 0700 and 2200 hoursExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "PNTA",
+        "description": "PODIATRIC SURGERY AFTER HOURS TIME PREMIUM ANY DAY NIGHT MORNING - Between 2400 and 0700 hoursExplicit"
+      },
+      {
+        "code": "PNTP",
+        "description": "PODIATRIC SURGERY AFTER HOURS TIME PREMIUM ANY DAY NIGHT EVENING - Between 2200 and 2400 hoursExplicit"
+      },
+      {
+        "code": "PTEV",
+        "description": "PODIATRIC SURGERY AFTER HOURS TIME PREMIUM WEEKDAY EVENING - Between 1700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "PTST",
+        "description": "PODIATRIC SURGERY AFTER HOURS TIME PREMIUM STATUTORY HOLIDAYS - Between 0700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "PTWK",
+        "description": "PODIATRIC SURGERY AFTER HOURS TIME PREMIUM WEEKEND - Between 0700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "TDES",
+        "description": "AFTER HOURS TIME PREMIUM DESIGNATED HOLIDAYS - Between 0700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "TEV",
+        "description": "AFTER HOURS TIME PREMIUM WEEKDAY EVENING - Between 1700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "TNTA",
+        "description": "AFTER HOURS TIME PREMIUM ANY DAY NIGHT MORNING - Between 2400 and 0700 hoursExplicit"
+      },
+      {
+        "code": "TNTP",
+        "description": "AFTER HOURS TIME PREMIUM ANY DAY NIGHT EVENING - Between 2200 and 2400 hoursExplicit"
+      },
+      {
+        "code": "TST",
+        "description": "AFTER HOURS TIME PREMIUM STATUTORY HOLIDAYS - Between 0700 and 2200 hoursExplicit"
+      },
+      {
+        "code": "TWK",
+        "description": "AFTER HOURS TIME PREMIUM WEEKEND - Between 0700 and 2200 hoursExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "TELE",
+    "name": "TELEHEALTH",
+    "description": "This modifier is used to indicate telehealth services. This modifier is used to indicate telehealth services. The TELES modifier may only be claimed when providing services at a regional telehealth site or registered Health Canada Telehealth location. The use of SKYPE or any other secure video transfer system may not be claimed using the TELES modifier. Only services provided using regional or Health Canada telehealth equipment may be claimed using the TELES modifier. The TELES modifier is NOT to be claimed for services provided via telephone. The TELES modifier may only be claimed when providing services at a regional telehealth site or registered Health Canada Telehealth location. The use of SKYPE or any other secure video transfer system may not be claimed using the TELES modifier. Only services provided using regional or Health Canada telehealth equipment may be claimed using the TELES modifier. The TELES modifier is NOT to be claimed for services provided via telephone. Description: TELEHEALTHExplicitA Medical consultant (other than a radiologist) may claim the appropriate consultation health service code with modifier TELES when a patient is referred from another physician, audiologist, a midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner.Referrals from a non-physician other than an audiologist, midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner may be claimed under the appropriate non-referred visit health service code.A Podiatric Surgeon consultant may claim the appropriate consultation health service code with modifier TELES when a patient is referred from a Medical practitioner, podiatric surgeon or a podiatrist. Referrals from any other source may be claimed under the appropriate non-referred visit health service code.Please refer to Governing Rules 17.1, 17.5, and 17.6 for more information. A Medical consultant (other than a radiologist) may claim the appropriate consultation health service code with modifier TELES when a patient is referred from another physician, audiologist, a midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner.Referrals from a non-physician other than an audiologist, midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner may be claimed under the appropriate non-referred visit health service code.A Podiatric Surgeon consultant may claim the appropriate consultation health service code with modifier TELES when a patient is referred from a Medical practitioner, podiatric surgeon or a podiatrist. Referrals from any other source may be claimed under the appropriate non-referred visit health service code.Please refer to Governing Rules 17.1, 17.5, and 17.6 for more information. A Medical consultant (other than a radiologist) may claim the appropriate consultation health service code with modifier TELES when a patient is referred from another physician, audiologist, a midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner. Referrals from a non-physician other than an audiologist, midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner may be claimed under the appropriate non-referred visit health service code. A Podiatric Surgeon consultant may claim the appropriate consultation health service code with modifier TELES when a patient is referred from a Medical practitioner, podiatric surgeon or a podiatrist. Referrals from any other source may be claimed under the appropriate non-referred visit health service code. Please refer to Governing Rules 17.1, 17.5, and 17.6 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "TELES",
+        "description": "TELEHEALTHExplicitA Medical consultant (other than a radiologist) may claim the appropriate consultation health service code with modifier TELES when a patient is referred from another physician, audiologist, a midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner.Referrals from a non-physician other than an audiologist, midwife, chiropractor, podiatrist, dentist, optometrist, physical therapist or nurse practitioner may be claimed under the appropriate non-referred visit health service code.A Podiatric Surgeon consultant may claim the appropriate consultation health service code with modifier TELES when a patient is referred from a Medical practitioner, podiatric surgeon or a podiatrist. Referrals from any other source may be claimed under the appropriate non-referred visit health service code.Please refer to Governing Rules 17.1, 17.5,  and 17.6 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "TRAY",
+    "name": "TRAY",
+    "description": "A specified amount is added to the base amount for procedures listed in Governing Rule 14.1 and 14.2. If more than one tray is used refer to NBTR. A specified amount is added to the base amount for procedures listed in Governing Rule 14.1 and 14.2. If more than one tray is used refer to NBTR. Description: MAJOR TRAY MINOR TRAY Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "MAJT",
+        "description": "MAJOR TRAY"
+      },
+      {
+        "code": "MINT",
+        "description": "MINOR TRAY"
+      }
+    ]
+  },
+  {
+    "modifierCode": "TSAR",
+    "name": "TWO SURGEONS SAME ANATOMICAL REGION",
+    "description": "Used to indicate that payment for the 2nd surgeon is to be made according to the Price List. Example: Health Service Code 14.49H (tumor of the cranial base). Base rate is payable for the neurosurgical component performed by the neurosurgeon. If the otolaryngological component is performed by a second surgeon, modifier ENT must be applied to Health Service Code 14.49H. Used to indicate that payment for the 2nd surgeon is to be made according to the Price List. Example: Health Service Code 14.49H (tumor of the cranial base). Base rate is payable for the neurosurgical component performed by the neurosurgeon. If the otolaryngological component is performed by a second surgeon, modifier ENT must be applied to Health Service Code 14.49H. Description: OTOLARYNGOLOGYExplicitIndicates the payment for the otolaryngological component of the procedure. Indicates the payment for the otolaryngological component of the procedure. Indicates the payment for the otolaryngological component of the procedure. TWO SURGEONS SAME ANATOMICAL REGIONExplicitPayment for the second surgeon same anatomical region should be processed according to the Price List. Payment for the second surgeon same anatomical region should be processed according to the Price List. Payment for the second surgeon same anatomical region should be processed according to the Price List. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ENT",
+        "description": "OTOLARYNGOLOGYExplicitIndicates the payment for the otolaryngological component of the procedure."
+      },
+      {
+        "code": "TSAR",
+        "description": "TWO SURGEONS SAME ANATOMICAL REGIONExplicitPayment for the second surgeon same anatomical region should be processed according to the Price List."
+      }
+    ]
+  },
+  {
+    "modifierCode": "UGA",
+    "name": "PROCEDURE UNDER GENERAL ANESTHETIC",
+    "description": "Increases payment for services performed under general anesthetic in accordance with restrictions listed in the Governing Rule. Increases payment for services performed under general anesthetic in accordance with restrictions listed in the Governing Rule. The UGA (Under General Anesthetic) modifier is intended to compensate physicians for the inconvenience of scrubbing in and preparing to do a procedure in the OR with the patient Under General Anesthetic when the procedure is ordinarily performed in a standard room without general anesthetic. Criteria:• The UGA modifier is attached to procedures that may require an anesthetic and are paid less than the UGA modifier.• It can be applied to a procedure when the conditions are such that the patient would not tolerate the procedure without the use of a general anesthetic and the physician must complete the service in the OR with the use of general anaesthetic.• The UGA modifier does not apply to second and subsequent procedures done under the same anesthetic at the same operative encounter. Multiple procedures: The UGA modifier can be applied if more than one procedure is provided at the same encounter and only when each procedure is paid less than the rate of the UGA modifier. The physician may submit the UGA modifier on the procedure with the greater benefit rate. All other services provided at the same encounter will be paid at the rates listed in the Price List. All other payment modifiers will be applied as appropriate, e.g., LVP75, ADD, LVP50, etc.When one or more of the procedures provided in the OR and under general anesthetic is paid equal or greater than the rate for the UGA modifier, the UGA modifier does not apply. It cannot be added to the service. The rates for each procedure will be applied according to the Price List.For more information, please review Governing Rule 6.8.4 The UGA (Under General Anesthetic) modifier is intended to compensate physicians for the inconvenience of scrubbing in and preparing to do a procedure in the OR with the patient Under General Anesthetic when the procedure is ordinarily performed in a standard room without general anesthetic. Criteria: • The UGA modifier is attached to procedures that may require an anesthetic and are paid less than the UGA modifier. • It can be applied to a procedure when the conditions are such that the patient would not tolerate the procedure without the use of a general anesthetic and the physician must complete the service in the OR with the use of general anaesthetic. • The UGA modifier does not apply to second and subsequent procedures done under the same anesthetic at the same operative encounter. Multiple procedures: The UGA modifier can be applied if more than one procedure is provided at the same encounter and only when each procedure is paid less than the rate of the UGA modifier. The physician may submit the UGA modifier on the procedure with the greater benefit rate. All other services provided at the same encounter will be paid at the rates listed in the Price List. All other payment modifiers will be applied as appropriate, e.g., LVP75, ADD, LVP50, etc. When one or more of the procedures provided in the OR and under general anesthetic is paid equal or greater than the rate for the UGA modifier, the UGA modifier does not apply. It cannot be added to the service. The rates for each procedure will be applied according to the Price List. For more information, please review Governing Rule 6.8.4 Description: PROCEDURE UNDER GENERAL ANESTHETICExplicitReplaces base rate for specific procedures performed under general anesthetic in accordance with the Governing Rule.Please refer to Governing Rule 6.8.4 for more information. Replaces base rate for specific procedures performed under general anesthetic in accordance with the Governing Rule.Please refer to Governing Rule 6.8.4 for more information. Replaces base rate for specific procedures performed under general anesthetic in accordance with the Governing Rule. Please refer to Governing Rule 6.8.4 for more information. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "UGA",
+        "description": "PROCEDURE UNDER GENERAL ANESTHETICExplicitReplaces base rate for specific procedures performed under general anesthetic in accordance with the Governing Rule.Please refer to Governing Rule 6.8.4 for more information."
+      }
+    ]
+  },
+  {
+    "modifierCode": "UNDP",
+    "name": "UNDISPLACED",
+    "description": "Used to indicate an undisplaced fracture as described in Governing Rule 6.11.2. Used to indicate an undisplaced fracture as described in Governing Rule 6.11.2. Description: UNDISPLACEDExplicit Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "UNDP",
+        "description": "UNDISPLACEDExplicit"
+      }
+    ]
+  },
+  {
+    "modifierCode": "VANE",
+    "name": "VARIABLE ANESTHETIC",
+    "description": "Indicates a specific rate adjustment for role ANE and/or ANEST with specific HSCs. Indicates a specific rate adjustment for role ANE and/or ANEST with specific HSCs. Description: ADDITIONS ANESTHETICModifier ADDA is derived from explicit modifiers ANE and ADD. It indicates the anesthetic rate which is payable in addition to a specific anesthetic rate for another procedure. Modifier ADDA is derived from explicit modifiers ANE and ADD. It indicates the anesthetic rate which is payable in addition to a specific anesthetic rate for another procedure. Modifier ADDA is derived from explicit modifiers ANE and ADD. It indicates the anesthetic rate which is payable in addition to a specific anesthetic rate for another procedure. AGE ANESTHETIC OVER 2 YEARSModifier AGEG2 is derived from the implicit modifier G2 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEG2 is derived from the implicit modifier G2 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEG2 is derived from the implicit modifier G2 and explicit modifier ANE. It adjusts the rate for role ANE. AGE ANESTHETIC UNDER 10 YEARSModifier AGEL10 is derived from the implicit modifier L10 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEL10 is derived from the implicit modifier L10 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEL10 is derived from the implicit modifier L10 and explicit modifier ANE. It adjusts the rate for role ANE. AGE ANESTHETIC UNDER 4 YEARSModifier AGEL4 is derived from the implicit modifier L4 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEL4 is derived from the implicit modifier L4 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier AGEL4 is derived from the implicit modifier L4 and explicit modifier ANE. It adjusts the rate for role ANE. UNDER 30 DAYS, ROLE OF ANEModifier L30AN is derived from the implicit modifier L30 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier L30AN is derived from the implicit modifier L30 and explicit modifier ANE. It adjusts the rate for role ANE. Modifier L30AN is derived from the implicit modifier L30 and explicit modifier ANE. It adjusts the rate for role ANE. UNDER 30 DAYS, ROLE OF ANESTModifier L30AT is derived from the implicit modifier L30 and explicit modifier ANEST. It adjusts the rate for role ANEST. Modifier L30AT is derived from the implicit modifier L30 and explicit modifier ANEST. It adjusts the rate for role ANEST. Modifier L30AT is derived from the implicit modifier L30 and explicit modifier ANEST. It adjusts the rate for role ANEST. UNDER 30 DAYS, ROLE OF ANES2Modifier L30AT2 is derived from the implicit modifier L30 and explicit modifier 2ANES. It adjusts the rate for role 2ANES. Modifier L30AT2 is derived from the implicit modifier L30 and explicit modifier 2ANES. It adjusts the rate for role 2ANES. Modifier L30AT2 is derived from the implicit modifier L30 and explicit modifier 2ANES. It adjusts the rate for role 2ANES. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "ADDA",
+        "description": "ADDITIONS ANESTHETICModifier ADDA is derived from explicit modifiers ANE and ADD. It indicates the anesthetic rate which is payable in addition to a specific anesthetic rate for another procedure."
+      },
+      {
+        "code": "AGEG2",
+        "description": "AGE ANESTHETIC OVER 2 YEARSModifier AGEG2 is derived from the implicit modifier G2 and explicit modifier ANE. It adjusts the rate for role ANE."
+      },
+      {
+        "code": "AGEL10",
+        "description": "AGE ANESTHETIC UNDER 10 YEARSModifier AGEL10 is derived from the implicit modifier L10 and explicit modifier ANE. It adjusts the rate for role ANE."
+      },
+      {
+        "code": "AGEL4",
+        "description": "AGE ANESTHETIC UNDER 4 YEARSModifier AGEL4 is derived from the implicit modifier L4 and explicit modifier ANE. It adjusts the rate for role ANE."
+      },
+      {
+        "code": "L30AN",
+        "description": "UNDER 30 DAYS, ROLE OF ANEModifier L30AN is derived from the implicit modifier L30 and explicit modifier ANE. It adjusts the rate for role ANE."
+      },
+      {
+        "code": "L30AT",
+        "description": "UNDER 30 DAYS, ROLE OF ANESTModifier L30AT is derived from the implicit modifier L30 and explicit modifier ANEST. It adjusts the rate for role ANEST."
+      },
+      {
+        "code": "L30AT2",
+        "description": "UNDER 30 DAYS, ROLE OF ANES2Modifier L30AT2 is derived from the implicit modifier L30 and explicit modifier 2ANES.  It adjusts the rate for role 2ANES."
+      }
+    ]
+  },
+  {
+    "modifierCode": "XRAY",
+    "name": "XRAY STUDIES",
+    "description": "Used to indicate that an xray was performed with the use of video, stereo, or cine studies or that tomography was used in addition to mammography services. Used to indicate that an xray was performed with the use of video, stereo, or cine studies or that tomography was used in addition to mammography services. Description: CINEExplicitIndicates xray involved cine. Indicates xray involved cine. Indicates xray involved cine. STEREOExplicitIndicates xray involved stereo. Indicates xray involved stereo. Indicates xray involved stereo. TOMOGRAPHYExplicitIndicates tomography is used in addition to mammography services. Indicates tomography is used in addition to mammography services. Indicates tomography is used in addition to mammography services. VIDEOExplicitIndicates xray involved video. Indicates xray involved video. Indicates xray involved video. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "CINE",
+        "description": "CINEExplicitIndicates xray involved cine."
+      },
+      {
+        "code": "STEREO",
+        "description": "STEREOExplicitIndicates xray involved stereo."
+      },
+      {
+        "code": "TOMO",
+        "description": "TOMOGRAPHYExplicitIndicates tomography is used in addition to mammography services."
+      },
+      {
+        "code": "VIDEO",
+        "description": "VIDEOExplicitIndicates xray involved video."
+      }
+    ]
+  },
+  {
+    "modifierCode": "2ANU",
+    "name": "ANESTHETIC TIME PREMIUM UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the Anesthetic time unit premium role modifier (2ANES) is used. EACH UNIT REPRESENTS 5 MINUTES. ADDITIONAL 5 MINUTE UNITS MAY NOT BE CLAIMED UNLESS A FULL 5 MINUTES HAS ELASPED. This modifier is system derived from the information entered in the calls field when the Anesthetic time unit premium role modifier (2ANES) is used. EACH UNIT REPRESENTS 5 MINUTES. ADDITIONAL 5 MINUTE UNITS MAY NOT BE CLAIMED UNLESS A FULL 5 MINUTES HAS ELASPED. Description: ANESTHETIC TIME PREMIUM UNITSFor anesthetic claimed on a time basis, claim the entire elapsed time against the health service code which has the 2ANES modifier, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against the health service code which has the 2ANES modifier). 2 hours equals 24 calls. For anesthetic claimed on a time basis, claim the entire elapsed time against the health service code which has the 2ANES modifier, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against the health service code which has the 2ANES modifier). 2 hours equals 24 calls. For anesthetic claimed on a time basis, claim the entire elapsed time against the health service code which has the 2ANES modifier, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against the health service code which has the 2ANES modifier). 2 hours equals 24 calls. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "2ANU",
+        "description": "ANESTHETIC TIME PREMIUM UNITSFor anesthetic claimed on a time basis, claim the entire elapsed time against the health service code which has the 2ANES modifier, even if multiple procedures are done. (Example: if procedure A and B take a combined total of 2 hours, claim 2 hours against the health service code which has the 2ANES modifier). 2 hours equals 24 calls."
+      }
+    ]
+  },
+  {
+    "modifierCode": "2MNU",
+    "name": "SECOND NEUROSURGEON MICROSURGERY UNITS",
+    "description": "Description: SECOND NEUROSURGEON MICROSURGERY UNITSThis modifier is system derived from the information entered in the calls field when the second neurosurgeon microsurgery role modifier (MSRGN) is used. EACH UNIT REPRESENTS 1 HOUR. This modifier is system derived from the information entered in the calls field when the second neurosurgeon microsurgery role modifier (MSRGN) is used. EACH UNIT REPRESENTS 1 HOUR. This modifier is system derived from the information entered in the calls field when the second neurosurgeon microsurgery role modifier (MSRGN) is used. EACH UNIT REPRESENTS 1 HOUR. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "2MNU",
+        "description": "SECOND NEUROSURGEON MICROSURGERY UNITSThis modifier is system derived from the information entered in the calls field when the second neurosurgeon microsurgery role modifier (MSRGN) is used.  EACH UNIT REPRESENTS 1 HOUR."
+      }
+    ]
+  },
+  {
+    "modifierCode": "2MPU",
+    "name": "SECOND PLASTIC SURGEON MICROSURGERY UNITS",
+    "description": "Description: SECOND PLASTIC SURGEON MICROSURGERY UNITSThis modifier is system derived from the information entered in the calls field when the second plastic surgeon microsurgery role modifier (MSRGP) is used. EACH UNIT REPRESENTS 1 HOUR. This modifier is system derived from the information entered in the calls field when the second plastic surgeon microsurgery role modifier (MSRGP) is used. EACH UNIT REPRESENTS 1 HOUR. This modifier is system derived from the information entered in the calls field when the second plastic surgeon microsurgery role modifier (MSRGP) is used. EACH UNIT REPRESENTS 1 HOUR. Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "2MPU",
+        "description": "SECOND PLASTIC SURGEON MICROSURGERY UNITSThis modifier is system derived from the information entered in the calls field when the second plastic surgeon microsurgery role modifier (MSRGP) is used.  EACH UNIT REPRESENTS 1 HOUR."
+      }
+    ]
+  },
+  {
+    "modifierCode": "2MSU",
+    "name": "SECOND MICROSURGERY UNITS",
+    "description": "This modifier is system derived from the information entered in the calls field when the second Microsurgery role modifier (MSURG2) is used. EACH UNIT REPRESENTS 1 HOUR. This modifier is system derived from the information entered in the calls field when the second Microsurgery role modifier (MSURG2) is used. EACH UNIT REPRESENTS 1 HOUR. Description: SECOND MICROSURGERY UNITS Disclaimer: this tool has been produced by the AMA solely as a convenient reference and the official Government of Alberta statutes and regulations must be consulted for all purposes of interpreting and applying the law. © Alberta Medical Association 2026 | Privacy Policy",
+    "subCodes": [
+      {
+        "code": "2MSU",
+        "description": "SECOND MICROSURGERY UNITS"
+      }
+    ]
+  }
+]

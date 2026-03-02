@@ -1,0 +1,30 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import NavCTA from '../global/NavCTA.astro';
+import EarlyBirdCounter from './EarlyBirdCounter';
+---
+
+<Section bg="primary">
+  <Container class="text-center">
+    <SectionHeading tag="h2" size="3xl" light>
+      Join the first 100 physicians on Meritum.
+    </SectionHeading>
+
+    <div class="mt-8">
+      <EarlyBirdCounter client:visible />
+    </div>
+
+    <p class="mt-6 text-lg text-white/80 max-w-2xl mx-auto">
+      $199/month for your first 12 months, at a flat rate with no percentage taken off the top. Cancel anytime.
+    </p>
+    <p class="mt-4 text-base text-white/60 max-w-2xl mx-auto">
+      The early bird rate is for physicians who are willing to be early. You get a lower price, and we get your feedback. When the 100 spots fill, the rate goes to $279/month for new signups, but your rate stays locked for the full 12 months regardless.
+    </p>
+
+    <div class="mt-8">
+      <NavCTA size="base" />
+    </div>
+  </Container>
+</Section>

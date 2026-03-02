@@ -1,0 +1,61 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const steps = [
+  {
+    number: 1,
+    title: 'Professional profile',
+    body: 'Your AHCIP billing number, CPSA registration number, specialty, and physician type. The platform validates each field as you enter it, so if something doesn\'t match the expected format, you\'ll know before you move on. This is the information that configures your rules engine: your specialty determines which governing rules apply to your claims, and your physician type sets your billing context for fee schedule lookups.',
+  },
+  {
+    number: 2,
+    title: 'Business arrangement(s)',
+    body: 'Your business arrangement number tells Alberta Health where to route your payments. Most physicians have one BA number; if you bill under PCPCM as well as fee-for-service, the setup walks you through adding both. The platform enforces the dual-BA requirement for PCPCM physicians, so the configuration is correct from the start rather than something you discover is wrong after your first submission.',
+  },
+  {
+    number: 3,
+    title: 'Practice location(s)',
+    body: 'Your practice name, functional centre code, and address. When you enter your location, the platform looks up your community code and determines your RRNP eligibility automatically. If you\'re eligible for rural and remote premiums, they\'ll be applied to every qualifying claim without any additional configuration. You can add multiple locations if you work across sites or do locum shifts; each location carries its own functional centre and RRNP status, and you select the applicable location when you create a claim.',
+  },
+  {
+    number: 4,
+    title: 'WCB configuration',
+    body: 'If you bill WCB Alberta, select your contract type from the dropdown. The platform auto-populates your permitted role codes and form types based on the WCB matrix, so you\'re working from the correct set of options from day one. If you hold multiple WCB contracts (for example, GP and occupational injury), you can add each one. If you don\'t bill WCB, skip this step entirely.',
+  },
+];
+---
+
+<Section bg="surface" id="onboarding">
+  <Container>
+    <SectionHeading tag="h2" size="3xl" class="max-w-2xl">
+      Four steps. Ten minutes. Everything you need is already in your wallet or your head.
+    </SectionHeading>
+
+    <div class="mt-12 space-y-8">
+      {steps.map(({ number, title, body }, i) => (
+        <div class="flex gap-6">
+          <div class="flex flex-col items-center">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+              {number}
+            </div>
+            {i < steps.length - 1 && <div class="mt-2 w-px flex-1 bg-primary/20" />}
+          </div>
+          <div class="pb-8">
+            <h3 class="font-display text-lg font-bold text-primary">Step {number}: {title}</h3>
+            <p class="mt-2 text-base leading-relaxed text-text">{body}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <p class="mt-4 max-w-2xl text-base leading-relaxed text-text">
+      That's it. No training call, no implementation project, no six-week rollout. Once your profile is complete, your rules engine is configured and you can start entering claims immediately.
+    </p>
+
+    <p class="mt-6 text-sm text-text-muted">
+      If someone else helps manage your billing, you can invite them as a delegate with controlled permissions. They see only what you choose to share.
+    </p>
+  </Container>
+</Section>

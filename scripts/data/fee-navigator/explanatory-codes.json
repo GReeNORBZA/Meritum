@@ -1,0 +1,617 @@
+[
+  {
+    "code": "INFRC",
+    "description": "RECOVERED FROM INCOMING FUND",
+    "category": "ACRONYMS AND SPECIAL PROCESSING CODES"
+  },
+  {
+    "code": "RTRF",
+    "description": "REASSESS TRANSACTION REFUSED",
+    "category": "ACRONYMS AND SPECIAL PROCESSING CODES"
+  },
+  {
+    "code": "RVRSL",
+    "description": "REVERSAL",
+    "category": "ACRONYMS AND SPECIAL PROCESSING CODES"
+  },
+  {
+    "code": "01",
+    "description": "NOT REGISTERED",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "01A",
+    "description": "NOT REGISTERED",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "01B",
+    "description": "NON RESIDENT",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "01C",
+    "description": "GOOD FAITH CLAIM",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "02",
+    "description": "REGISTRATION NUMBER/PERSONAL HEALTH NUMBER CONFLICT",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "03",
+    "description": "NEWBORN",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "04",
+    "description": "DONOR'S PERSONAL HEALTH NUMBER USED",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "04A",
+    "description": "SERVICE NOT GOOD FAITH",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05",
+    "description": "PATIENT PERSONAL HEALTH NUMBER - NOT EFFECTIVE",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05A",
+    "description": "INVALID PERSONAL HEALTH NUMBER",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05AA",
+    "description": "OPTED OUT RESIDENT",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05B",
+    "description": "UNREGISTERED WORKERS' COMPENSATION BOARD CLAIM",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05BA",
+    "description": "INVALID/BLANK REGISTRATION NUMBER",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "05BB",
+    "description": "INVALID/BLANK UNIQUE LIFETIME IDENTIFIER",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "06",
+    "description": "RETROACTIVE ELIGIBILITY CHANGE",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "07",
+    "description": "NEW RECIPIENT FOR ALTERNATE PAYMENT PLAN CONTRACT",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "08",
+    "description": "NEW RECIPIENT PREVIOUSLY PAID FOR ALTERNATE PAYMENT PLAN CONTRACT",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "09",
+    "description": "INITIAL ROSTER RELATIONSHIP",
+    "category": "PATIENT REGISTRATION"
+  },
+  {
+    "code": "10",
+    "description": "INELIGIBLE PRACTITIONER/INCORRECT SUBMISSION",
+    "category": "PRACTITIONER REGISTRATION"
+  },
+  {
+    "code": "10A",
+    "description": "SERVICE PROVIDER RESTRICTIONS",
+    "category": "PRACTITIONER REGISTRATION"
+  },
+  {
+    "code": "10AA",
+    "description": "INELIGIBLE PRACTITIONER",
+    "category": "PRACTITIONER REGISTRATION"
+  },
+  {
+    "code": "11",
+    "description": "LOCUM BUSINESS ARRANGEMENT",
+    "category": "PRACTITIONER REGISTRATION"
+  },
+  {
+    "code": "20",
+    "description": "INELIGIBLE SERVICES",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20A",
+    "description": "THIRD PARTY SERVICES",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20AB",
+    "description": "EXPERIMENTAL/RESEARCH SERVICES",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20B",
+    "description": "ARMED FORCES AND FEDERAL PENITENTIARY",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20C",
+    "description": "PRACTITIONER BILLING FOR OWN FAMILY",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20D",
+    "description": "DENTAL CARE - ORAL SURGERY",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "20E",
+    "description": "BENEFITS SCHEDULE",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "21",
+    "description": "WORKERS' COMPENSATION BOARD CLAIM",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "21AB",
+    "description": "WORKERS' COMPENSATION BOARD CLAIM SUBMISSIONS",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "21AC",
+    "description": "WORKERS'COMPENSATION BOARD SUPPORTING DOCUMENTATION REQUIRED",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "22",
+    "description": "INELIGIBLE PATIENT",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "23A",
+    "description": "PRIOR APPROVAL",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "25",
+    "description": "EXCLUDED SERVICE - RECIPROCAL PROGRAMS",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "25A",
+    "description": "MEDICAL RECIPROCAL - INCORRECT CLAIM",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "28",
+    "description": "OPTED OUT PRACTITIONER",
+    "category": "INELIGIBLE SERVICES"
+  },
+  {
+    "code": "50",
+    "description": "TWO PHYSICIANS - UNRELATED ABDOMINAL SURGICAL PROCEDURES",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50A",
+    "description": "PROCEDURES INCLUDED IN THE MAJOR PROCEDURAL BENEFIT",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50AA",
+    "description": "DIAGNOSTIC PROCEDURES RELATING TO SURGERY",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50AB",
+    "description": "SECOND OR SUBSEQUENT PROCEDURE",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50B",
+    "description": "REPEAT CLOSED REDUCTION - SAME PRACTITIONER",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50BA",
+    "description": "REPEAT CLOSED REDUCTION - DIFFERENT PRACTITIONER",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50BB",
+    "description": "CLOSED - OPEN REDUCTION - DIFFERENT PRACTITIONER",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "50BC",
+    "description": "CLOSED - OPEN REDUCTION - SAME PRACTITIONER",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "51",
+    "description": "PRE AND/OR POST-OPERATIVE CARE - TWO PRACTITIONERS",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "51A",
+    "description": "UNILATERAL - BILATERAL PROCEDURES",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "51G",
+    "description": "SURGICAL ASSISTS",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "52A",
+    "description": "LACERATIONS",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "52B",
+    "description": "SAME PHYSICIAN - TWO FUNCTIONS",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "54",
+    "description": "INCLUDED SERVICES",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "54A",
+    "description": "POSTNATAL MAXIMUM",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "54B",
+    "description": "PRENATAL CARE",
+    "category": "SURGICAL PROCEDURES"
+  },
+  {
+    "code": "56",
+    "description": "PROCEDURE - VISIT",
+    "category": "MINOR PROCEDURES"
+  },
+  {
+    "code": "56A",
+    "description": "MULTIPLE MINOR SURGICAL PROCEDURES",
+    "category": "MINOR PROCEDURES"
+  },
+  {
+    "code": "56B",
+    "description": "VARICOSE VEINS INJECTIONS",
+    "category": "MINOR PROCEDURES"
+  },
+  {
+    "code": "56C",
+    "description": "TRAY SERVICES",
+    "category": "MINOR PROCEDURES"
+  },
+  {
+    "code": "56D",
+    "description": "FIBREGLASS CAST",
+    "category": "MINOR PROCEDURES"
+  },
+  {
+    "code": "58",
+    "description": "TWO PROCEDURES - TWO SURGEONS",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58A",
+    "description": "INCLUSIVE ANESTHETIC BENEFIT",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58B",
+    "description": "LOCAL ANESTHETIC",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58BA",
+    "description": "SIMULTANEOUS SURGERY",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58C",
+    "description": "MULTIPLE BENIGN SKIN LESIONS",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58E",
+    "description": "RELATED ANESTHETIC CODE",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "58F",
+    "description": "ADDITIONAL AGE BENEFIT",
+    "category": "ANESTHESIA"
+  },
+  {
+    "code": "60",
+    "description": "INITIAL VISIT - MAJOR",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60A",
+    "description": "CONSULTATION - INCLUSIVE BENEFIT",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60AA",
+    "description": "CONSULTATION",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60B",
+    "description": "DENTAL CONSULTATION",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60C",
+    "description": "HOSPITAL ADMISSION",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60E",
+    "description": "EMERGENCY DEPARTMENT/ADVANCED AMBULATORY CARE CENTRE/URGENT CARE CENTRE VISITS",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "60EA",
+    "description": "CRITICAL CARE - EMERGENCY DEPARTMENT/ADVANCED AMBULATORY CARE CENTRE/URGENT CARE CENTRE VISIT",
+    "category": "CONSULTATIONS/VISITS"
+  },
+  {
+    "code": "70",
+    "description": "PRE/POST-OPERATIVE CARE",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70A",
+    "description": "TWO DENTAL PROCEDURES",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70D",
+    "description": "INELIGIBLE DENTAL SERVICES",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70E",
+    "description": "TOOTH IDENTIFICATION",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70EA",
+    "description": "DENTAL EXTRACTION",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70EB",
+    "description": "TOOTH SURFACE/TOOTH CODE",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70F",
+    "description": "DENTURES/REBASE/RESET",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70G",
+    "description": "RELINE OR REBASE",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70J",
+    "description": "INCLUSION WITHIN THE COMPOSITE BENEFIT",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "70L",
+    "description": "DENTAL PROCEDURES",
+    "category": "DENTAL ASSESSMENT"
+  },
+  {
+    "code": "73",
+    "description": "ADDITIONAL COMPENSATION CLAIMS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73A",
+    "description": "ADDITIONAL COMPENSATION COMMITTEE",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73BA",
+    "description": "INCORRECT ADDITIONAL COMPENSATION CLAIM SUBMISSION",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73BB",
+    "description": "NO PAYMENT BY AHCIP",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73BC",
+    "description": "REQUEST FOR ADDITIONAL COMPENSATION",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73BD",
+    "description": "NON-INSURED SERVICE",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "73BE",
+    "description": "CHANGE OF PAYMENT RESPONSIBILITY",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80B",
+    "description": "EYE EXAMINATIONS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80BA",
+    "description": "OPTOMETRIC SERVICES",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80BD",
+    "description": "FOLLOW-UP VISIT (HSC B901) TEST REQUIRED",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80BE",
+    "description": "MAXIMUM BENEFIT REACHED",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80BF",
+    "description": "PREVIOUS PAYMENT, SAME DATE OF SERVICE",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80C",
+    "description": "PODIATRIC/DENTAL LIMITS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80D",
+    "description": "EYEGLASSES/LENSES/FRAME",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80F",
+    "description": "TWELVE MONTH LIMIT",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80G",
+    "description": "OUTDATED CLAIMS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80H",
+    "description": "CONTRACT LIMITS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80J",
+    "description": "PRACTITIONER/BUSINESS ARRANGEMENT LIMITS",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80K",
+    "description": "RECIPIENT LIMIT HAS BEEN REACHED FOR ALTERNATE PAYMENT PLAN CONTRACT",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80L",
+    "description": "ALTERNATE PAYMENT PLAN FEE FOR SERVICE",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "80M",
+    "description": "BUSINESS COST PROGRAM",
+    "category": "ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6"
+  },
+  {
+    "code": "90",
+    "description": "PAYMENT REDUCTION",
+    "category": "ADJUSTMENTS"
+  },
+  {
+    "code": "90A",
+    "description": "PREVIOUS CORRESPONDENCE - MUTUAL INFORMATION",
+    "category": "ADJUSTMENTS"
+  },
+  {
+    "code": "90D",
+    "description": "ADJUSTMENT, RECIPIENT NO LONGER ELIGIBLE FOR COVERAGE",
+    "category": "ADJUSTMENTS"
+  },
+  {
+    "code": "90E",
+    "description": "ADJUSTMENT, RECIPIENT DECEASED",
+    "category": "ADJUSTMENTS"
+  },
+  {
+    "code": "95",
+    "description": "NEWBORN",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95A",
+    "description": "INPATIENT/OUTPATIENT SERVICES",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95B",
+    "description": "DAY OF DISCHARGE",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95C",
+    "description": "HIGH COST PROCEDURE/ZERO WARD RATE",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95D",
+    "description": "MULTIPLE TRANSPLANTS SAME HOSPITAL STAY",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95E",
+    "description": "REDUCED BENEFITS",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95F",
+    "description": "OUTPATIENT SERVICES",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95G",
+    "description": "MAXIMUM NUMBER OF SERVICES",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95K",
+    "description": "CLAIM IN PROCESS",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95L",
+    "description": "OUT OF PROVINCE REGISTRATION EXPIRY DATE",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "95M",
+    "description": "UNABLE TO PROCESS UPDATED TRANSACTION",
+    "category": "HOSPITAL RECIPROCAL"
+  },
+  {
+    "code": "98",
+    "description": "CAPITATION PAID",
+    "category": "ALTERNATE PAYMENT PLAN"
+  },
+  {
+    "code": "98A",
+    "description": "INVALID HEALTH SERVICE CODE",
+    "category": "ALTERNATE PAYMENT PLAN"
+  }
+]

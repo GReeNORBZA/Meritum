@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-02T22:33:46.424Z",
+  "durationSeconds": 1077,
+  "counts": {
+    "hscCodes": 3089,
+    "hscModifierRows": 41328,
+    "modifiers": 42,
+    "governingRules": 19,
+    "explanatoryCodes": 123
+  },
+  "errors": []
+}

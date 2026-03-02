@@ -1,0 +1,66 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import { pricingConfig, formatCAD } from '../../config/pricing';
+import { siteConfig } from '../../config/site';
+---
+
+<Section bg="surface" id="practice-pricing">
+  <Container>
+    <div class="max-w-3xl mx-auto">
+      <SectionHeading tag="h2" size="2xl">
+        Running a practice with five or more physicians?
+      </SectionHeading>
+      <p class="mt-4 text-lg text-text-muted font-body">
+        One account, one invoice, every physician on the platform. The practice tier gives you 10% off the standard per-physician rate, with annual billing adding a further 5% for a total of up to 15% off list price.
+      </p>
+
+      <div class="mt-8 overflow-x-auto">
+        <table class="w-full border-collapse text-left" role="table">
+          <thead>
+            <tr class="border-b-2 border-primary/10">
+              <th class="py-3 pr-4 font-display text-sm font-bold text-primary" scope="col">&nbsp;</th>
+              <th class="py-3 px-4 font-display text-sm font-bold text-primary" scope="col">Per physician, monthly</th>
+              <th class="py-3 pl-4 font-display text-sm font-bold text-primary" scope="col">Per physician, annually</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-primary/5">
+              <td class="py-4 pr-4 font-body font-medium text-text">
+                Practice tier ({pricingConfig.practice.minimumPhysicians}+ physicians)
+              </td>
+              <td class="py-4 px-4 font-body text-text">
+                {formatCAD(pricingConfig.practice.monthlyRate)}/month <span class="text-sm text-text-muted">({pricingConfig.practice.clinicDiscountPercent}% off)</span>
+              </td>
+              <td class="py-4 pl-4 font-body text-text">
+                {formatCAD(pricingConfig.practice.annualRate)}/year <span class="text-sm text-text-muted">(~{formatCAD(Math.round(pricingConfig.practice.annualRate / 12))}/month, ~{pricingConfig.practice.maxDiscountPercent}% off)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-8 space-y-4 text-base leading-relaxed text-text font-body">
+        <p>
+          Every physician on the practice account gets the full platform: their own dashboard, their own rules engine and advice engine, their own claims data. The practice administrator manages seats and receives a single consolidated invoice, but does not have access to individual physician billing data or claim details. Your billing performance is your own.
+        </p>
+        <p>
+          Physicians can be added at any time, prorated to your billing cycle. If a physician leaves, they're removed at the end of the current calendar month. If the practice drops below five physicians, each remaining subscription reverts to the standard individual rate.
+        </p>
+        <p class="text-sm text-text-muted">
+          Plus {pricingConfig.gstPercent}% GST. Same features, same support, same continuous updates as individual subscriptions.
+        </p>
+      </div>
+
+      <div class="mt-8">
+        <a
+          href={siteConfig.ctaUrl}
+          class="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-body font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          Get started with practice pricing
+        </a>
+      </div>
+    </div>
+  </Container>
+</Section>

@@ -1,0 +1,222 @@
+---
+import Section from '../ui/Section.astro';
+import Container from '../ui/Container.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+
+const billingAgentRows = [
+  {
+    category: 'Cost',
+    agent: '3--5% of annual billings. On $400K, that\'s $12,000--$20,000/year.',
+    meritum: '$279/month standard ($3,348/year) or $265/month annual ($3,181/year). Same price whether you bill $200K or $2M.',
+  },
+  {
+    category: 'Pricing model',
+    agent: 'Percentage-based. The more you earn, the more you pay.',
+    meritum: 'Flat rate. Your billings go up, your cost stays the same.',
+  },
+  {
+    category: 'Revenue visibility',
+    agent: 'Often a monthly summary or PDF. Rejection details may require follow-up.',
+    meritum: 'Real-time dashboard with claim status, rejection patterns, and assessment results.',
+  },
+  {
+    category: 'Rules checking',
+    agent: 'Depends on the agent\'s knowledge. Errors caught after assessment, if at all.',
+    meritum: 'Automated pre-submission validation against every applicable governing rule, on every claim.',
+  },
+  {
+    category: 'Billing optimisation',
+    agent: 'Depends on the agent proactively reviewing your billing patterns. Many don\'t.',
+    meritum: 'Advice engine identifies missed codes and modifiers and analyses billing patterns for revenue recovery opportunities.',
+  },
+  {
+    category: 'Submission timing',
+    agent: 'On the agent\'s schedule. Claims may batch up during busy periods or leave.',
+    meritum: 'Automated Thursday cycle via H-Link. Claims go out on schedule regardless.',
+  },
+  {
+    category: 'WCB billing',
+    agent: 'Often separate or at additional cost. Some agents don\'t handle WCB.',
+    meritum: 'Included. AHCIP and WCB in the same platform, for every physician.',
+  },
+  {
+    category: 'PCPCM',
+    agent: 'Varies. Not all agents handle panel-based payment tracking and reconciliation.',
+    meritum: 'PCPCM panel tracking and payment reconciliation included as a separate billing stream.',
+  },
+  {
+    category: 'Your data',
+    agent: 'Lives in the agent\'s system. Leaving often means starting from scratch.',
+    meritum: 'Full export at any time, at no charge.',
+  },
+  {
+    category: 'Continuity risk',
+    agent: 'If your billing person retires, gets sick, or leaves, your revenue operations are disrupted.',
+    meritum: 'The rules are encoded in the platform. No single point of failure.',
+  },
+  {
+    category: 'Data residency',
+    agent: 'Varies. Not all agents can confirm where patient data is stored.',
+    meritum: 'DigitalOcean Toronto. HIA-compliant. IMA under s.66.',
+  },
+  {
+    category: 'Updates',
+    agent: 'Depends on the agent staying current with rule changes. You may not know if they haven\'t.',
+    meritum: 'Platform updates automatically when governing rules change. Every physician benefits immediately.',
+  },
+];
+
+const selfServeRows = [
+  {
+    category: 'Pre-submission rules checking',
+    existing: 'Limited or absent. Most tools submit what you enter without validating against governing rules.',
+    meritum: 'Every claim checked against every applicable AHCIP governing rule before submission.',
+  },
+  {
+    category: 'Billing optimisation',
+    existing: 'Not available. You\'re responsible for knowing which codes and modifiers apply.',
+    meritum: 'Advice engine flags missed codes and modifiers and analyses billing patterns for recovery opportunities.',
+  },
+  {
+    category: 'RRNP calculation',
+    existing: 'Usually requires manual configuration. Miss the setup and eligible premiums don\'t get applied.',
+    meritum: 'Auto-calculated from your practice location and specialty on every eligible claim.',
+  },
+  {
+    category: 'After-hours modifiers',
+    existing: 'Typically manual. You select the modifier and hope you chose the right time-period rate.',
+    meritum: 'Calculated automatically from your documented start and end times.',
+  },
+  {
+    category: 'WCB billing',
+    existing: 'Inconsistent. Some EMR-based tools have WCB modules that don\'t work for all physicians.',
+    meritum: 'AHCIP and WCB billing both work for every physician, regardless of EMR.',
+  },
+  {
+    category: 'PCPCM',
+    existing: 'Rarely integrated. Panel tracking and reconciliation are typically manual or absent.',
+    meritum: 'Panel enrolment tracking and payment reconciliation built in as a separate billing stream.',
+  },
+  {
+    category: 'Rejection analytics',
+    existing: 'Basic or absent. You see the refusal code; understanding patterns is on you.',
+    meritum: 'Rejection patterns analysed across your claim history, with reason codes in plain language.',
+  },
+  {
+    category: 'Rule updates',
+    existing: 'You may need to wait for software updates from the vendor, which may lag behind AHCIP changes.',
+    meritum: 'Rules engine updates when governing rules change. Included in your subscription.',
+  },
+  {
+    category: 'Alberta-specific depth',
+    existing: 'Most tools serve multiple provinces or countries. Alberta-specific features are often bolted on, not native.',
+    meritum: 'Built from the ground up for Alberta billing. AHCIP, WCB, RRNP, PCPCM, Thursday cycle, SOMB rules.',
+  },
+];
+---
+
+<Section id="comparison">
+  <Container>
+    <div class="text-center max-w-3xl mx-auto">
+      <SectionHeading tag="h2" size="3xl">
+        How Meritum Compares
+      </SectionHeading>
+    </div>
+
+    {/* Comparison 1: vs. Billing Agent */}
+    <div class="mt-16">
+      <h3 class="font-display text-xl lg:text-2xl font-bold text-primary">
+        Meritum vs. a Billing Agent
+      </h3>
+
+      {/* Desktop table (hidden below md) */}
+      <div class="mt-8 hidden md:block overflow-x-auto">
+        <table class="w-full border-collapse text-left" role="table">
+          <thead>
+            <tr class="border-b-2 border-primary/10">
+              <th class="py-3 pr-4 font-display text-sm font-bold text-primary w-[160px]" scope="col">&nbsp;</th>
+              <th class="py-3 px-4 font-display text-sm font-bold text-text-muted" scope="col">Billing Agent</th>
+              <th class="py-3 pl-4 font-display text-sm font-bold text-accent" scope="col">Meritum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {billingAgentRows.map((row) => (
+              <tr class="border-b border-primary/5">
+                <td class="py-4 pr-4 align-top font-display text-sm font-bold text-primary">{row.category}</td>
+                <td class="py-4 px-4 align-top font-body text-sm leading-relaxed text-text-muted">{row.agent}</td>
+                <td class="py-4 pl-4 align-top font-body text-sm leading-relaxed text-text">{row.meritum}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile stacked cards (visible below md) */}
+      <div class="mt-8 space-y-4 md:hidden">
+        {billingAgentRows.map((row) => (
+          <div class="rounded-lg border border-surface bg-white p-5">
+            <p class="font-display text-sm font-bold text-primary">{row.category}</p>
+            <div class="mt-3 space-y-3">
+              <div>
+                <p class="text-xs font-body font-medium uppercase tracking-wide text-text-muted">Billing Agent</p>
+                <p class="mt-1 text-sm leading-relaxed text-text-muted font-body">{row.agent}</p>
+              </div>
+              <div class="border-t border-surface pt-3">
+                <p class="text-xs font-body font-medium uppercase tracking-wide text-accent">Meritum</p>
+                <p class="mt-1 text-sm leading-relaxed text-text font-body">{row.meritum}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Comparison 2: vs. Existing Self-Serve Software */}
+    <div class="mt-20">
+      <h3 class="font-display text-xl lg:text-2xl font-bold text-primary">
+        Meritum vs. Existing Self-Serve Software
+      </h3>
+
+      {/* Desktop table (hidden below md) */}
+      <div class="mt-8 hidden md:block overflow-x-auto">
+        <table class="w-full border-collapse text-left" role="table">
+          <thead>
+            <tr class="border-b-2 border-primary/10">
+              <th class="py-3 pr-4 font-display text-sm font-bold text-primary w-[160px]" scope="col">&nbsp;</th>
+              <th class="py-3 px-4 font-display text-sm font-bold text-text-muted" scope="col">Existing Self-Serve Tools</th>
+              <th class="py-3 pl-4 font-display text-sm font-bold text-accent" scope="col">Meritum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selfServeRows.map((row) => (
+              <tr class="border-b border-primary/5">
+                <td class="py-4 pr-4 align-top font-display text-sm font-bold text-primary">{row.category}</td>
+                <td class="py-4 px-4 align-top font-body text-sm leading-relaxed text-text-muted">{row.existing}</td>
+                <td class="py-4 pl-4 align-top font-body text-sm leading-relaxed text-text">{row.meritum}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile stacked cards (visible below md) */}
+      <div class="mt-8 space-y-4 md:hidden">
+        {selfServeRows.map((row) => (
+          <div class="rounded-lg border border-surface bg-white p-5">
+            <p class="font-display text-sm font-bold text-primary">{row.category}</p>
+            <div class="mt-3 space-y-3">
+              <div>
+                <p class="text-xs font-body font-medium uppercase tracking-wide text-text-muted">Existing Self-Serve Tools</p>
+                <p class="mt-1 text-sm leading-relaxed text-text-muted font-body">{row.existing}</p>
+              </div>
+              <div class="border-t border-surface pt-3">
+                <p class="text-xs font-body font-medium uppercase tracking-wide text-accent">Meritum</p>
+                <p class="mt-1 text-sm leading-relaxed text-text font-body">{row.meritum}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Container>
+</Section>

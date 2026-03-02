@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+import { QueryProvider } from '@/providers/query-provider';
+import { ToastProvider } from '@/providers/toast-provider';
+import '@/app/globals.css';
 
 export const metadata: Metadata = {
   title: 'Meritum',
@@ -12,7 +15,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <QueryProvider>
+          {children}
+          <ToastProvider />
+        </QueryProvider>
+      </body>
     </html>
   );
 }

@@ -1,0 +1,177 @@
+
+MERITUM HEALTH TECHNOLOGIES
+Homepage & About Page Copy
+February 2026 · Working Draft v5
+
+Production-ready copy for the Meritum homepage and About page, with visual identity recommendations. Each section is annotated with implementation notes.
+v4 changes: stronger first-person voice throughout About page, honest EMR integration framing (export/import at launch, API integration coming), new data portability objection buster, WCB reliability woven into competence pillar.
+v5 changes: consistency pass to add PCPCM and advice engine references throughout. Advice engine added to competence pillar, Thursday cycle step 2, objection buster #1, and About page. PCPCM panel tracking added to control pillar. Calculator Path B implementation note updated to flag advice engine connection. No structural changes; all edits are additive.
+
+SECTION 1
+Hero
+Implementation note: Full-bleed section. One headline, one subhead, one CTA button. No feature list, no screenshots, no illustrations. The copy does the work.
+
+Billing agents charge like it’s 1995.
+Meritum doesn’t.
+
+Alberta’s self-serve medical billing platform. Flat monthly rate, full control, built for physicians who are done overpaying.
+
+[ See what you’d save → ]
+CTA links to calculator section below. Button text is intentionally not “Sign Up” or “Get Started”; the calculator is the conversion mechanism.
+
+SECTION 2
+Calculator
+Implementation note: Interactive calculator with two tabs/paths. Copy for both paths is defined in the brand context document (Section 6) and is production-ready. This section confirms the framing and adds UX annotations.
+
+Tab A: Currently Using a Billing Agent
+How much is your billing agent actually costing you?
+Two inputs: estimated annual AHCIP billings (slider or field, default $400,000) and agent’s percentage fee (default 4%, range 3–5%). Output shows agent cost, Meritum cost ($2,388 early bird annual), and annual saving. The math is the message.
+Supporting line beneath output:
+“That’s what you’re paying for someone to submit claims you could submit yourself, with a platform that checks every governing rule before anything goes out.”
+
+Tab B: Currently Using Self-Serve Software
+Self-serve is the right call. The question is whether your software is checking the rules.
+No calculator in this path; it’s a persuasion piece built around three concrete billing examples (03.01AA after-hours modifier, volume specialty scale problem, RRNP auto-calculation). Full copy is in the brand context document, Section 6, Path B. Use as-is.
+Implementation note: Path B should render as editorial content with a “Start Today” CTA at the bottom. It’s doing different work than Path A: not cost savings versus an agent, but revenue recovery from missed modifiers. The billing examples in Path B demonstrate the advice engine’s core capability, even though the term isn’t used in the copy itself.
+
+SECTION 3
+Three Pillars
+Implementation note: Three blocks, equal weight, prose paragraphs. Each pillar gets a short punchy headline and one paragraph of body copy. The tone throughout is someone who knows the system explaining why the status quo is absurd.
+
+The Money Argument
+You’re losing thousands of dollars a year and you know it.
+The billing agent model charges a percentage of your collections. That made sense twenty years ago, when someone was physically keying every claim into a terminal. It doesn’t make sense now. A rural GP billing $400,000 annually is handing somewhere between $12,000 and $20,000 to a billing agent every year for a task that modern software handles in a fraction of the time, with better accuracy. Meritum is $199 a month for your first year. You don’t need a calculator to see the gap, but we built one anyway.
+
+The Control Argument
+Your revenue data shouldn’t live in someone else’s head.
+When your billing runs through an agent, you’re operating on their timeline, their error rates, and their availability. You find out about a rejection pattern when they mention it; if they mention it at all. Meritum puts your claims, your assessments, your PCPCM panel status, your rejection analytics, and your revenue patterns in front of you in real time. Not at the end of the month in a PDF someone emails you, but on your dashboard, the moment it matters. And if you ever decide to leave, your data leaves with you: full export, no charge, no questions. It’s your data, not a digital hostage.
+
+The Competence Argument
+We don’t add provinces. We learn them.
+Meritum isn’t a US billing platform with a Canadian checkbox bolted on. It was built from the ground up for how Canadian physicians actually bill. For Alberta, that means AHCIP fee-for-service claims, WCB Alberta, RRNP auto-calculation, PCPCM eligibility tracking, the Thursday submission cycle, and every governing rule in the Schedule of Medical Benefits encoded into a pre-submission rules engine, backed by an advice engine that identifies missed codes and modifiers across your billing patterns. AHCIP and WCB billing both work for every physician on the platform, regardless of which EMR you’re on or how your system happens to be configured. The specificity isn’t a feature we’re marketing; it’s the reason we exist.
+
+SECTION 4
+How the Thursday Cycle Works
+Implementation note: Timeline or stepped visual. Design should make it obvious this is an Alberta-specific workflow; the specificity is the proof point. Emphasis throughout on minimum friction: Meritum fits into the clinical workflow physicians already have.
+
+Section header:
+Your billing week, automated. Your clinical workflow, untouched.
+Alberta Health processes fee-for-service claims on a weekly Thursday cycle. Meritum is built around it. The goal is simple: capture claims with as little disruption to your clinical day as possible, then let the platform handle everything from rules checking and billing optimisation to submission.
+
+Step 1: Capture claims as you go. Meritum can import encounters from your EMR through system exports, so you don’t re-enter what you’ve already documented. For ED shifts or after-hours work, mobile claim entry captures the patient, the codes, and the timestamps at the bedside. The claim is queued the moment it’s entered, with no paper billing sheets and no gaps in your record.
+Implementation note: At launch, EMR integration works through file exports from systems like Med Access and Wolf (the physician exports from their EMR and imports into Meritum). Direct API integration with EMR vendors is on the roadmap but depends on vendor cooperation and cost. Do not promise automated real-time sync until API agreements are in place. The export/import workflow is the honest launch capability and it’s still a significant improvement over manual re-entry.
+Step 2: Rules check before submission. Before anything leaves, every claim is validated against the applicable AHCIP governing rules: modifier eligibility, duplicate detection, time-period checks, age-based benefits, and RRNP premiums. Issues get flagged for your review, and clean claims are cleared for submission. Beyond the rules check, the advice engine identifies codes and modifiers you may have missed, so the revenue you’re entitled to is the revenue you’re actually claiming.
+Step 3: Thursday submission. Your validated claims are submitted to Alberta Health via H-Link on the Thursday cycle, without manual batching or last-minute scrambling.
+Step 4: Assessment and tracking. When assessments come back, Meritum matches them to your submitted claims. You see paid, held, and refused statuses in your dashboard, with the reason codes translated into plain language so you can act on them immediately.
+
+If this looks like what you’re already doing manually, it is. Except the rules checking, the submission, and the reconciliation happen without you thinking about them.
+
+SECTION 5
+Objection Busters
+Implementation note: Five blocks, conversational tone. These should feel like a physician asked a friend who happens to know billing software. The question is the heading, the answer is one short paragraph.
+
+“What if I make a billing error?”
+That’s the point of the rules engine. Every claim goes through it before it leaves Meritum, checked against every applicable AHCIP governing rule: modifier eligibility, time-period requirements, duplicate services, and age-based restrictions. If something’s wrong, you’ll know before the claim goes out, not six weeks later when a refusal comes back. Beyond catching errors, the advice engine identifies codes and modifiers you may have missed; you’re not just avoiding rejections, you’re capturing revenue you might otherwise leave on the table.
+
+“I don’t have time to learn new software.”
+Onboarding takes about ten minutes. You enter your practitioner ID, your practice location, and your specialty; Meritum configures your rules engine from there. You can import encounters from your EMR through a simple file export, and the Thursday submission cycle runs on its own. Mobile claim entry works from your phone. The learning curve is closer to switching pharmacies than switching EMRs.
+
+“What about my patients’ data?”
+Meritum is compliant with the Alberta Health Information Act. Your data is hosted in Canada, in DigitalOcean’s Toronto region, and it stays there. You sign an Information Manager Agreement under HIA s.66 before your first claim goes out, so the regulatory work is already done. The founder also runs an information security practice, which means Meritum was built with security as its foundation rather than as a feature added after the fact.
+
+“What if I want to leave?”
+Then you leave, and your data comes with you. Meritum provides a full export of your claims, assessments, and analytics at no charge and with no questions asked. Your billing history is yours; we don’t hold it hostage to keep you on the platform. If you stay, it should be because Meritum is worth what you’re paying for it, not because leaving is too painful.
+
+“What if I need help?”
+Email support with a one-business-day response commitment, and a help centre with Alberta-specific billing guidance rather than generic articles rewritten from US healthcare content. If you run into a governing rule question or a claim rejection you don’t understand, you’re talking to someone who knows what H-Link is and why your Thursday batch matters.
+
+SECTION 6
+Social Proof / Early Bird Counter
+Implementation note: At launch, this section uses a live early bird counter. No testimonials, no fabricated quotes, no stock photography. The counter is a launch requirement, not a post-launch iteration. Replace with real physician testimonials as they arrive.
+
+Join the first 100 physicians on Meritum.
+
+Implementation note: Display live counter here, e.g. “82 of 100 early bird spots remaining.” The counter should update in real time. When it gets low (under 20), the scarcity does the work.
+
+$199/month for your first 12 months, at a flat rate with no percentage taken off the top. Cancel anytime.
+
+The early bird rate is for physicians who are willing to be early. You get a lower price, and we get your feedback. When the 100 spots fill, the rate goes to $279/month for new signups, but your rate stays locked for the full 12 months regardless.
+
+[ Start today — $199/month → ]
+Post-launch: begin rotating in testimonial cards as they’re collected. Prioritise rural GP testimonials for ICP alignment.
+
+SECTION 7
+Final CTA
+Implementation note: Full-width section at the bottom of the page. One headline, one supporting line, one button. Mirror the confidence of the hero without repeating it.
+
+You already know you’re overpaying.
+Start today, cancel anytime. Your first year is $199/month, and the math only gets better from there.
+
+[ Start today — $199/month → ]
+
+ABOUT PAGE
+About Page Copy
+Implementation note: Full standalone page. Single scroll, no sidebar, no feature callouts, no mid-page CTAs. The voice is first-person throughout; the founder speaking directly. The CTA at the bottom routes to the calculator rather than directly to signup, because the About page reader is still evaluating trust.
+
+I spent a year managing a medical practice in Alberta. My wife is a physician. Most of my closest friends are physicians. I know what a Thursday submission cycle feels like from the inside, and I know what it costs when it goes wrong.
+I built Meritum because the tools available to Alberta physicians are either brutally expensive or genuinely bad. Usually both.
+The percentage-based billing agent model was designed for an era when claims were keyed by hand into a terminal. That era is over, but the pricing hasn’t caught up. A rural GP billing $400,000 a year is paying $12,000 to $20,000 for a service that modern software can handle more accurately, more quickly, and for a fraction of the cost.
+This isn’t an argument against the people doing your billing. Some billing agents are excellent; they know the rules cold and they care about getting it right. The problem is structural. When your entire revenue stream depends on one person’s knowledge, one person’s availability, and one person’s timeline, you’ve built a single point of failure into the most important part of your practice. People retire, people get sick, and people move on. The rules don’t.
+I built Meritum to encode the rules. Every governing rule in the AHCIP Schedule of Medical Benefits, applied to every claim before it goes out: modifier eligibility, duplicate detection, time-period checks, and RRNP auto-calculation from your practice location. I built it to catch the things that fall through the cracks after a long clinic day or a night shift, because the platform doesn’t get tired and it doesn’t forget. And beyond the rules, I built an advice engine that looks at what you might be missing: codes and modifiers you’re entitled to but aren’t claiming, patterns in your billing that suggest revenue left on the table.
+I also run an information security practice, and I built Meritum the way I’d expect a client’s system to be built if I were auditing it. Your patients’ data is hosted in Canada, governed by the Alberta Health Information Act, and held to the same standards I’d hold anyone else to. Security isn’t something I added to Meritum after the fact; it’s the foundation I started from.
+If Meritum works for you, stay. If it doesn’t, leave; your data comes with you, exported in full, at no charge. I’d rather earn your business every month than keep it by making the alternative painful.
+Flat monthly rate, no percentage, cancel anytime. I built this because Alberta’s physicians deserve billing software that respects their time, their money, and their data.
+
+[ See what Meritum would save you → ]
+Implementation note: This CTA links to the homepage calculator, not to signup. The About page reader is still building trust; the calculator closes them.
+
+APPENDIX
+Visual Identity Recommendations
+Starting points for Meritum’s visual identity, informed by the brand positioning (professional, confident, not flashy), the audience (physicians who distrust marketing), and the competitive landscape (medical billing software that universally looks like it was designed in 2008).
+
+Wordmark
+Meritum should use a clean, confident wordmark rather than a logomark or icon. Physicians associate medical software logos with clipart stethoscopes and heartbeat lines, so the move is to go in the opposite direction entirely. Think of how Stripe, Linear, or Notion present themselves: the name is the brand.
+Typographic direction: a geometric or neo-grotesque sans-serif with medium weight and slightly wide letter-spacing for legibility at small sizes. No italics, no decorative serifs, no gradients. The word “Meritum” is distinctive enough on its own; the type treatment just needs to stay out of the way.
+Consider a subtle typographic detail such as a custom ligature or a slightly modified letterform on the “M.” The goal is that it looks like it was chosen by someone with taste, not someone with a Canva subscription.
+
+Colour Palette
+The palette should signal trust, competence, and restraint. Medical billing is a credibility-first category, so anything that reads as consumer tech (bright gradients, neon accents) or as generic healthcare (teal, mint green, soft purple) is off the table.
+
+Role
+Colour
+Rationale
+Primary
+Deep navy (#1B2A4A)
+Anchors the brand. Reads as authoritative without being cold, and works for text, headers, and primary UI surfaces. Avoids the generic mid-blue that every SaaS product defaults to.
+Accent
+Warm brass/amber (#C2973E)
+Distinguishes Meritum from the sea of blue-and-white medical software. Gold/brass carries connotations of earned value and merit, which aligns with the name. Use sparingly for CTAs, highlights, and the wordmark; it’s an accent, not a background.
+Background
+Off-white (#FAFAF8)
+Warm off-white rather than stark clinical white. Reduces eye strain for a product that’ll be used at the end of a long clinic day.
+Surface
+Light warm grey (#F0EFEC)
+Cards, calculator backgrounds, and input fields. Differentiates interactive surfaces from the page background without introducing visual noise.
+Text
+Near-black (#1A1A2E)
+Primary body text. True black (#000) is too harsh on warm backgrounds; this has enough depth to be legible without the contrast being fatiguing.
+Status
+Forest green / Warm red
+For claim status indicators. Muted and legible rather than bright traffic-light colours, and designed to work for colourblind users when paired with icons or labels.
+
+What to avoid: healthcare teal or mint (which screams “generic health app”), bright blue gradients (which read as consumer fintech), purple (too playful for the audience), and anything involving stock imagery of smiling doctors.
+
+Typography
+Two typefaces maximum across the entire product and website.
+
+Primary (UI + body): Inter or IBM Plex Sans. Both are open-source, render well at small sizes, and have the professional neutrality this category demands. Inter is more widely adopted and may feel less distinctive; IBM Plex Sans has slightly more character without crossing into personality.
+Display (headlines + wordmark): Consider a geometric sans with slightly more presence, such as Satoshi, General Sans, or Instrument Sans. These provide enough visual distinction from the body type to create hierarchy without introducing a second voice.
+Avoid serif typefaces for body copy. They read as traditional or legacy in a product context, which undercuts the “modern alternative” positioning. A serif could work for a single editorial accent such as a pull quote on the About page, but not as a system font.
+
+Photography & Imagery
+At launch, no photography at all. Use the calculator, the Thursday cycle visual, and the copy itself to carry the homepage. Stock photography of physicians is an instant credibility destroyer with a physician audience; they can spot it immediately, and it signals that you don’t know them.
+When real photography is eventually introduced (post-launch, ideally featuring actual Meritum users), it should be candid rather than staged. A physician at a desk rather than smiling at a camera. A phone on a counter in an ED rather than a hand holding an iPhone in a studio. The visual language should match the copy: real, specific, and unpolished in the right ways.
+For abstract visual elements like backgrounds, section dividers, and decorative geometry: keep it minimal. Subtle topographic contour patterns or fine grid textures can add visual interest without becoming a brand cliché. Avoid blob gradients, abstract mesh patterns, and anything that looks AI-generated.
+
+
+End of document. Next deliverables: Pricing page copy, How It Works page copy, blog post drafts (starting with the practice management origin story as a standalone blog post).

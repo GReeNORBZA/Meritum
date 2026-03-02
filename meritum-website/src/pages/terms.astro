@@ -1,0 +1,23 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+---
+
+<PageLayout
+  title="Terms of Service — Meritum"
+  description="Meritum's terms of service."
+>
+  <Section>
+    <Container narrow>
+      <SectionHeading tag="h1" size="3xl">Terms of Service</SectionHeading>
+      <div class="mt-12 font-body text-base leading-relaxed text-text-muted lg:text-lg lg:leading-relaxed">
+        <p>
+          This page is being finalised. For questions, contact
+          <a href="mailto:hello@meritum.ca" class="text-accent underline underline-offset-2 hover:text-accent-hover transition-colors">hello@meritum.ca</a>.
+        </p>
+      </div>
+    </Container>
+  </Section>
+</PageLayout>

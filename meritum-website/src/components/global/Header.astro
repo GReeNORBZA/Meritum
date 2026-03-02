@@ -1,0 +1,104 @@
+---
+import Wordmark from './Wordmark.astro';
+import NavCTA from './NavCTA.astro';
+
+const navLinks = [
+  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/about', label: 'About' },
+  { href: '/blog', label: 'Blog' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header
+  class="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm transition-shadow"
+  id="site-header"
+>
+  <nav class="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4" aria-label="Main navigation">
+    <Wordmark class="text-xl" />
+
+    <div class="hidden items-center gap-8 md:flex">
+      {navLinks.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[
+            "text-sm font-body font-medium transition-colors hover:text-accent",
+            currentPath.startsWith(href) ? 'text-accent' : 'text-primary',
+          ]}
+          aria-current={currentPath.startsWith(href) ? 'page' : undefined}
+        >
+          {label}
+        </a>
+      ))}
+      <NavCTA />
+    </div>
+
+    <div class="flex items-center gap-3 md:hidden">
+      <NavCTA size="sm" />
+      <button
+        type="button"
+        class="flex h-10 w-10 items-center justify-center rounded-md text-primary hover:bg-surface"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        id="menu-toggle"
+      >
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <div
+    id="mobile-menu"
+    class="hidden border-t border-surface md:hidden"
+    role="dialog"
+    aria-label="Mobile navigation"
+  >
+    <div class="flex flex-col gap-1 px-6 py-4">
+      {navLinks.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[
+            "rounded-md px-3 py-2.5 text-base font-body font-medium transition-colors hover:bg-surface",
+            currentPath.startsWith(href) ? 'text-accent bg-surface' : 'text-primary',
+          ]}
+          aria-current={currentPath.startsWith(href) ? 'page' : undefined}
+        >
+          {label}
+        </a>
+      ))}
+    </div>
+  </div>
+</header>
+
+<div class="h-[72px]" aria-hidden="true"></div>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const header = document.getElementById('site-header');
+
+  toggle?.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!expanded));
+    menu?.classList.toggle('hidden');
+    toggle.querySelector('svg')!.innerHTML = expanded
+      ? '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />'
+      : '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />';
+  });
+
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    if (scrollY > 10) {
+      header?.classList.add('shadow-sm');
+    } else {
+      header?.classList.remove('shadow-sm');
+    }
+    lastScroll = scrollY;
+  }, { passive: true });
+</script>

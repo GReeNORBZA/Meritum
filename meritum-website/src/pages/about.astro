@@ -1,0 +1,82 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import Section from '../components/ui/Section.astro';
+import Container from '../components/ui/Container.astro';
+import Button from '../components/ui/Button.astro';
+---
+
+<PageLayout
+  title="About — Meritum"
+  description="Why Meritum exists. The founder's story behind Alberta's self-serve medical billing platform."
+>
+  <Section>
+    <Container narrow>
+      <h1 class="font-display text-3xl font-bold text-primary lg:text-4xl">About Meritum</h1>
+
+      <div class="mt-12 space-y-6 font-body text-base leading-relaxed text-text lg:text-lg lg:leading-relaxed">
+        <p>
+          I spent a year managing a medical practice in Alberta. My wife is a physician. Most of my
+          closest friends are physicians. I know what a Thursday submission cycle feels like from the
+          inside, and I know what it costs when it goes wrong.
+        </p>
+
+        <p>
+          I built Meritum because the tools available to Alberta physicians are either brutally
+          expensive or genuinely bad. Usually both.
+        </p>
+
+        <p>
+          The percentage-based billing agent model was designed for an era when claims were keyed by
+          hand into a terminal. That era is over, but the pricing hasn't caught up. A rural GP
+          billing $400,000 a year is paying $12,000 to $20,000 for a service that modern software
+          can handle more accurately, more quickly, and for a fraction of the cost.
+        </p>
+
+        <p>
+          This isn't an argument against the people doing your billing. Some billing agents are
+          excellent; they know the rules cold and they care about getting it right. The problem is
+          structural. When your entire revenue stream depends on one person's knowledge, one person's
+          availability, and one person's timeline, you've built a single point of failure into the
+          most important part of your practice. People retire, people get sick, and people move on.
+          The rules don't.
+        </p>
+
+        <p>
+          I built Meritum to encode the rules. Every governing rule in the AHCIP Schedule of Medical
+          Benefits, applied to every claim before it goes out: modifier eligibility, duplicate
+          detection, time-period checks, and RRNP auto-calculation from your practice location. I
+          built it to catch the things that fall through the cracks after a long clinic day or a
+          night shift, because the platform doesn't get tired and it doesn't forget. And beyond the
+          rules, I built an advice engine that looks at what you might be missing: codes and
+          modifiers you're entitled to but aren't claiming, patterns in your billing that suggest
+          revenue left on the table.
+        </p>
+
+        <p>
+          I also run an information security practice, and I built Meritum the way I'd expect a
+          client's system to be built if I were auditing it. Your patients' data is hosted in Canada,
+          governed by the Alberta Health Information Act, and held to the same standards I'd hold
+          anyone else to. Security isn't something I added to Meritum after the fact; it's the
+          foundation I started from.
+        </p>
+
+        <p>
+          If Meritum works for you, stay. If it doesn't, leave; your data comes with you, exported
+          in full, at no charge. I'd rather earn your business every month than keep it by making
+          the alternative painful.
+        </p>
+
+        <p>
+          Flat monthly rate, no percentage, cancel anytime. I built this because Alberta's physicians
+          deserve billing software that respects their time, their money, and their data.
+        </p>
+      </div>
+
+      <div class="mt-16">
+        <Button href="/#calculator" variant="primary" size="lg">
+          See what Meritum would save you
+        </Button>
+      </div>
+    </Container>
+  </Section>
+</PageLayout>
