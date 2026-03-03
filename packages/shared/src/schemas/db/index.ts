@@ -116,6 +116,7 @@ export {
   anesthesiaRules,
   bundlingRules,
   justificationTemplates,
+  hscModifierEligibility,
 } from './reference.schema.js';
 export type {
   InsertVersion,
@@ -126,6 +127,8 @@ export type {
   SelectWcbCode,
   InsertModifierDefinition,
   SelectModifierDefinition,
+  InsertHscModifierEligibility,
+  SelectHscModifierEligibility,
   InsertGoverningRule,
   SelectGoverningRule,
   InsertFunctionalCentre,

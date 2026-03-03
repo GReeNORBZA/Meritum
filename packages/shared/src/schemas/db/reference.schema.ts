@@ -88,12 +88,35 @@ export const hscCodes = pgTable(
       .default(sql`'[]'::jsonb`)
       .$type<string[]>(),
     surchargeEligible: boolean('surcharge_eligible').notNull().default(false),
+    governingRuleReferences: jsonb('governing_rule_references')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
+    selfReferralBlocked: boolean('self_referral_blocked')
+      .notNull()
+      .default(false),
+    ageRestriction: jsonb('age_restriction').$type<{
+      text: string;
+      minYears?: number;
+      maxYears?: number;
+      minMonths?: number;
+      maxMonths?: number;
+    } | null>(),
+    frequencyRestriction: jsonb('frequency_restriction').$type<{
+      text: string;
+      count: number;
+      period: string;
+    } | null>(),
+    requiresAnesthesia: boolean('requires_anesthesia')
+      .notNull()
+      .default(false),
     pcpcmBasket: varchar('pcpcm_basket', { length: 20 })
       .notNull()
       .default('not_applicable'),
     shadowBillingEligible: boolean('shadow_billing_eligible')
       .notNull()
       .default(false),
+    facilityDesignation: varchar('facility_designation', { length: 20 }),
     notes: text('notes'),
     helpText: text('help_text'),
     versionId: uuid('version_id')
@@ -214,6 +237,47 @@ export const modifierDefinitions = pgTable(
       table.versionId,
     ),
     index('modifier_definitions_version_id_idx').on(table.versionId),
+  ],
+);
+
+// --- HSC Modifier Eligibility Table ---
+// Per-code modifier eligibility rows (~41,000 records from Fee Navigator).
+// Each row specifies how a particular modifier sub-code applies to an HSC code:
+// the action (Replace Base, Increase By, etc.) and the amount ($40.23, 25%).
+// No PHI — these are public reference data.
+
+export const hscModifierEligibility = pgTable(
+  'hsc_modifier_eligibility',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hscCode: varchar('hsc_code', { length: 10 }).notNull(),
+    modifierType: varchar('modifier_type', { length: 10 }).notNull(),
+    subCode: varchar('sub_code', { length: 20 }).notNull(),
+    calls: varchar('calls', { length: 20 }),
+    explicit: boolean('explicit').notNull().default(false),
+    action: varchar('action', { length: 30 }).notNull(),
+    amount: varchar('amount', { length: 20 }).notNull(),
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => referenceDataVersions.versionId),
+    effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'string' }),
+  },
+  (table) => [
+    index('hsc_modifier_elig_hsc_code_version_id_idx').on(
+      table.hscCode,
+      table.versionId,
+    ),
+    index('hsc_modifier_elig_type_version_id_idx').on(
+      table.modifierType,
+      table.versionId,
+    ),
+    uniqueIndex('hsc_modifier_elig_code_type_sub_version_idx').on(
+      table.hscCode,
+      table.modifierType,
+      table.subCode,
+      table.versionId,
+    ),
   ],
 );
 
@@ -767,6 +831,9 @@ export type SelectWcbCode = typeof wcbCodes.$inferSelect;
 
 export type InsertModifierDefinition = typeof modifierDefinitions.$inferInsert;
 export type SelectModifierDefinition = typeof modifierDefinitions.$inferSelect;
+
+export type InsertHscModifierEligibility = typeof hscModifierEligibility.$inferInsert;
+export type SelectHscModifierEligibility = typeof hscModifierEligibility.$inferSelect;
 
 export type InsertGoverningRule = typeof governingRules.$inferInsert;
 export type SelectGoverningRule = typeof governingRules.$inferSelect;
