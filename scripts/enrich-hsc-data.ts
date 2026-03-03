@@ -85,9 +85,23 @@ interface FrequencyRestriction {
  * Normalize a specialty string: filter garbage fragments, title-case.
  */
 function normalizeSpecialty(s: string): string | null {
-  const trimmed = s.trim();
+  let trimmed = s.trim();
   // Filter too short
   if (trimmed.length < 4) return null;
+
+  // Extract specialty from "physicians with [a/an] X specialty" pattern
+  const withSpecialtyMatch = trimmed.match(/^physicians?\s+with\s+(?:an?\s+)?(.+?)\s+specialty$/i);
+  if (withSpecialtyMatch) {
+    trimmed = withSpecialtyMatch[1].trim();
+    if (trimmed.length < 4) return null;
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+
+  // Handle "physicians who have been approved by the CPSA"
+  if (/^physicians?\s+who\s+have\s+been\s+approved/i.test(trimmed)) {
+    return 'CPSA-approved physician';
+  }
+
   // Filter values starting with common fragment prefixes
   if (/^(?:physicians?|those|with|working|in|at|for|by)\b/i.test(trimmed)) return null;
   // Filter values ending with prepositions
@@ -105,11 +119,29 @@ function extractSpecialtyRestrictions(notes: string): string[] {
   // Notes use "." directly followed by next sentence (no space).
   // Terminate at period NOT followed by a digit (avoids matching periods in HSC codes).
   const pattern =
-    /(?:May only be claimed by|only\s+.*?claimed by)\s+(.+?)(?:\.(?!\d)|$)/gi;
+    /(?:May only be claimed by|only\s+.*?claimed by|payable only to)[:\s]+(.+?)(?:\.(?!\d)|$)/gi;
   let match;
   while ((match = pattern.exec(notes)) !== null) {
-    // Split on "or" / "and" / commas / colons / semicolons for multi-specialty restrictions
     const raw = match[1].trim();
+
+    // Check for location-based restrictions (AACC, UCC, ICU, emergency department)
+    const locationMatch = raw.match(/(?:physicians?\s+)?(?:working\s+|on[- ]site\s+|on\s+rotation\s+duty\s+)?(?:in|at)\s+(?:an?\s+)?(.+)/i);
+    if (locationMatch) {
+      const loc = locationMatch[1].trim();
+      // Extract known location abbreviations
+      const locationTerms: string[] = [];
+      if (/\bAACC\b/i.test(loc)) locationTerms.push('AACC physician');
+      if (/\bUCC\b/i.test(loc)) locationTerms.push('UCC physician');
+      if (/\bICU\b/i.test(loc)) locationTerms.push('ICU physician');
+      if (/\bemergency\s+department\b/i.test(loc)) locationTerms.push('Emergency department physician');
+      if (/\bemergency\s+room\b/i.test(loc)) locationTerms.push('Emergency room physician');
+      if (locationTerms.length > 0) {
+        restrictions.push(...locationTerms);
+        continue;
+      }
+    }
+
+    // Split on "or" / "and" / commas / colons / semicolons for multi-specialty restrictions
     const parts = raw
       .split(/\s*(?:,(?!\d)\s*(?:or|and)\s*|,(?!\d)\s*|\s+or\s+|\s+and\s+|;\s*|:\s*(?=[A-Z]))\s*/i)
       .map((s) => s.trim())
@@ -128,11 +160,27 @@ function extractSpecialtyRestrictions(notes: string): string[] {
 }
 
 /**
+ * Helper: add extracted codes to the exclusions list with deduplication.
+ */
+function addExclusions(
+  text: string,
+  relationship: BundlingExclusion['relationship'],
+  exclusions: BundlingExclusion[],
+  seen: Set<string>,
+): void {
+  const codes = extractHscCodesFromText(text);
+  for (const code of codes) {
+    const key = `${relationship}:${code}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      exclusions.push({ excludedCode: code, relationship });
+    }
+  }
+}
+
+/**
  * Extract bundling/combination exclusions and same-day restrictions from notes.
- * Patterns:
- *   - "May not be claimed with HSC XX.XXX"
- *   - "not payable ... in addition to HSC XX.XXX"
- *   - "May not be claimed on the same day as HSC XX.XXX"
+ * Handles both "HSC"-prefixed and bare code references, and both "claimed" and "billed" verbs.
  */
 function extractBundlingExclusions(
   _sourceCode: string,
@@ -141,31 +189,236 @@ function extractBundlingExclusions(
   const exclusions: BundlingExclusion[] = [];
   const seen = new Set<string>();
 
-  // Pattern 1: "not claimed with" — sentence-bounded
-  const withPattern =
-    /(?:May not be claimed|not\s+(?:be\s+)?payable|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed))(?:[^.]|\.(?=\d))*?(?:with|in addition to)\s+HSC[s]?\s+([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
+  // Common prohibition verbs (claimed OR billed)
+  const NOT_VERB = String.raw`(?:May not be (?:claimed|billed)|not\s+(?:be\s+)?(?:payable|claimed|billed)|shall not be (?:submitted|claimed|billed)|cannot\s+be\s+(?:claimed|billed|submitted))`;
+  // Optional "HSC(s)" prefix before code references
+  const HSC_OPT = String.raw`(?:HSC[s]?\s+)?`;
+  // Code capture group (greedy enough to capture comma-separated lists)
+  const CODE_LIST = String.raw`([\d.,\s/andor\w]+?)`;
+  // Sentence boundary: period NOT followed by digit, or end of string
+  const SENT_END = String.raw`(?:\.(?!\d)|$)`;
+  // Non-period content or period-before-digit (navigate within a sentence)
+  const IN_SENT = String.raw`(?:[^.]|\.(?=\d))*?`;
+
   let match;
-  while ((match = withPattern.exec(notes)) !== null) {
-    const codes = extractHscCodesFromText(match[1]);
-    for (const code of codes) {
-      const key = `not_claimable_with:${code}`;
+
+  // ---- Group A: Prohibition + preposition + codes (standard) ----
+  // "not claimed/billed with|in addition to|in association with|in conjunction with [HSC] XX.XX"
+  const groupAPattern = new RegExp(
+    `${NOT_VERB}${IN_SENT}(?:with|in addition to|in association with|in conjunction with)\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = groupAPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group B: Same-day/shift/encounter exclusions ----
+  // "not claimed/billed on the same day/shift/encounter [as] [HSC] XX.XX"
+  const groupBPattern = new RegExp(
+    `${NOT_VERB}${IN_SENT}(?:on the same day|same date of service|same shift|same visit|same encounter|same session|same calendar week)${IN_SENT}(?:as\\s+)?${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = groupBPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'same_day_exclusion', exclusions, seen);
+  }
+
+  // ---- Group C: Inverted subject — "HSC(s) XX.XX may not be claimed in addition/on same day" ----
+  // "HSC XX.XX may not be claimed in addition"
+  const invertedAdditionPattern =
+    /HSC[s]?\s+([\d.,\s/andor\w]+?)\s+may not be (?:claimed|billed)(?:\s+in addition|\s+(?:with|in association with|in conjunction with)\s)/gi;
+  while ((match = invertedAdditionPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // "HSC(s) XX.XX may not be claimed on the same day/shift/encounter"
+  const invertedTemporalPattern =
+    /HSC[s]?\s+([\d.,\s/andor\w]+?)\s+may not be (?:claimed|billed)\s+(?:on the same|at the same|in the same)\s+(?:day|date|shift|encounter|session|visit)/gi;
+  while ((match = invertedTemporalPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'same_day_exclusion', exclusions, seen);
+  }
+
+  // ---- Group D: Subject-list — "HSCs XX, YY and ZZ may not be claimed on same shift" ----
+  const subjectListPattern =
+    /HSC[s]?\s+([\d.,\s/andor\w]+?)\s+may not be (?:claimed|billed)\s+(?:on|at|in)\s+the\s+same\s+(?:shift|day|encounter|visit|session)/gi;
+  while ((match = subjectListPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'same_day_exclusion', exclusions, seen);
+  }
+
+  // ---- Group E: Mutual exclusion — "Only one of HSCs XX, YY or ZZ may be claimed" ----
+  const mutualExclusionPattern =
+    /Only one\s+(?:of\s+)?HSC[s]?\s+([\d.,\s/andor\w]+?)\s+may be (?:claimed|billed)/gi;
+  while ((match = mutualExclusionPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group F: Callback/parenthetical — "(HSCs XX, YY) may not be claimed in addition" ----
+  const callbackParenPattern =
+    /\(HSC[s]?\s+([\d.,\s/andor\w]+?)\)\s+may not be (?:claimed|billed)\s+in addition/gi;
+  while ((match = callbackParenPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group G: "in lieu of" (substitution) ----
+  const lieuPattern = new RegExp(
+    `(?:in lieu of)\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = lieuPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group H: "is included in" / "included in the benefit for" ----
+  const includedInPattern = new RegExp(
+    `(?:is\\s+included\\s+in|included\\s+in\\s+(?:the\\s+)?(?:benefit|fee)\\s+(?:for|of))\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = includedInPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group I: "not separately payable/billable" ----
+  const notSeparatelyPattern = new RegExp(
+    `not\\s+separately\\s+(?:payable|billable|claimable)${IN_SENT}(?:with|from|when\\s+claimed\\s+with)\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = notSeparatelyPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group J: "replaces" / "supersedes" ----
+  const replacesPattern = new RegExp(
+    `(?:replaces|supersedes)\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = replacesPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group K: "not payable in the same calendar week as" ----
+  const calendarWeekPattern = new RegExp(
+    `not\\s+payable\\s+in\\s+the\\s+same\\s+calendar\\s+week\\s+as\\s+${HSC_OPT}${CODE_LIST}${SENT_END}`,
+    'gi',
+  );
+  while ((match = calendarWeekPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'same_day_exclusion', exclusions, seen);
+  }
+
+  // ---- Group L: "Benefits XX through YY may not be claimed" (range-based, orthopedic codes) ----
+  const rangePattern =
+    /(?:Benefits?\s+)?(\d{2}\.\d{1,3}[A-Z]*)\s+through\s+(\d{2}\.\d{1,3}[A-Z]*)\s+(?:\([^)]*\)\s+)?may not be (?:claimed|billed)/gi;
+  while ((match = rangePattern.exec(notes)) !== null) {
+    // Extract the range endpoints as exclusions
+    addExclusions(match[1] + ', ' + match[2], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group M: "anesthetic rate for XX.XX may not be claimed" ----
+  const anesthRatePattern =
+    /(?:anesthetic\s+)?rate\s+for\s+(?:HSC\s+)?(\d{2}\.\d{1,3}[A-Z]*)\s+may not be (?:claimed|billed)/gi;
+  while ((match = anesthRatePattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group N: "Neither HSCs XX or YY are payable if HSC ZZ" ----
+  const neitherPattern =
+    /Neither\s+HSC[s]?\s+([\d.,\s/andor\w]+?)\s+(?:are|is)\s+payable/gi;
+  while ((match = neitherPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group O: Prohibition with parenthetical code list ----
+  // "May not be claimed in addition to X (HSC YY.YY, ZZ.ZZ)" or "... examinations (03.04A, 03.08A)"
+  const parenCodePattern =
+    /(?:May not be (?:claimed|billed)|not\s+(?:be\s+)?(?:payable|claimed|billed))(?:[^.]*?)\((?:HSC[s]?\s+)?([\d.,\s/andor\w]+?)\)/gi;
+  while ((match = parenCodePattern.exec(notes)) !== null) {
+    // Only add if the parenthetical contains actual HSC codes
+    const codesInParen = extractHscCodesFromText(match[1]);
+    if (codesInParen.length > 0) {
+      addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+    }
+  }
+
+  // ---- Group P: Temporal exclusion — "not claimed within N days of XX.XX" ----
+  const temporalPattern =
+    /(?:May not be (?:claimed|billed)|not\s+(?:be\s+)?(?:claimed|billed))(?:[^.]*?)(?:within\s+\d+\s+days?\s+(?:of|subsequent\s+to|following|after|prior\s+to))\s+(?:an?\s+)?(?:HSC\s+)?(\d{2}\.\d{1,3}[A-Z]{0,3})/gi;
+  while ((match = temporalPattern.exec(notes)) !== null) {
+    addExclusions(match[1], 'not_claimable_with', exclusions, seen);
+  }
+
+  // ---- Group Q: Range in parentheses — "(HSCs XX.XX through YY.YY)" ----
+  const parenRangePattern =
+    /\(HSC[s]?\s+(\d{2}\.\d{1,3}[A-Z]*)\s+through\s+(\d{2}\.\d{1,3}[A-Z]*)\)/gi;
+  while ((match = parenRangePattern.exec(notes)) !== null) {
+    // Check context: only add if in a prohibition sentence
+    const contextStart = Math.max(0, match.index - 200);
+    const context = notes.substring(contextStart, match.index);
+    if (/(?:may not|not\s+(?:be\s+)?(?:claimed|billed|payable)|shall not|cannot)/i.test(context)) {
+      addExclusions(match[1] + ', ' + match[2], 'not_claimable_with', exclusions, seen);
+    }
+  }
+
+  // ---- Group R: Generic category exclusions ----
+  // "May not be claimed in addition to any other visit/procedure/consultation"
+  // Uses category markers (*VISIT, *PROCEDURE, etc.) instead of specific codes
+  const CATEGORY_MAP: [RegExp, string][] = [
+    [/(?:any\s+other\s+)?(?:visit|consultation)\s+(?:or\s+(?:consultation|assessment)\s+)?(?:on|at|by)\s/i, '*VISIT'],
+    [/(?:any\s+other\s+)?visit,?\s*consultation\s+or\s+assessment/i, '*VISIT'],
+    [/(?:a|any\s+other)\s+visit\s+at\s+the\s+same/i, '*VISIT'],
+    [/(?:any\s+other\s+)?(?:procedure|procedures)\s*(?:on|at|by)\s/i, '*PROCEDURE'],
+    [/(?:any\s+other\s+)?(?:procedure|procedures)\s*$/i, '*PROCEDURE'],
+    [/(?:a\s+)?surgical\s+assist\s*\(/i, '*SURGICAL_ASSIST'],
+    [/(?:any\s+other\s+)?anesthetic\s+services?/i, '*ANESTHETIC'],
+    [/another\s+procedure/i, '*PROCEDURE'],
+  ];
+
+  // ---- Group R-pre: "No additional payment/benefit for" (procedure included) ----
+  const noAdditionalPattern =
+    /(?:no additional (?:payment|benefit)\s+for)\s+(.+?)(?:\.(?!\d)|$)/gi;
+  while ((match = noAdditionalPattern.exec(notes)) !== null) {
+    const fragment = match[1].trim();
+    // Extract any HSC codes in the fragment
+    const codes = extractHscCodesFromText(fragment);
+    if (codes.length > 0) {
+      for (const code of codes) {
+        const key = `not_claimable_with:${code}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          exclusions.push({ excludedCode: code, relationship: 'not_claimable_with' });
+        }
+      }
+    } else {
+      // Generic "no additional payment for [procedure]" — use category marker
+      const key = `not_claimable_with:*INCLUDED_${fragment.toUpperCase().replace(/\s+/g, '_').substring(0, 30)}`;
       if (!seen.has(key)) {
         seen.add(key);
-        exclusions.push({ excludedCode: code, relationship: 'not_claimable_with' });
+        exclusions.push({
+          excludedCode: `*INCLUDED`,
+          relationship: 'not_claimable_with',
+        });
       }
     }
   }
 
-  // Pattern 2: Same-day exclusions — sentence-bounded
-  const sameDayPattern =
-    /(?:May not be claimed|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed))(?:[^.]|\.(?=\d))*?(?:on the same day|same date of service|same shift|same visit|same encounter|same session)(?:[^.]|\.(?=\d))*?(?:as\s+)?(?:HSC[s]?\s+)?([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
-  while ((match = sameDayPattern.exec(notes)) !== null) {
-    const codes = extractHscCodesFromText(match[1]);
-    for (const code of codes) {
-      const key = `same_day_exclusion:${code}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        exclusions.push({ excludedCode: code, relationship: 'same_day_exclusion' });
+  // ---- Group R-sole: "Sole procedure only" ----
+  if (/sole\s+procedure/i.test(notes)) {
+    const key = 'not_claimable_with:*SOLE_PROCEDURE';
+    if (!seen.has(key)) {
+      seen.add(key);
+      exclusions.push({ excludedCode: '*SOLE_PROCEDURE', relationship: 'not_claimable_with' });
+    }
+  }
+
+  const genericExclPattern =
+    /(?:May not be (?:claimed|billed)|not\s+(?:be\s+)?(?:payable|claimed|billed))(?:[^.]*?)(?:in addition to|with|in association with)\s+((?:any\s+other\s+|another\s+|a\s+)(?:visit|consultation|procedure|assessment|examination|service|surgical|anesthetic|call)[^.]*?)(?:\.(?!\d)|$)/gi;
+  while ((match = genericExclPattern.exec(notes)) !== null) {
+    const fragment = match[1].trim();
+    for (const [catRegex, marker] of CATEGORY_MAP) {
+      if (catRegex.test(fragment)) {
+        const key = `not_claimable_with:${marker}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          exclusions.push({ excludedCode: marker, relationship: 'not_claimable_with' });
+        }
+        break;
       }
     }
   }
@@ -211,15 +464,18 @@ interface AgePattern {
 }
 
 const AGE_PATTERNS: AgePattern[] = [
-  { tag: 'max_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'max_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+(?:under|younger))/i },
   { tag: 'max_months', regex: /(?:under|younger\s+than)\s+(\d+)\s*months/i },
-  { tag: 'max_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'max_months', regex: /(?:up\s+to)\s+(\d+)\s*months/i },
+  { tag: 'max_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+(?:under|younger))/i },
   { tag: 'max_years',  regex: /(?:under|younger\s+than)\s+(\d+)\s*years/i },
+  { tag: 'max_years',  regex: /(?:up\s+to)\s+(\d+)\s*years/i },
   { tag: 'min_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
   { tag: 'min_years',  regex: /(?:over|older\s+than)\s+(\d+)\s*years/i },
   { tag: 'min_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
   { tag: 'range_years', regex: /between\s+(\d+)\s*and\s*(\d+)\s*years/i },
   { tag: 'range_ages',  regex: /aged?\s+(\d+)\s*(?:to|-)\s*(\d+)/i },
+  { tag: 'range_ages',  regex: /age\s+(\d+)\s+to\s+(\d+)\s+years/i },
 ];
 
 /**
@@ -257,12 +513,32 @@ function extractAgeRestriction(notes: string): AgeRestriction | null {
 }
 
 /**
+ * Convert word-form numbers to digits.
+ */
+const WORD_NUMBERS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, fifteen: 15, twenty: 20,
+};
+
+function parseNumberOrWord(digitGroup: string | undefined, wordGroup: string | undefined): number | null {
+  if (digitGroup) return parseInt(digitGroup, 10);
+  if (wordGroup) return WORD_NUMBERS[wordGroup.toLowerCase()] ?? null;
+  return null;
+}
+
+// Regex fragment matching digit or word-form numbers
+const NUM = String.raw`(?:(\d+)\s*|(\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)\b)\s*)`;
+
+/**
  * Extract frequency limits from notes text.
  * Patterns:
  *   - "once per year"
  *   - "4 times per patient per calendar year"
  *   - "maximum of 15 calls per patient per benefit year"
  *   - "once per patient per day"
+ *   - "maximum of two claims per patient per physician per day"
+ *   - "maximum of three (any combination of HSC ...) per day"
  */
 function extractFrequencyLimit(notes: string): {
   maxPerDay: number | null;
@@ -275,16 +551,29 @@ function extractFrequencyLimit(notes: string): {
     restriction: null as FrequencyRestriction | null,
   };
 
-  // Pattern: "once/X times per day"
-  const perDayMatch = notes.match(
-    /(?:(?:once|(\d+)\s*times?)|(?:a\s+)?maximum\s+(?:of\s+)?(\d+))\s*(?:per|each)\s*(?:patient\s*,?\s*per\s*)?(?:physician\s*,?\s*per\s*)?day/i,
+  // Pattern: "maximum of N (...optional parenthetical...) claims? per patient per physician per day"
+  const perDayMaxPattern = new RegExp(
+    String.raw`(?:a\s+)?maximum\s+(?:of\s+)?${NUM}(?:\([^)]*\)\s*)?(?:claims?\s+)?(?:may\s+be\s+claimed\s+)?(?:per|each)\s*(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(?:per\s+)?day`,
+    'i',
   );
-  if (perDayMatch) {
-    result.maxPerDay = perDayMatch[1]
-      ? parseInt(perDayMatch[1], 10)
-      : perDayMatch[2]
-        ? parseInt(perDayMatch[2], 10)
-        : 1;
+  const perDayMaxMatch = notes.match(perDayMaxPattern);
+  if (perDayMaxMatch) {
+    const n = parseNumberOrWord(perDayMaxMatch[1], perDayMaxMatch[2]);
+    if (n !== null) result.maxPerDay = n;
+  }
+
+  // Pattern: "once/X times per day"
+  if (result.maxPerDay === null) {
+    const perDayMatch = notes.match(
+      /(?:(?:once|(\d+)\s*times?)|(?:a\s+)?maximum\s+(?:of\s+)?(\d+))\s*(?:per|each)\s*(?:patient\s*,?\s*per\s*)?(?:physician\s*,?\s*per\s*)?day/i,
+    );
+    if (perDayMatch) {
+      result.maxPerDay = perDayMatch[1]
+        ? parseInt(perDayMatch[1], 10)
+        : perDayMatch[2]
+          ? parseInt(perDayMatch[2], 10)
+          : 1;
+    }
   }
 
   // Pattern: "once/X times per visit"
@@ -299,17 +588,19 @@ function extractFrequencyLimit(notes: string): {
         : 1;
   }
 
-  // General frequency pattern for non-day/visit periods
-  const freqPattern =
-    /(?:(?:once|(\d+)\s*times?)|(?:a\s+)?maximum\s+(?:of\s+)?(\d+)(?:\s+(?:calls?|claims?|sessions?))?)\s*(?:per|every|each|in\s+a)\s*(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(year|calendar year|benefit year|lifetime|12[- ]?month|pregnancy|calendar week|calendar month|week|month|365[- ]?day|shift|session|admission)/i;
+  // General frequency pattern for non-day/visit periods (word + digit numbers)
+  const freqPattern = new RegExp(
+    String.raw`(?:(?:once|${NUM}times?)|(?:a\s+)?maximum\s+(?:of\s+)?${NUM}(?:\([^)]*\)\s*)?(?:\s*(?:calls?|claims?|sessions?|visits?))?)` +
+    String.raw`\s*(?:may\s+be\s+claimed\s+)?(?:per|every|each|in\s+a)\s*(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(year|calendar year|benefit year|lifetime|12[- ]?month|pregnancy|calendar week|calendar month|week|month|365[- ]?day|shift|session|admission|hospitalization|weekday|weekend\s*day)`,
+    'i',
+  );
   const freqMatch = notes.match(freqPattern);
   if (freqMatch) {
-    const count = freqMatch[1]
-      ? parseInt(freqMatch[1], 10)
-      : freqMatch[2]
-        ? parseInt(freqMatch[2], 10)
-        : 1;
-    const period = freqMatch[3].toLowerCase().replace(/\s+/g, '_');
+    // Groups: freqMatch[1]=digit_count1, [2]=word_count1, [3]=digit_count2, [4]=word_count2, [5]=period
+    const count = parseNumberOrWord(freqMatch[1], freqMatch[2])
+      ?? parseNumberOrWord(freqMatch[3], freqMatch[4])
+      ?? 1;
+    const period = freqMatch[5].toLowerCase().replace(/\s+/g, '_');
     result.restriction = {
       text: freqMatch[0].trim(),
       count,
@@ -331,15 +622,33 @@ function extractFrequencyLimit(notes: string): {
     }
   }
 
+  // Fallback: "maximum of N per weekday/weekend day" (digit or word)
+  if (!result.restriction) {
+    const weekdayPattern = new RegExp(
+      String.raw`(?:a\s+)?maximum\s+(?:of\s+)?${NUM}(?:\([^)]*\)\s*)?(?:.*?)(?:per\s+)?(weekday|weekend\s*day)`,
+      'i',
+    );
+    const weekdayMatch = notes.match(weekdayPattern);
+    if (weekdayMatch) {
+      const count = parseNumberOrWord(weekdayMatch[1], weekdayMatch[2]) ?? 1;
+      const period = weekdayMatch[3].toLowerCase().replace(/\s+/g, '_');
+      result.restriction = {
+        text: weekdayMatch[0].trim(),
+        count,
+        period,
+      };
+    }
+  }
+
   return result;
 }
 
 /**
  * Extract anesthesia requirements from notes text.
- * Pattern: "under general anesthesia" / "procedural sedation"
+ * Pattern: "under general anesthesia" / "procedural sedation" / "requiring sedation"
  */
 function extractAnesthesiaRequirement(notes: string): boolean {
-  return /(?:under\s+(?:general\s+)?anesthesia|requires?\s+(?:general\s+)?anesthesia|procedural\s+sedation)/i.test(
+  return /(?:under\s+(?:general\s+)?(?:anesthesia|anesthetic)|requires?\s+(?:general\s+)?(?:anesthesia|anesthetic)|requiring\s+(?:procedural\s+)?sedation|procedural\s+sedation|with\s+(?:general\s+)?(?:anesthesia|anesthetic)|under\s+(?:conscious|procedural)\s+sedation|performed\s+under\s+(?:general\s+)?(?:anesthesia|anesthetic))/i.test(
     notes,
   );
 }
@@ -542,9 +851,16 @@ async function main(): Promise<void> {
   let outOfOfficeCount = 0;
 
   for (const hsc of hscCodes) {
-    // Referral requirements
+    // Referral requirements (GR-based first, then notes-based supplement)
     hsc.requiresReferral = requiresReferral.has(hsc.hscCode);
     hsc.selfReferralBlocked = selfReferralBlocked.has(hsc.hscCode);
+
+    // Notes-based referral detection (supplement GR 4.4.8)
+    if (!hsc.requiresReferral && hsc.notes) {
+      if (/(?:referral\s+(?:must|is\s+required|required)|must\s+be\s+referred|requires?\s+(?:a\s+)?referral)/i.test(hsc.notes)) {
+        hsc.requiresReferral = true;
+      }
+    }
 
     if (hsc.requiresReferral) referralCount++;
     if (hsc.selfReferralBlocked) selfBlockedCount++;

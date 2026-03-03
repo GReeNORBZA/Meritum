@@ -17,19 +17,35 @@ const DATA_DIR = path.join(
   'fee-navigator',
 );
 
+const jsonMode = process.argv.includes('--json');
+
 let errors = 0;
 let warnings = 0;
 
+interface CheckRecord {
+  section: string;
+  name: string;
+  status: 'pass' | 'fail' | 'warn';
+  value?: number;
+  threshold?: number;
+}
+
+const checks: CheckRecord[] = [];
+let currentSection = 'General';
+
 function pass(msg: string): void {
-  console.log(`  \u2713 ${msg}`);
+  if (!jsonMode) console.log(`  \u2713 ${msg}`);
 }
 function fail(msg: string): void {
-  console.log(`  \u2717 ${msg}`);
+  if (!jsonMode) console.log(`  \u2717 ${msg}`);
   errors++;
 }
 function warn(msg: string): void {
-  console.log(`  \u26A0 ${msg}`);
+  if (!jsonMode) console.log(`  \u26A0 ${msg}`);
   warnings++;
+}
+function recordCheck(name: string, status: 'pass' | 'fail' | 'warn', value?: number, threshold?: number): void {
+  checks.push({ section: currentSection, name, status, value, threshold });
 }
 
 function loadJson<T>(filename: string): T | null {
@@ -42,8 +58,9 @@ function loadJson<T>(filename: string): T | null {
 // A. File Existence
 // ============================================================================
 
-console.log('\n=== Fee Navigator Data Validation ===\n');
-console.log('Files:');
+if (!jsonMode) console.log('\n=== Fee Navigator Data Validation ===\n');
+if (!jsonMode) console.log('Files:');
+currentSection = 'Files';
 
 const REQUIRED_FILES = [
   'hsc-codes.json',
@@ -61,9 +78,11 @@ for (const file of REQUIRED_FILES) {
     const sizeKb = Math.round(stats.size / 1024);
     fileExists[file] = true;
     pass(`${file} (${sizeKb} KB)`);
+    recordCheck(file, 'pass');
   } else {
     fileExists[file] = false;
     fail(`${file} — MISSING`);
+    recordCheck(file, 'fail');
   }
 }
 
@@ -71,14 +90,20 @@ for (const file of REQUIRED_FILES) {
 const metadataPath = path.join(DATA_DIR, 'scrape-metadata.json');
 if (fs.existsSync(metadataPath)) {
   pass('scrape-metadata.json');
+  recordCheck('scrape-metadata.json', 'pass');
 } else {
   warn('scrape-metadata.json — missing (optional)');
+  recordCheck('scrape-metadata.json', 'warn');
 }
 
 // If core files are missing, abort early
 if (!fileExists['hsc-codes.json'] || !fileExists['hsc-modifiers.json']) {
-  console.log(`\nResult: FAIL (${errors} errors, ${warnings} warnings)`);
-  console.log('Cannot continue validation without core data files.\n');
+  if (jsonMode) {
+    console.log(JSON.stringify({ result: 'FAIL', errors, warnings, checks }));
+  } else {
+    console.log(`\nResult: FAIL (${errors} errors, ${warnings} warnings)`);
+    console.log('Cannot continue validation without core data files.\n');
+  }
   process.exit(1);
 }
 
@@ -147,7 +172,8 @@ const explCodes = loadJson<ExplanatoryCode[]>('explanatory-codes.json') ?? [];
 // B. Completeness Thresholds
 // ============================================================================
 
-console.log('\nCompleteness:');
+if (!jsonMode) console.log('\nCompleteness:');
+currentSection = 'Completeness';
 
 const THRESHOLDS: Array<[string, number, number]> = [
   ['HSC codes', hscCodes.length, 2900],
@@ -160,8 +186,10 @@ const THRESHOLDS: Array<[string, number, number]> = [
 for (const [label, count, threshold] of THRESHOLDS) {
   if (count >= threshold) {
     pass(`${label}: ${count.toLocaleString()} (threshold: ${threshold.toLocaleString()})`);
+    recordCheck(label, 'pass', count, threshold);
   } else {
     fail(`${label}: ${count.toLocaleString()} — below threshold ${threshold.toLocaleString()}`);
+    recordCheck(label, 'fail', count, threshold);
   }
 }
 
@@ -169,7 +197,8 @@ for (const [label, count, threshold] of THRESHOLDS) {
 // C. HSC Code Format Validation
 // ============================================================================
 
-console.log('\nFormat:');
+if (!jsonMode) console.log('\nFormat:');
+currentSection = 'Format';
 
 // HSC code formats from Fee Navigator:
 // - Standard: "03.03A", "03.7 A", "15.3" (numeric.numeric + optional alpha)
@@ -222,12 +251,16 @@ for (const hsc of hscCodes) {
 
 if (formatErrors === 0) {
   pass('All HSC codes pass format validation');
+  recordCheck('HSC code format', 'pass');
 } else {
   fail(`${formatErrors} format errors found`);
-  for (const issue of formatIssues) {
-    console.log(`    - ${issue}`);
+  recordCheck('HSC code format', 'fail', formatErrors);
+  if (!jsonMode) {
+    for (const issue of formatIssues) {
+      console.log(`    - ${issue}`);
+    }
+    if (formatErrors > 5) console.log(`    ... and ${formatErrors - 5} more`);
   }
-  if (formatErrors > 5) console.log(`    ... and ${formatErrors - 5} more`);
 }
 
 // ============================================================================
@@ -245,8 +278,10 @@ for (const hsc of hscCodes) {
 
 if (dupes === 0) {
   pass('No duplicate HSC codes');
+  recordCheck('No duplicate HSC codes', 'pass');
 } else {
   fail(`${dupes} duplicate HSC code(s) found`);
+  recordCheck('No duplicate HSC codes', 'fail', dupes);
 }
 
 // ============================================================================
@@ -263,8 +298,10 @@ for (const m of hscModifiers) {
 
 if (modRowErrors === 0) {
   pass('All modifier rows have required fields');
+  recordCheck('Modifier row fields', 'pass');
 } else {
   fail(`${modRowErrors} modifier rows with missing fields`);
+  recordCheck('Modifier row fields', 'fail', modRowErrors);
 }
 
 // E2: Modifier row deduplication check
@@ -280,15 +317,18 @@ for (const m of hscModifiers) {
 
 if (modRowDupes === 0) {
   pass('No duplicate modifier rows');
+  recordCheck('No duplicate modifier rows', 'pass');
 } else {
   fail(`${modRowDupes} duplicate modifier rows (key: hscCode|type|code|calls)`);
+  recordCheck('No duplicate modifier rows', 'fail', modRowDupes);
 }
 
 // ============================================================================
 // F. Cross-file Consistency
 // ============================================================================
 
-console.log('\nCross-file:');
+if (!jsonMode) console.log('\nCross-file:');
+currentSection = 'Cross-file';
 
 // F1: Every hscCode in modifiers exists in hsc-codes
 const modHscMissing = new Set<string>();
@@ -300,10 +340,14 @@ for (const m of hscModifiers) {
 
 if (modHscMissing.size === 0) {
   pass('All modifier hscCodes found in hsc-codes.json');
+  recordCheck('Modifier hscCodes in hsc-codes', 'pass');
 } else {
   fail(`${modHscMissing.size} modifier hscCode(s) not in hsc-codes.json`);
-  const sample = [...modHscMissing].slice(0, 5);
-  console.log(`    Sample: ${sample.join(', ')}`);
+  recordCheck('Modifier hscCodes in hsc-codes', 'fail', modHscMissing.size);
+  if (!jsonMode) {
+    const sample = [...modHscMissing].slice(0, 5);
+    console.log(`    Sample: ${sample.join(', ')}`);
+  }
 }
 
 // F2: Every modifier type exists in modifiers.json
@@ -317,8 +361,10 @@ for (const m of hscModifiers) {
 
 if (modTypeMissing.size === 0) {
   pass('All modifier types found in modifiers.json');
+  recordCheck('Modifier types in modifiers', 'pass');
 } else {
   fail(`${modTypeMissing.size} modifier type(s) not in modifiers.json: ${[...modTypeMissing].join(', ')}`);
+  recordCheck('Modifier types in modifiers', 'fail', modTypeMissing.size);
 }
 
 // F3: Governing rule reference resolution
@@ -341,10 +387,14 @@ for (const hsc of hscCodes) {
 
 if (unresolvedGrRefs === 0) {
   pass('All governing rule references resolve');
+  recordCheck('GR reference resolution', 'pass');
 } else {
   warn(`${unresolvedGrRefs} unresolved governing rule references (sub-rules may lack dedicated entries)`);
-  for (const s of unresolvedSample) {
-    console.log(`    - ${s}`);
+  recordCheck('GR reference resolution', 'warn', unresolvedGrRefs);
+  if (!jsonMode) {
+    for (const s of unresolvedSample) {
+      console.log(`    - ${s}`);
+    }
   }
 }
 
@@ -352,7 +402,8 @@ if (unresolvedGrRefs === 0) {
 // G. Enrichment Validation
 // ============================================================================
 
-console.log('\nEnrichment:');
+if (!jsonMode) console.log('\nEnrichment:');
+currentSection = 'Enrichment';
 
 let withReferral = 0;
 let withSpecialty = 0;
@@ -422,22 +473,27 @@ const ENRICHMENT_MINIMUMS: Array<[string, number, number]> = [
 for (const [label, count, min] of ENRICHMENT_MINIMUMS) {
   if (count >= min) {
     pass(`${label}: ${count} codes (min: ${min})`);
+    recordCheck(label, 'pass', count, min);
   } else {
     fail(`${label}: ${count} codes — below minimum ${min}`);
+    recordCheck(label, 'fail', count, min);
   }
 }
 
 if (enrichErrors === 0) {
   pass('All enrichment fields pass type validation');
+  recordCheck('Enrichment type validation', 'pass');
 } else {
   fail(`${enrichErrors} enrichment type errors found`);
+  recordCheck('Enrichment type validation', 'fail', enrichErrors);
 }
 
 // ============================================================================
 // H. Data Quality Audits
 // ============================================================================
 
-console.log('\nData Quality:');
+if (!jsonMode) console.log('\nData Quality:');
+currentSection = 'Data Quality';
 
 // H1: Visit codes without modifiers
 const modifierHscSet = new Set(hscModifiers.map((m) => m.hscCode));
@@ -447,16 +503,27 @@ const visitCodesWithoutMods = hscCodes.filter(
 
 if (visitCodesWithoutMods.length <= 70) {
   pass(`Visit codes without modifiers: ${visitCodesWithoutMods.length} (within expected range)`);
+  recordCheck('Visit codes without modifiers', 'pass', visitCodesWithoutMods.length, 70);
 } else {
   warn(`Visit codes without modifiers: ${visitCodesWithoutMods.length} — may indicate scraping issue (expected ≤70)`);
+  recordCheck('Visit codes without modifiers', 'warn', visitCodesWithoutMods.length, 70);
 }
 
 // ============================================================================
 // Summary
 // ============================================================================
 
-console.log(
-  `\nResult: ${errors === 0 ? 'PASS' : 'FAIL'} (${errors} errors, ${warnings} warnings)\n`,
-);
+if (jsonMode) {
+  console.log(JSON.stringify({
+    result: errors === 0 ? 'PASS' : 'FAIL',
+    errors,
+    warnings,
+    checks,
+  }, null, 2));
+} else {
+  console.log(
+    `\nResult: ${errors === 0 ? 'PASS' : 'FAIL'} (${errors} errors, ${warnings} warnings)\n`,
+  );
+}
 
 process.exit(errors > 0 ? 1 : 0);

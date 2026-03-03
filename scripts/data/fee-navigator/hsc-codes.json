@@ -259,7 +259,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": {
       "text": "12 months or younger",
       "maxMonths": 12
@@ -1348,7 +1353,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1424,7 +1429,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1448,7 +1453,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1472,7 +1477,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1498,7 +1503,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1524,7 +1529,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1550,7 +1555,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1578,7 +1583,7 @@
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1606,7 +1611,7 @@
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1634,7 +1639,7 @@
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1658,7 +1663,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1682,7 +1687,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -1706,7 +1711,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": null,
-    "maxPerDay": null,
+    "maxPerDay": 2,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -2013,7 +2018,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05JR",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.01T",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -2041,7 +2055,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05JR",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.01S",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -2249,7 +2272,12 @@
     "specialtyRestrictions": [
       "Internal medicine at the time the patient is seen"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*VISIT",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -2543,7 +2571,12 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.03D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -2989,7 +3022,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05N",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05P",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QB",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05R",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -3023,7 +3077,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05N",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05P",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QB",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05R",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -3056,7 +3131,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05N",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05P",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QB",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05R",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -3089,7 +3185,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05N",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05P",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05QB",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.05R",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -3121,7 +3238,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "A maximum of five (5) per week",
+      "count": 5,
+      "period": "week"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -3149,7 +3270,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "A maximum of ten (10) per week",
+      "count": 10,
+      "period": "week"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -3591,7 +3716,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -3649,10 +3777,8 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Emergency medicine physicians",
-      "Full time emergency room physicians",
-      "General practitioners",
-      "Pediatricians working a rotation duty shift in an emergency department with 24 hour on-site coverage"
+      "Emergency department physician",
+      "Emergency room physician"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -3681,7 +3807,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -3739,10 +3868,8 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Emergency medicine physicians",
-      "Full time emergency room physicians",
-      "General practitioners",
-      "Pediatricians working a rotation duty shift in an emergency department with 24 hour on-site coverage"
+      "Emergency department physician",
+      "Emergency room physician"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -3771,7 +3898,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -3801,7 +3931,8 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Emergency medicine physicians (skill EMSP) working a non-rotation duty shift in a non-rotation duty emergency department that has less than 25,000 visits to the emergency room per year"
+      "Emergency department physician",
+      "Emergency room physician"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -3897,7 +4028,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "27.72A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "*SURGICAL_ASSIST",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4285,7 +4425,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Are providing first call coverage in an emergency department with greater than 25,000 visits per year"
+      "Emergency department physician"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -4316,9 +4456,22 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Providing first call coverage in an emergency department with greater than 25,000 visits per year"
+      "Emergency department physician"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05FB",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05F",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FA",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4347,9 +4500,22 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Providing first call coverage in an emergency department with greater than 25,000 visits per year"
+      "Emergency department physician"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05FB",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05F",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FA",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4378,9 +4544,22 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Providing first call coverage in an emergency department with greater than 25,000 visits per year"
+      "Emergency department physician"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05F",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4407,8 +4586,24 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05FE",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FC",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FD",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4439,8 +4634,24 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05FE",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FC",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FD",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4471,8 +4682,24 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.05FC",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FD",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "03.05FE",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -4592,7 +4819,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -4681,7 +4911,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -4711,7 +4944,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "AACC physician",
+      "UCC physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -5023,7 +5259,11 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "Pediatricians (including subspecialties) for patients 18 years of age",
+      "Under",
+      "Medical geneticists (no age restriction)"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": {
       "text": "18 years of age and under",
@@ -5053,7 +5293,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "Pediatricians (including subspecialties) for patients 18 years of age",
+      "Under"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": {
       "text": "18 years of age and under",
@@ -5193,7 +5436,20 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.01S",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.01T",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.01N",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -5246,7 +5502,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*VISIT",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -5303,7 +5564,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "a maximum of four visits per patient hospitalization",
+      "count": 4,
+      "period": "hospitalization"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -5331,7 +5596,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "A maximum of one visit per week",
+      "count": 1,
+      "period": "week"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -5511,7 +5780,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.01AA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.03DF",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -5688,7 +5966,11 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "Pediatricians (including subspecialties) for patients 18 years of age",
+      "Undermedical geneticists",
+      "Psychiatrists (no age restriction) when a minimum of 30 minutes has been spent"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": {
       "text": "18 years of age and under",
@@ -5795,7 +6077,12 @@
     "selfReferralBlocked": true,
     "facilityDesignation": "in_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SURGICAL_ASSIST",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -5835,7 +6122,12 @@
     "selfReferralBlocked": true,
     "facilityDesignation": "out_of_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SURGICAL_ASSIST",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -5957,7 +6249,12 @@
     "selfReferralBlocked": true,
     "facilityDesignation": "in_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SURGICAL_ASSIST",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -6003,7 +6300,12 @@
     "selfReferralBlocked": true,
     "facilityDesignation": "out_of_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SURGICAL_ASSIST",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -6280,7 +6582,9 @@
     "requiresReferral": true,
     "selfReferralBlocked": true,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "CPSA-approved physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -6553,7 +6857,9 @@
     "requiresReferral": true,
     "selfReferralBlocked": true,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "Anesthesia"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -6613,7 +6919,7 @@
     "commonTerms": [],
     "billingTips": null,
     "governingRuleReferences": [],
-    "requiresReferral": false,
+    "requiresReferral": true,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
@@ -8478,7 +8784,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*VISIT",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -8504,7 +8815,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*VISIT",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9258,6 +9574,14 @@
       {
         "excludedCode": "07.53D",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "07.53H",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "07.53J",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
@@ -9487,7 +9811,20 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9561,7 +9898,20 @@
     "specialtyRestrictions": [
       "Psychiatrists"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9634,7 +9984,20 @@
     "selfReferralBlocked": false,
     "facilityDesignation": "in_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9675,7 +10038,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9717,7 +10093,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": "out_of_office",
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9753,7 +10142,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9788,7 +10190,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9825,7 +10240,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -9861,7 +10289,20 @@
     "selfReferralBlocked": true,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "08.19GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GZ",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "08.19GB",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -11172,7 +11613,32 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.04A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.04AZ",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.08A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.08AZ",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "03.08H",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "09.04",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": {
       "text": "18 years of age or younger",
       "maxYears": 18
@@ -12399,7 +12865,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "13.62A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -12589,7 +13060,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "61.63A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -12900,7 +13376,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "01.09",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -13274,7 +13755,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "12.24",
@@ -13306,7 +13787,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "03.26",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -13668,7 +14154,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SOLE_PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -13816,6 +14307,10 @@
     "bundlingExclusions": [
       {
         "excludedCode": "95.94C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "95.94C",
         "relationship": "same_day_exclusion"
       }
     ],
@@ -13909,7 +14404,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "07.09A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "07.09B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -14092,7 +14596,12 @@
       "When the physician is on site",
       "Immediately available"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "13.59VA",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -14116,7 +14625,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "13.59V",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -14294,7 +14808,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Level III ICU"
+      "ICU physician"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -15053,7 +15567,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "13.99JA",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -17340,7 +17859,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "15.93B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -18736,15 +19260,27 @@
       {
         "excludedCode": "92.78C",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89D",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": {
-      "text": "once per year",
-      "count": 1,
-      "period": "year"
+      "text": "A maximum of twelve calls may be claimed per patient, per benefit year",
+      "count": 12,
+      "period": "benefit_year"
     },
     "requiresAnesthesia": false
   },
@@ -18797,15 +19333,27 @@
       {
         "excludedCode": "92.78C",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89D",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": {
-      "text": "once per year",
-      "count": 1,
-      "period": "year"
+      "text": "A maximum of twelve calls may be claimed per patient, per benefit year",
+      "count": 12,
+      "period": "benefit_year"
     },
     "requiresAnesthesia": false
   },
@@ -18858,15 +19406,27 @@
       {
         "excludedCode": "92.78C",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "16.89D",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": {
-      "text": "once per year",
-      "count": 1,
-      "period": "year"
+      "text": "A maximum of twelve calls may be claimed per patient, per benefit year",
+      "count": 12,
+      "period": "benefit_year"
     },
     "requiresAnesthesia": false
   },
@@ -19143,7 +19703,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "16.93A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -20105,6 +20670,10 @@
       {
         "excludedCode": "17.39C",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "17.33",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
@@ -20398,7 +20967,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "17.39C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -20584,6 +21158,10 @@
     "bundlingExclusions": [
       {
         "excludedCode": "95.94C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "95.94C",
         "relationship": "same_day_exclusion"
       }
     ],
@@ -20618,7 +21196,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*ANESTHETIC",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "*VISIT",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -20770,7 +21357,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "17.92A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -20805,7 +21397,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "17.92B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -20840,7 +21437,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "17.92C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -21258,6 +21860,14 @@
       {
         "excludedCode": "X107A",
         "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "18.29E",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "18.29EA",
+        "relationship": "same_day_exclusion"
       }
     ],
     "ageRestriction": null,
@@ -21290,7 +21900,24 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "18.29F",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "18.29E",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "18.29EA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "X107A",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -21325,7 +21952,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "18.29GA",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "X107A",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -21355,7 +21991,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "18.29G",
+        "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "X107A",
+        "relationship": "same_day_exclusion"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -23103,7 +23748,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -23308,7 +23958,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "A maximum of 15 calls may be claimed per patient, per benefit year",
+      "count": 15,
+      "period": "benefit_year"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -24948,7 +25602,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -26230,7 +26889,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "30.61B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "30.61A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -26264,7 +26932,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "30.61A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "30.61B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -27200,7 +27877,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*SOLE_PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -31758,7 +32440,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "43.96A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -31794,7 +32481,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "43.96B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -31827,7 +32519,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "43.96C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -31860,7 +32557,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "43.96D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -35212,7 +35914,20 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "48.92A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "48.98A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "48.98B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -37552,7 +38267,16 @@
       "Cardiologists",
       "Thoracic surgeons"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "49.98AA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "49.98Y",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -37633,7 +38357,16 @@
       "Cardiologists",
       "Thoracic surgeons"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "49.98AA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "49.98Y",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -37714,7 +38447,16 @@
       "Cardiologists",
       "Thoracic surgeons"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "49.98AA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "49.98Y",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -37795,7 +38537,16 @@
       "Cardiologists",
       "Thoracic surgeons"
     ],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "49.98AA",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "49.98Y",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -43847,7 +44598,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "16.81A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "50.99C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -43946,7 +44706,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "16.81A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "50.98B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -46422,7 +47191,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "17.32A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.51F",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -46465,6 +47243,14 @@
       },
       {
         "excludedCode": "95.14E",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "17.32A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.51F",
         "relationship": "not_claimable_with"
       }
     ],
@@ -46567,6 +47353,14 @@
       },
       {
         "excludedCode": "95.14E",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "17.32A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.51F",
         "relationship": "not_claimable_with"
       }
     ],
@@ -47030,7 +47824,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -47758,7 +48555,24 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "54.76A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "65.7B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "65.8B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "65.8C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -49128,7 +49942,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "65.7 A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -50060,6 +50879,14 @@
       {
         "excludedCode": "60.52B",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "57.6 A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "57.6 E",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
@@ -50217,7 +51044,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51600,7 +52432,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51642,7 +52479,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51685,7 +52527,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51733,7 +52580,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51770,7 +52622,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51805,7 +52662,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51849,7 +52711,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51895,7 +52762,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51930,7 +52802,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -51973,6 +52850,14 @@
       {
         "excludedCode": "10.23 ",
         "relationship": "same_day_exclusion"
+      },
+      {
+        "excludedCode": "10.23",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
@@ -52011,7 +52896,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*INCLUDED",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -52766,6 +53656,14 @@
       {
         "excludedCode": "64.7",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "63.22 ",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "63.27",
+        "relationship": "not_claimable_with"
       }
     ],
     "ageRestriction": null,
@@ -52934,7 +53832,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "63.88",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -53496,7 +54399,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -54038,7 +54946,24 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "58.81A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "58.81B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "58.81C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "66.4 A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -56230,7 +57155,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X77A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X77B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -58185,7 +59119,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -59187,7 +60126,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "82.64A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -59222,7 +60166,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "82.64A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -61128,7 +62077,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "76.0",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -61608,7 +62562,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -62334,7 +63293,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -62658,7 +63622,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -62873,7 +63842,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -63318,7 +64292,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -63353,7 +64332,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -63532,7 +64516,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -63602,7 +64591,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "*PROCEDURE",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -63758,7 +64752,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "a maximum of four per pregnancy",
+      "count": 4,
+      "period": "pregnancy"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -64348,7 +65346,11 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": null,
+    "frequencyRestriction": {
+      "text": "once per hospitalization",
+      "count": 1,
+      "period": "hospitalization"
+    },
     "requiresAnesthesia": false
   },
   {
@@ -65641,7 +66643,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.79A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -70961,7 +71968,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "91.05C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -74353,7 +75365,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "91.75A",
@@ -75037,7 +76049,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "91.84C",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75407,7 +76424,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75444,7 +76470,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75480,7 +76515,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75516,7 +76560,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75553,7 +76606,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75589,7 +76651,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75625,7 +76696,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -75661,7 +76741,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.10",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.19A",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -76192,7 +77281,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.32B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.32D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -76230,7 +77328,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.32B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.32D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -76267,7 +77374,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.32B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.32D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -77161,7 +78277,20 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.32B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.32C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "92.32D",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -79630,7 +80759,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "93.83D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -79781,7 +80919,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "93.83D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -79818,7 +80965,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -79855,7 +81007,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -79892,7 +81049,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -80004,7 +81166,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "92.41",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -83272,7 +84439,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -83537,7 +84709,12 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "95.65B",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -86822,7 +87999,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VB",
@@ -86859,7 +88036,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VC",
@@ -86896,7 +88073,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VD",
@@ -86933,7 +88110,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VE",
@@ -86970,7 +88147,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VF",
@@ -87007,7 +88184,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.12VG",
@@ -87044,7 +88221,7 @@
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
-    "requiresAnesthesia": false
+    "requiresAnesthesia": true
   },
   {
     "hscCode": "98.13A",
@@ -87469,7 +88646,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87510,7 +88708,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87551,7 +88770,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87592,7 +88832,28 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87633,7 +88894,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87674,7 +88944,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87715,7 +88994,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87755,7 +89043,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87795,7 +89092,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -87836,7 +89142,16 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
+    "bundlingExclusions": [
+      {
+        "excludedCode": "98.49A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "98.49G",
+        "relationship": "not_claimable_with"
+      }
+    ],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -90444,7 +91759,9 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "CPSA-approved physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -100405,7 +101722,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100432,7 +101752,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100472,7 +101795,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100499,7 +101825,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100526,7 +101855,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100554,7 +101886,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100606,7 +101941,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100674,7 +102012,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100701,7 +102042,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100728,7 +102072,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100755,7 +102102,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100781,7 +102131,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100807,7 +102160,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100833,7 +102189,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100859,7 +102218,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100885,7 +102247,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100912,7 +102277,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100939,7 +102307,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100966,7 +102337,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -100993,7 +102367,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101020,7 +102397,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101047,7 +102427,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101074,7 +102457,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101101,7 +102487,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101130,7 +102519,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101157,7 +102549,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101184,7 +102579,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101211,7 +102609,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101238,7 +102639,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101265,7 +102669,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101292,7 +102699,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101322,8 +102732,8 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
     "ageRestriction": {
-      "text": "under 50 years",
-      "maxYears": 50
+      "text": "12 years of age and younger",
+      "maxYears": 12
     },
     "maxPerDay": null,
     "maxPerVisit": null,
@@ -101353,7 +102763,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101380,7 +102793,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101406,7 +102822,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101434,7 +102853,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101462,7 +102884,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101488,7 +102913,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101514,7 +102942,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101540,7 +102971,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101566,7 +103000,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101592,7 +103029,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101618,7 +103058,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101644,7 +103087,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101670,7 +103116,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101696,7 +103145,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101722,7 +103174,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101748,7 +103203,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101775,7 +103233,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101801,7 +103262,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101827,7 +103291,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101853,7 +103320,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101879,7 +103349,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101905,7 +103378,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101931,7 +103407,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101957,7 +103436,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -101983,7 +103465,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102009,7 +103494,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102035,7 +103523,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102061,7 +103552,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102088,7 +103582,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102114,7 +103611,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102140,7 +103640,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102166,7 +103669,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102192,7 +103698,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102218,7 +103727,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102244,7 +103756,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102270,7 +103785,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102297,7 +103815,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102324,7 +103845,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102351,7 +103875,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102378,7 +103905,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102402,7 +103932,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102429,7 +103962,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102456,7 +103992,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102483,7 +104022,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102510,7 +104052,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102537,7 +104082,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102563,7 +104111,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102589,7 +104140,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102625,7 +104179,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102658,7 +104215,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102691,7 +104251,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102723,7 +104286,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102759,7 +104325,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102786,7 +104355,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102813,7 +104385,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102841,7 +104416,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102870,7 +104448,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102898,7 +104479,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102938,7 +104522,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -102960,7 +104547,7 @@
     "commonTerms": [],
     "billingTips": "AMA billing tips:When tomography is used in addition to the mammography service the TOMO modifier may be claimed in addition. The modifier replaces the billing practice of claiming X105 in addition to the mammography codes.",
     "governingRuleReferences": [],
-    "requiresReferral": false,
+    "requiresReferral": true,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
@@ -102972,9 +104559,28 @@
       {
         "excludedCode": "X105A",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X27C",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X27D",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X27E",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X27G",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103002,7 +104608,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103030,7 +104639,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103058,7 +104670,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103083,8 +104698,52 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X302",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X303",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X338",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103117,9 +104776,40 @@
       {
         "excludedCode": "X303",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103152,9 +104842,40 @@
       {
         "excludedCode": "X302",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103183,9 +104904,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103214,8 +104966,40 @@
       "The same",
       "Different physician in the same location on the same day"
     ],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103252,9 +105036,36 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103291,9 +105102,36 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103326,9 +105164,32 @@
       {
         "excludedCode": "X306B",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103361,9 +105222,40 @@
       {
         "excludedCode": "X309",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103396,9 +105288,40 @@
       {
         "excludedCode": "X308",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103426,7 +105349,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103459,9 +105385,40 @@
       {
         "excludedCode": "X312",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103510,9 +105467,40 @@
       {
         "excludedCode": "X328",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103549,9 +105537,40 @@
       {
         "excludedCode": "X316",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103577,8 +105596,40 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103607,8 +105658,40 @@
       "The same",
       "Different physician in the same location on the same day"
     ],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103660,9 +105743,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103706,9 +105820,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103756,9 +105901,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103811,9 +105987,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103870,9 +106077,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103929,9 +106167,40 @@
       {
         "excludedCode": "X324",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103958,7 +106227,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -103986,7 +106258,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104031,9 +106306,40 @@
       {
         "excludedCode": "X321",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104078,9 +106384,40 @@
       {
         "excludedCode": "X320",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104121,9 +106458,40 @@
       {
         "excludedCode": "X319",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104164,9 +106532,32 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104218,10 +106609,41 @@
       {
         "excludedCode": "X319",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
-    "maxPerDay": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
+    "maxPerDay": 1,
     "maxPerVisit": null,
     "frequencyRestriction": null,
     "requiresAnesthesia": false
@@ -104243,8 +106665,40 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104267,8 +106721,40 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104291,8 +106777,40 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104321,9 +106839,40 @@
       {
         "excludedCode": "X311",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104348,8 +106897,40 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104377,7 +106958,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104406,9 +106990,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104438,9 +107053,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104470,9 +107116,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104502,9 +107179,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104534,9 +107242,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104569,9 +107308,40 @@
       {
         "excludedCode": "X337",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104597,8 +107367,52 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [],
-    "bundlingExclusions": [],
-    "ageRestriction": null,
+    "bundlingExclusions": [
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X330",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X334",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X335",
+        "relationship": "not_claimable_with"
+      }
+    ],
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104628,9 +107442,40 @@
       {
         "excludedCode": "X301",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X304",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X306B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X323",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X331",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X332",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X333",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104658,7 +107503,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104686,7 +107534,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104714,7 +107565,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104741,7 +107595,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104769,7 +107626,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104797,7 +107657,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104825,7 +107688,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104857,7 +107723,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104885,7 +107754,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104913,7 +107785,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104941,7 +107816,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -104978,7 +107856,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105005,7 +107886,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105032,7 +107916,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105060,7 +107947,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105088,7 +107978,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105116,7 +108009,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105153,7 +108049,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105181,7 +108080,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105208,7 +108110,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105236,7 +108141,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105272,7 +108180,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105308,7 +108219,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105344,7 +108258,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105380,7 +108297,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105407,7 +108327,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105521,9 +108444,20 @@
       {
         "excludedCode": "X 65",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X 54A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X 54B",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105559,7 +108493,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": {
@@ -105599,7 +108536,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": {
@@ -105639,7 +108579,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105675,7 +108618,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105711,7 +108657,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105748,7 +108697,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105785,7 +108737,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105820,9 +108775,24 @@
       {
         "excludedCode": "X 54B",
         "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X 58A",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X 58B",
+        "relationship": "not_claimable_with"
+      },
+      {
+        "excludedCode": "X 58D",
+        "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105858,7 +108828,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105894,7 +108867,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105921,7 +108897,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105957,7 +108936,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -105993,7 +108975,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106029,7 +109014,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106065,7 +109053,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106101,7 +109092,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106137,7 +109131,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106164,7 +109161,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106191,7 +109191,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106218,7 +109221,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106258,7 +109264,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106285,7 +109294,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106312,7 +109324,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106339,7 +109354,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106366,7 +109384,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106393,7 +109414,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106420,7 +109444,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106447,7 +109474,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106474,7 +109504,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106501,7 +109534,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106528,7 +109564,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106556,7 +109595,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106584,7 +109626,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106613,7 +109658,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106641,7 +109689,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106669,7 +109720,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106697,7 +109751,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106734,7 +109791,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106771,7 +109831,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106808,7 +109871,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106836,7 +109902,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106863,7 +109932,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106890,7 +109962,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106917,7 +109992,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106944,7 +110022,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106971,7 +110052,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -106998,7 +110082,10 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [],
     "bundlingExclusions": [],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -107038,7 +110125,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,
@@ -107078,7 +110168,10 @@
         "relationship": "not_claimable_with"
       }
     ],
-    "ageRestriction": null,
+    "ageRestriction": {
+      "text": "12 years of age and younger",
+      "maxYears": 12
+    },
     "maxPerDay": null,
     "maxPerVisit": null,
     "frequencyRestriction": null,

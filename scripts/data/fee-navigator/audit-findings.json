@@ -1,0 +1,161 @@
+{
+  "timestamp": "2026-03-03T19:10:43.940Z",
+  "iteration": 2,
+  "metrics": {
+    "bundlingExclusions": {
+      "current": 219,
+      "target": 350,
+      "gap": 131,
+      "severity": "medium"
+    },
+    "ageRestriction": {
+      "current": 242,
+      "target": 50,
+      "gap": 0,
+      "severity": "low"
+    },
+    "frequencyRestriction": {
+      "current": 55,
+      "target": 40,
+      "gap": 0,
+      "severity": "low"
+    },
+    "specialtyRestrictions": {
+      "current": 113,
+      "target": 120,
+      "gap": 7,
+      "severity": "low"
+    },
+    "requiresReferral": {
+      "current": 47,
+      "target": 50,
+      "gap": 3,
+      "severity": "low"
+    },
+    "requiresAnesthesia": {
+      "current": 12,
+      "target": 15,
+      "gap": 3,
+      "severity": "low"
+    },
+    "maxPerDay": {
+      "current": 19,
+      "target": 10,
+      "gap": 0,
+      "severity": "low"
+    }
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "dimension": "bundlingExclusions",
+      "severity": "medium",
+      "description": "808 codes have bundlingExclusions-related language in notes but no extracted bundlingExclusions",
+      "unmatchedCount": 808,
+      "sampleCodes": [
+        "01.05A",
+        "01.09",
+        "01.14",
+        "01.16A",
+        "01.16B"
+      ],
+      "samplePatterns": [
+        {
+          "code": "01.05A",
+          "sentence": "NOTE:Payable only for the assessment of velopharyngeal incompetence."
+        },
+        {
+          "code": "01.09",
+          "sentence": "NOTE:No additional benefit for aspiration.May be claimed in addition to HSC 43."
+        },
+        {
+          "code": "01.14",
+          "sentence": "NOTE:HSCs 11.02, 12.12B, 12.13A, 13.99AF, 54.21C, 54.21D, 54.21E, 54.91A, 54.91C, 54.92E, 54.99A, 55.1 B, 55.41A, 55.41B, 56.34A, 56.99A and 58.39B may be claimed in addition."
+        },
+        {
+          "code": "01.16A",
+          "sentence": "NOTE:A maximum of 2 1/2 hours may be claimed."
+        },
+        {
+          "code": "01.16B",
+          "sentence": "NOTE:May be claimed in addition to HSCs 01."
+        }
+      ]
+    },
+    {
+      "id": "F-002",
+      "dimension": "specialtyRestrictions",
+      "severity": "low",
+      "description": "17 codes have specialtyRestrictions-related language in notes but no extracted specialtyRestrictions",
+      "unmatchedCount": 17,
+      "sampleCodes": [
+        "03.01LG",
+        "03.01LH",
+        "03.01LI",
+        "03.05JJ",
+        "03.05JK"
+      ],
+      "samplePatterns": [
+        {
+          "code": "03.01LG",
+          "sentence": "May only be claimed when the consultant has provided an opinion and recommendations for patient treatment as well as management after reviewing pertinent family/patient history and history of the pres"
+        },
+        {
+          "code": "03.05JJ",
+          "sentence": "NOTE:May only be claimed by:pediatricians (including subspecialties) for patients 18 years of age and under;medical geneticists (no age restriction)."
+        },
+        {
+          "code": "03.05JK",
+          "sentence": "NOTE:May only be claimed by: pediatricians (including subspecialties) for patients 18 years of age and under, or by medical geneticists (no age restriction)."
+        },
+        {
+          "code": "03.05Y",
+          "sentence": "May only be claimed by:pediatricians (including subspecialties) for patients 18 years of age and undermedical geneticists and psychiatrists (no age restriction) when a minimum of 30 minutes has been s"
+        },
+        {
+          "code": "03.08H",
+          "sentence": "08H will be payable only to physicians who have been approved by the CPSA to provide these services."
+        }
+      ]
+    },
+    {
+      "id": "F-003",
+      "dimension": "requiresReferral",
+      "severity": "low",
+      "description": "17 codes have requiresReferral-related language in notes but no extracted requiresReferral",
+      "unmatchedCount": 17,
+      "sampleCodes": [
+        "03.01R",
+        "03.05O",
+        "03.05V",
+        "03.05W",
+        "03.05X"
+      ],
+      "samplePatterns": [
+        {
+          "code": "03.01R",
+          "sentence": "NOTE:Time spent completing the referral may not be claimed using complexity modifiers."
+        },
+        {
+          "code": "03.05O",
+          "sentence": "NOTE:In those situations where the physician is not part of a comprehensive, coordinated, interdisciplinary chronic pain program, the patient must have been initially assessed at an interdisciplinary "
+        },
+        {
+          "code": "03.05V",
+          "sentence": "In those situations where the physician is not part of a comprehensive, coordinated, interdisciplinary chronic pain program, the patient must have been initially assessed at an interdisciplinary chron"
+        },
+        {
+          "code": "08.11A",
+          "sentence": "The total time spent providing the non-referred first visit must be claimed using the applicable non-referred first visit code."
+        },
+        {
+          "code": "08.19CV",
+          "sentence": "May be claimed for both referred and non-referred patients with psychiatric disorders."
+        }
+      ]
+    }
+  ],
+  "actionable": true,
+  "totalGap": 144,
+  "previousTotalGap": null
+}
