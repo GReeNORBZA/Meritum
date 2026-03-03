@@ -21,6 +21,7 @@ import {
   anesthesiaRules,
   bundlingRules,
   justificationTemplates,
+  hscModifierEligibility,
   type InsertVersion,
   type SelectVersion,
   type SelectHscCode,
@@ -54,6 +55,7 @@ import {
   type SelectBundlingRule,
   type SelectJustificationTemplate,
   type InsertProviderRegistry,
+  type SelectHscModifierEligibility,
 } from '@meritum/shared/schemas/db/reference.schema.js';
 
 // ---------------------------------------------------------------------------
@@ -206,7 +208,7 @@ export function createReferenceRepository(db: NodePgDatabase) {
     ): Promise<
       Pick<
         SelectHscCode,
-        'id' | 'hscCode' | 'description' | 'baseFee' | 'feeType' | 'helpText' | 'effectiveTo'
+        'id' | 'hscCode' | 'description' | 'baseFee' | 'feeType' | 'helpText' | 'requiresReferral' | 'effectiveTo'
       >[]
     > {
       const conditions = [eq(hscCodes.versionId, versionId)];
@@ -232,6 +234,7 @@ export function createReferenceRepository(db: NodePgDatabase) {
           baseFee: hscCodes.baseFee,
           feeType: hscCodes.feeType,
           helpText: hscCodes.helpText,
+          requiresReferral: hscCodes.requiresReferral,
           effectiveTo: hscCodes.effectiveTo,
         })
         .from(hscCodes)
@@ -437,6 +440,53 @@ export function createReferenceRepository(db: NodePgDatabase) {
         )
         .limit(1);
       return rows[0];
+    },
+
+    // -----------------------------------------------------------------------
+    // HSC Modifier Eligibility Queries
+    // -----------------------------------------------------------------------
+
+    /**
+     * Find all modifier eligibility rows for a given HSC code and version.
+     * Returns rows ordered by modifier_type then sub_code.
+     */
+    async findModifierEligibilityForHsc(
+      hscCode: string,
+      versionId: string,
+    ): Promise<SelectHscModifierEligibility[]> {
+      return db
+        .select()
+        .from(hscModifierEligibility)
+        .where(
+          and(
+            eq(hscModifierEligibility.hscCode, hscCode),
+            eq(hscModifierEligibility.versionId, versionId),
+          ),
+        )
+        .orderBy(
+          asc(hscModifierEligibility.modifierType),
+          asc(hscModifierEligibility.subCode),
+        );
+    },
+
+    /**
+     * Find distinct HSC codes where a given modifier type is eligible.
+     */
+    async findHscCodesForModifierType(
+      modifierType: string,
+      versionId: string,
+    ): Promise<string[]> {
+      const rows = await db
+        .selectDistinct({ hscCode: hscModifierEligibility.hscCode })
+        .from(hscModifierEligibility)
+        .where(
+          and(
+            eq(hscModifierEligibility.modifierType, modifierType),
+            eq(hscModifierEligibility.versionId, versionId),
+          ),
+        )
+        .orderBy(asc(hscModifierEligibility.hscCode));
+      return rows.map((r) => r.hscCode);
     },
 
     /**

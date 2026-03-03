@@ -64,6 +64,8 @@ import {
   governingRules,
   explanatoryCodes,
   rrnpCommunities,
+  hscModifierEligibility,
+  bundlingRules,
 } from '@meritum/shared/schemas/db/reference.schema.js';
 
 import {
@@ -686,6 +688,30 @@ async function main() {
     surchargeEligible: boolean;
     notes: string | null;
     helpText: string | null;
+    governingRuleReferences?: string[];
+    requiresReferral?: boolean;
+    selfReferralBlocked?: boolean;
+    facilityDesignation?: 'in_office' | 'out_of_office' | null;
+    specialtyRestrictions?: string[];
+    bundlingExclusions?: Array<{
+      excludedCode: string;
+      relationship: 'not_claimable_with' | 'same_day_exclusion';
+    }>;
+    ageRestriction?: {
+      text: string;
+      minYears?: number;
+      maxYears?: number;
+      minMonths?: number;
+      maxMonths?: number;
+    } | null;
+    maxPerDay?: number | null;
+    maxPerVisit?: number | null;
+    frequencyRestriction?: {
+      text: string;
+      count: number;
+      period: string;
+    } | null;
+    requiresAnesthesia?: boolean;
   }
   interface ScrapedModifier {
     modifierCode: string;
@@ -704,13 +730,23 @@ async function main() {
     description: string;
     category: string;
   }
+  interface ScrapedHscModifier {
+    hscCode: string;
+    type: string;
+    code: string;
+    calls: string;
+    explicit: string;
+    action: string;
+    amount: string;
+  }
 
   const scrapedHsc = loadScrapedData<ScrapedHsc[]>('hsc-codes.json');
   const scrapedModifiers = loadScrapedData<ScrapedModifier[]>('modifiers.json');
   const scrapedRules = loadScrapedData<ScrapedGoverningRule[]>('governing-rules.json');
   const scrapedExplCodes = loadScrapedData<ScrapedExplanatoryCode[]>('explanatory-codes.json');
+  const scrapedHscModifiers = loadScrapedData<ScrapedHscModifier[]>('hsc-modifiers.json');
 
-  console.log(`    Loading ${scrapedHsc.length} HSC codes, ${scrapedModifiers.length} modifiers, ${scrapedRules.length} governing rules, ${scrapedExplCodes.length} explanatory codes`);
+  console.log(`    Loading ${scrapedHsc.length} HSC codes, ${scrapedModifiers.length} modifiers, ${scrapedRules.length} governing rules, ${scrapedExplCodes.length} explanatory codes, ${scrapedHscModifiers.length} HSC modifier eligibility rows`);
 
   // Version
   await db.insert(referenceDataVersions).values([
@@ -753,6 +789,16 @@ async function main() {
         feeType: h.feeType,
         modifierEligibility: h.modifierEligibility,
         surchargeEligible: h.surchargeEligible,
+        governingRuleReferences: h.governingRuleReferences ?? [],
+        requiresReferral: h.requiresReferral ?? false,
+        selfReferralBlocked: h.selfReferralBlocked ?? false,
+        specialtyRestrictions: h.specialtyRestrictions ?? [],
+        maxPerDay: h.maxPerDay ?? null,
+        maxPerVisit: h.maxPerVisit ?? null,
+        ageRestriction: h.ageRestriction ?? null,
+        frequencyRestriction: h.frequencyRestriction ?? null,
+        requiresAnesthesia: h.requiresAnesthesia ?? false,
+        facilityDesignation: h.facilityDesignation ?? null,
         notes: h.notes,
         helpText: h.helpText,
         versionId: REF_VERSION_ID,
@@ -764,6 +810,38 @@ async function main() {
     }
   }
   console.log(`    HSC codes: ${scrapedHsc.length}/${scrapedHsc.length} done`);
+
+  // HSC Modifier Eligibility — insert 41k rows in batches of 500
+  const MOD_ELIG_BATCH_SIZE = 500;
+  for (let i = 0; i < scrapedHscModifiers.length; i += MOD_ELIG_BATCH_SIZE) {
+    const batch = scrapedHscModifiers.slice(i, i + MOD_ELIG_BATCH_SIZE);
+    await db.insert(hscModifierEligibility).values(
+      batch.map((m) => ({
+        hscCode: m.hscCode,
+        modifierType: m.type,
+        subCode: m.code,
+        calls: m.calls || null,
+        explicit: m.explicit === 'Yes',
+        action: m.action,
+        amount: m.amount,
+        versionId: REF_VERSION_ID,
+        effectiveFrom: '2025-04-01',
+      })),
+    );
+    if (i + MOD_ELIG_BATCH_SIZE < scrapedHscModifiers.length) {
+      console.log(`    HSC modifier eligibility: ${Math.min(i + MOD_ELIG_BATCH_SIZE, scrapedHscModifiers.length)}/${scrapedHscModifiers.length}`);
+    }
+  }
+  console.log(`    HSC modifier eligibility: ${scrapedHscModifiers.length}/${scrapedHscModifiers.length} done`);
+
+  // Build applicableHscFilter map from eligibility data
+  const modifierHscMap = new Map<string, Set<string>>();
+  for (const m of scrapedHscModifiers) {
+    if (!modifierHscMap.has(m.type)) {
+      modifierHscMap.set(m.type, new Set());
+    }
+    modifierHscMap.get(m.type)!.add(m.hscCode);
+  }
 
   // DI Codes (10 common ones — not available from Fee Navigator)
   const diSeedData = [
@@ -797,18 +875,30 @@ async function main() {
     { code: 'LTCR', name: 'Long Term Care', facilityType: 'LTC', active: true, versionId: REF_VERSION_ID, effectiveFrom: '2025-04-01' },
   ]);
 
-  // Modifier Definitions — all 42 from Fee Navigator
+  // Modifier Definitions — all 42 from Fee Navigator (with applicableHscFilter)
   await db.insert(modifierDefinitions).values(
-    scrapedModifiers.map((m) => ({
-      modifierCode: m.modifierCode,
-      name: m.name,
-      description: m.description,
-      type: 'MODIFIER',
-      calculationMethod: 'VARIES',
-      calculationParams: m.subCodes.length > 0 ? { subCodes: m.subCodes } : {},
-      versionId: REF_VERSION_ID,
-      effectiveFrom: '2025-04-01',
-    })),
+    scrapedModifiers.map((m) => {
+      const hscSet = modifierHscMap.get(m.modifierCode);
+      let applicableHscFilter: Record<string, unknown> = {};
+      if (hscSet) {
+        if (hscSet.size > 2500) {
+          applicableHscFilter = { all: true };
+        } else {
+          applicableHscFilter = { codes: [...hscSet].sort() };
+        }
+      }
+      return {
+        modifierCode: m.modifierCode,
+        name: m.name,
+        description: m.description,
+        type: 'MODIFIER',
+        calculationMethod: 'VARIES',
+        calculationParams: m.subCodes.length > 0 ? { subCodes: m.subCodes } : {},
+        applicableHscFilter,
+        versionId: REF_VERSION_ID,
+        effectiveFrom: '2025-04-01',
+      };
+    }),
   );
 
   // Governing Rules — all 19 from Fee Navigator
@@ -838,6 +928,50 @@ async function main() {
       effectiveFrom: '2025-04-01',
     })),
   );
+
+  // Bundling Rules — extracted from HSC notes text
+  const bundlingPairs = new Map<string, { codeA: string; codeB: string; relationship: string; description: string }>();
+  for (const h of scrapedHsc) {
+    if (!h.bundlingExclusions?.length) continue;
+    for (const excl of h.bundlingExclusions) {
+      // Canonical ordering: codeA < codeB
+      const [codeA, codeB] =
+        h.hscCode < excl.excludedCode
+          ? [h.hscCode, excl.excludedCode]
+          : [excl.excludedCode, h.hscCode];
+      const key = `${codeA}:${codeB}`;
+      if (!bundlingPairs.has(key)) {
+        const rel =
+          excl.relationship === 'same_day_exclusion'
+            ? 'SAME_DAY_EXCLUSION'
+            : 'NOT_CLAIMABLE_WITH';
+        bundlingPairs.set(key, {
+          codeA,
+          codeB,
+          relationship: rel,
+          description: `${h.hscCode} may not be claimed with ${excl.excludedCode}`,
+        });
+      }
+    }
+  }
+
+  if (bundlingPairs.size > 0) {
+    const bundlingRows = [...bundlingPairs.values()];
+    const BUNDLING_BATCH_SIZE = 500;
+    for (let i = 0; i < bundlingRows.length; i += BUNDLING_BATCH_SIZE) {
+      const batch = bundlingRows.slice(i, i + BUNDLING_BATCH_SIZE);
+      await db.insert(bundlingRules).values(
+        batch.map((b) => ({
+          codeA: b.codeA,
+          codeB: b.codeB,
+          relationship: b.relationship,
+          description: b.description,
+          sourceReference: 'SOMB Fee Navigator notes',
+        })),
+      );
+    }
+    console.log(`    Bundling rules: ${bundlingRows.length} pairs inserted`);
+  }
 
   // ========================================================================
   // 9. Intelligence Engine
@@ -1347,6 +1481,7 @@ async function main() {
   console.log('  18 claims (15 AHCIP + 3 WCB)');
   console.log('  2 AHCIP batches');
   console.log(`  ${scrapedHsc.length} HSC codes, 10 DI codes, 4 functional centres, ${scrapedModifiers.length} modifiers`);
+  console.log(`  ${scrapedHscModifiers.length} HSC modifier eligibility rows`);
   console.log(`  ${scrapedRules.length} governing rules, ${scrapedExplCodes.length} explanatory codes`);
   console.log('  2 AI rules');
   console.log('  3 subscriptions, 2 payments');

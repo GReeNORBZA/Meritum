@@ -71,6 +71,7 @@ export interface HscSearchResult {
   baseFee: string | null;
   feeType: string;
   helpText: string | null;
+  requiresReferral: boolean;
   deprecated: boolean;
   replacement?: string;
 }
@@ -104,6 +105,7 @@ export async function searchHscCodes(
     baseFee: row.baseFee ?? null,
     feeType: row.feeType,
     helpText: row.helpText ?? null,
+    requiresReferral: row.requiresReferral,
     deprecated: row.effectiveTo !== null && row.effectiveTo !== undefined,
     ...(row.effectiveTo ? { replacement: undefined } : {}),
   }));
@@ -125,11 +127,39 @@ export interface HscDetailResult {
   combinationGroup: string | null;
   surchargeEligible: boolean;
   pcpcmBasket: string;
+  requiresReferral: boolean;
+  selfReferralBlocked: boolean;
+  requiresAnesthesia: boolean;
+  ageRestriction: {
+    text: string;
+    minYears?: number;
+    maxYears?: number;
+    minMonths?: number;
+    maxMonths?: number;
+  } | null;
+  frequencyRestriction: {
+    text: string;
+    count: number;
+    period: string;
+  } | null;
+  maxPerDay: number | null;
+  maxPerVisit: number | null;
+  governingRuleReferences: string[];
+  facilityDesignation: string | null;
+  notes: string | null;
   applicableModifiers: Array<{
     modifierCode: string;
     name: string;
     description: string;
     calculationMethod: string;
+  }>;
+  modifierEligibilityDetail: Array<{
+    modifierType: string;
+    subCode: string;
+    calls: string | null;
+    explicit: boolean;
+    action: string;
+    amount: string;
   }>;
 }
 
@@ -148,7 +178,10 @@ export async function getHscDetail(
     throw new NotFoundError('HSC code');
   }
 
-  const modifiers = await deps.repo.findModifiersForHsc(hscCode, versionId);
+  const [modifiers, eligibilityRows] = await Promise.all([
+    deps.repo.findModifiersForHsc(hscCode, versionId),
+    deps.repo.findModifierEligibilityForHsc(hscCode, versionId),
+  ]);
 
   return {
     code: code.hscCode,
@@ -162,11 +195,29 @@ export async function getHscDetail(
     combinationGroup: code.combinationGroup ?? null,
     surchargeEligible: code.surchargeEligible,
     pcpcmBasket: code.pcpcmBasket,
+    requiresReferral: code.requiresReferral,
+    selfReferralBlocked: code.selfReferralBlocked,
+    requiresAnesthesia: code.requiresAnesthesia,
+    ageRestriction: (code.ageRestriction as HscDetailResult['ageRestriction']) ?? null,
+    frequencyRestriction: (code.frequencyRestriction as HscDetailResult['frequencyRestriction']) ?? null,
+    maxPerDay: code.maxPerDay ?? null,
+    maxPerVisit: code.maxPerVisit ?? null,
+    governingRuleReferences: (code.governingRuleReferences ?? []) as string[],
+    facilityDesignation: code.facilityDesignation ?? null,
+    notes: code.notes ?? null,
     applicableModifiers: modifiers.map((m) => ({
       modifierCode: m.modifierCode,
       name: m.name,
       description: m.description,
       calculationMethod: m.calculationMethod,
+    })),
+    modifierEligibilityDetail: eligibilityRows.map((r) => ({
+      modifierType: r.modifierType,
+      subCode: r.subCode,
+      calls: r.calls,
+      explicit: r.explicit,
+      action: r.action,
+      amount: r.amount,
     })),
   };
 }
