@@ -313,6 +313,8 @@ function createStubReferenceRepo() {
     findModifiersForHsc: vi.fn(async (_hscCode: string, versionId: string) => {
       return modifierStore.filter((m) => m.versionId === versionId);
     }),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     bulkInsertHscCodes: vi.fn(async () => {}),
     getHscByCode: vi.fn(async () => undefined),
     getHscCodesByVersion: vi.fn(async () => []),

@@ -183,6 +183,8 @@ function createMockReferenceRepo() {
     }),
     findRulesForContext: vi.fn(async () => [MOCK_RULE]),
     findModifiersForHsc: vi.fn(async () => MOCK_MODIFIERS),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     findFunctionalCentre: vi.fn(async (code: string, _versionId: string) => {
       if (code === 'FC001') return MOCK_FC;
       return undefined;

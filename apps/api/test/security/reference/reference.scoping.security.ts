@@ -320,6 +320,8 @@ function createMockReferenceRepo() {
     getDiCodesByVersion: vi.fn(async () => SHARED_DI_SEARCH_RESULTS),
     bulkInsertDiCodes: vi.fn(async () => {}),
     findModifiersForHsc: vi.fn(async () => []),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     findModifierByCode: vi.fn(async () => SHARED_MODIFIER_LIST[0]),
     listAllModifiers: vi.fn(async () => SHARED_MODIFIER_LIST),
     getModifiersByVersion: vi.fn(async () => SHARED_MODIFIER_LIST),

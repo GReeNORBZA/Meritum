@@ -183,6 +183,8 @@ function createMockReferenceRepo() {
     searchHscCodes: vi.fn(async () => []),
     findHscByCode: vi.fn(async () => undefined),
     findModifiersForHsc: vi.fn(async () => []),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     searchDiCodes: vi.fn(async () => []),
     findDiByCode: vi.fn(async () => undefined),
     listAllModifiers: vi.fn(async () => []),

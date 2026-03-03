@@ -52,6 +52,7 @@ let functionalCentreStore: Record<string, any>[];
 let statutoryHolidayStore: Record<string, any>[];
 let explanatoryCodeStore: Record<string, any>[];
 let stagingStore: Record<string, any>[];
+let hscModifierEligibilityStore: Record<string, any>[];
 
 // ---------------------------------------------------------------------------
 // Mock Drizzle DB
@@ -70,6 +71,7 @@ function storeFor(table: any): Record<string, any>[] {
   if (table?.__table === 'statutory_holidays') return statutoryHolidayStore;
   if (table?.__table === 'explanatory_codes') return explanatoryCodeStore;
   if (table?.__table === 'reference_data_staging') return stagingStore;
+  if (table?.__table === 'hsc_modifier_eligibility') return hscModifierEligibilityStore;
   return [];
 }
 
@@ -110,6 +112,12 @@ function insertRow(store: Record<string, any>[], values: any): any {
       combinationGroup: values.combinationGroup ?? null,
       modifierEligibility: values.modifierEligibility ?? [],
       surchargeEligible: values.surchargeEligible ?? false,
+      governingRuleReferences: values.governingRuleReferences ?? [],
+      selfReferralBlocked: values.selfReferralBlocked ?? false,
+      ageRestriction: values.ageRestriction ?? null,
+      frequencyRestriction: values.frequencyRestriction ?? null,
+      requiresAnesthesia: values.requiresAnesthesia ?? false,
+      facilityDesignation: values.facilityDesignation ?? null,
       pcpcmBasket: values.pcpcmBasket ?? 'not_applicable',
       shadowBillingEligible: values.shadowBillingEligible ?? false,
       notes: values.notes ?? null,
@@ -366,6 +374,21 @@ function makeMockDb() {
         if (ctx.offsetN) matches = matches.slice(ctx.offsetN);
         const limited = ctx.limitN ? matches.slice(0, ctx.limitN) : matches;
 
+        if (ctx._distinct && ctx._distinctProjection) {
+          const projKeys = Object.keys(ctx._distinctProjection);
+          const projected = limited.map((row) => {
+            const out: any = {};
+            for (const key of projKeys) out[key] = row[key];
+            return out;
+          });
+          const seen = new Set<string>();
+          return projected.filter((row) => {
+            const k = JSON.stringify(row);
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        }
         if (ctx.projection) {
           return limited.map((row) => ctx.projection(row));
         }
@@ -436,6 +459,10 @@ function makeMockDb() {
           ctx._countMode = true;
         }
       }
+      return chainable(ctx);
+    },
+    selectDistinct(projection?: any) {
+      const ctx: any = { op: 'select', whereClauses: [], setClauses: null, projection: null, _distinct: true, _distinctProjection: projection };
       return chainable(ctx);
     },
     update(table: any) {
@@ -865,6 +892,21 @@ vi.mock('@meritum/shared/schemas/db/reference.schema.js', () => {
     createdAt: makeCol('createdAt'),
   };
 
+  const hscModifierEligibility: any = {
+    __table: 'hsc_modifier_eligibility',
+    id: makeCol('id'),
+    hscCode: makeCol('hscCode'),
+    modifierType: makeCol('modifierType'),
+    subCode: makeCol('subCode'),
+    calls: makeCol('calls'),
+    explicit: makeCol('explicit'),
+    action: makeCol('action'),
+    amount: makeCol('amount'),
+    versionId: makeCol('versionId'),
+    effectiveFrom: makeCol('effectiveFrom'),
+    effectiveTo: makeCol('effectiveTo'),
+  };
+
   return {
     referenceDataVersions,
     hscCodes,
@@ -878,6 +920,7 @@ vi.mock('@meritum/shared/schemas/db/reference.schema.js', () => {
     statutoryHolidays,
     explanatoryCodes,
     referenceDataStaging,
+    hscModifierEligibility,
   };
 });
 
@@ -898,6 +941,7 @@ beforeEach(() => {
   statutoryHolidayStore = [];
   explanatoryCodeStore = [];
   stagingStore = [];
+  hscModifierEligibilityStore = [];
 });
 
 // ---------------------------------------------------------------------------
@@ -942,6 +986,12 @@ function seedHsc(overrides: Partial<Record<string, any>> = {}): Record<string, a
     combinationGroup: overrides.combinationGroup ?? null,
     modifierEligibility: overrides.modifierEligibility ?? ['CMGP', 'LSCD'],
     surchargeEligible: overrides.surchargeEligible ?? true,
+    governingRuleReferences: overrides.governingRuleReferences ?? [],
+    selfReferralBlocked: overrides.selfReferralBlocked ?? false,
+    ageRestriction: overrides.ageRestriction ?? null,
+    frequencyRestriction: overrides.frequencyRestriction ?? null,
+    requiresAnesthesia: overrides.requiresAnesthesia ?? false,
+    facilityDesignation: overrides.facilityDesignation ?? null,
     pcpcmBasket: overrides.pcpcmBasket ?? 'in_basket',
     shadowBillingEligible: overrides.shadowBillingEligible ?? false,
     notes: overrides.notes ?? null,
@@ -1376,6 +1426,8 @@ describe('Reference Repository — HSC Code Queries', () => {
     expect(r.helpText).toBe('Help text');
     // effectiveTo is included for deprecated flag
     expect(r).toHaveProperty('effectiveTo');
+    // requiresReferral is included in search results
+    expect(r).toHaveProperty('requiresReferral');
   });
 });
 
@@ -3032,6 +3084,7 @@ describe('Reference Service — searchHscCodes', () => {
     expect(results.some((r) => r.code === '03.04A')).toBe(true);
     expect(results[0]).toHaveProperty('deprecated');
     expect(results[0]).toHaveProperty('feeType');
+    expect(results[0]).toHaveProperty('requiresReferral');
   });
 
   it('marks deprecated codes with effectiveTo set', async () => {
@@ -3147,6 +3200,53 @@ describe('Reference Service — getHscDetail', () => {
     expect(detail.pcpcmBasket).toBe('in_basket');
     expect(detail.applicableModifiers).toHaveLength(1);
     expect(detail.applicableModifiers[0].modifierCode).toBe('CMGP');
+    // New enrichment fields default values
+    expect(detail.requiresReferral).toBe(false);
+    expect(detail.selfReferralBlocked).toBe(false);
+    expect(detail.requiresAnesthesia).toBe(false);
+    expect(detail.ageRestriction).toBeNull();
+    expect(detail.frequencyRestriction).toBeNull();
+    expect(detail.maxPerDay).toBeNull();
+    expect(detail.maxPerVisit).toBeNull();
+    expect(detail.governingRuleReferences).toEqual([]);
+    expect(detail.facilityDesignation).toBeNull();
+    expect(detail.notes).toBeNull();
+  });
+
+  it('returns all enriched fields when populated', async () => {
+    const { deps } = makeServiceDeps();
+
+    const v = seedVersion({ dataSet: 'SOMB', isActive: true });
+    seedHsc({
+      hscCode: '08.19A',
+      description: 'Specialist consultation',
+      baseFee: '155.00',
+      versionId: v.versionId,
+      requiresReferral: true,
+      selfReferralBlocked: true,
+      requiresAnesthesia: true,
+      ageRestriction: { text: '18 years and older', minYears: 18 },
+      frequencyRestriction: { text: 'once per year', count: 1, period: 'year' },
+      maxPerDay: 3,
+      maxPerVisit: 1,
+      governingRuleReferences: ['GR-4', 'GR-7'],
+      facilityDesignation: 'in_office',
+      notes: 'Requires referral from GP',
+    });
+
+    const detail = await getHscDetail(deps, '08.19A');
+
+    expect(detail.code).toBe('08.19A');
+    expect(detail.requiresReferral).toBe(true);
+    expect(detail.selfReferralBlocked).toBe(true);
+    expect(detail.requiresAnesthesia).toBe(true);
+    expect(detail.ageRestriction).toEqual({ text: '18 years and older', minYears: 18 });
+    expect(detail.frequencyRestriction).toEqual({ text: 'once per year', count: 1, period: 'year' });
+    expect(detail.maxPerDay).toBe(3);
+    expect(detail.maxPerVisit).toBe(1);
+    expect(detail.governingRuleReferences).toEqual(['GR-4', 'GR-7']);
+    expect(detail.facilityDesignation).toBe('in_office');
+    expect(detail.notes).toBe('Requires referral from GP');
   });
 
   it('throws NotFoundError for non-existent HSC code', async () => {

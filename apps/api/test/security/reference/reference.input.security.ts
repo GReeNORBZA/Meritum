@@ -180,6 +180,8 @@ function createMockReferenceRepo() {
 
     // Modifiers
     findModifiersForHsc: vi.fn(async () => []),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     findModifierByCode: vi.fn(async () => undefined),
     listAllModifiers: vi.fn(async () => []),
     bulkInsertModifiers: vi.fn(async () => {}),

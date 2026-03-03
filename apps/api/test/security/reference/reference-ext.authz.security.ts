@@ -178,6 +178,8 @@ function createStubReferenceRepo() {
     getDiCodesByVersion: vi.fn(async () => []),
     bulkInsertDiCodes: vi.fn(async () => {}),
     findModifiersForHsc: vi.fn(async () => []),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     getModifiersForHsc: vi.fn(async () => []),
     findModifierByCode: vi.fn(async () => undefined),
     getModifierByCode: vi.fn(async () => undefined),

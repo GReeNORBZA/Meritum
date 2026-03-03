@@ -269,6 +269,8 @@ function createMockReferenceRepo() {
       total: 1,
     })),
     findModifiersForHsc: vi.fn(async () => MOCK_MODIFIERS),
+    findModifierEligibilityForHsc: vi.fn(async () => []),
+    findHscCodesForModifierType: vi.fn(async () => []),
     searchDiCodes: vi.fn(async () => MOCK_DI_RESULTS),
     findDiByCode: vi.fn(async (code: string, _versionId: string) => {
       if (code === '401') return MOCK_DI_DETAIL;
