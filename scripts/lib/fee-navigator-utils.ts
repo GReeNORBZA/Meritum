@@ -48,7 +48,10 @@ export function validateResponse(url: string, body: string): void {
     lower.includes('access denied') ||
     lower.includes('rate limit exceeded') ||
     lower.includes('too many requests') ||
-    lower.includes('blocked') ||
+    lower.includes('you have been blocked') ||
+    lower.includes('your ip has been blocked') ||
+    lower.includes('access has been blocked') ||
+    lower.includes('your access is blocked') ||
     lower.includes('cloudflare') ||
     lower.includes('please verify you are human')
   ) {
@@ -121,6 +124,7 @@ export function decodeHtmlEntities(xml: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&#x27;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, '\u00A0')
     .replace(/&ndash;/g, '\u2013')
     .replace(/&mdash;/g, '\u2014')
@@ -143,14 +147,21 @@ export function ensureDir(dir: string): void {
 export function saveJson(outputDir: string, filename: string, data: unknown): void {
   ensureDir(outputDir);
   const filePath = path.join(outputDir, filename);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  const tmpPath = filePath + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+  fs.renameSync(tmpPath, filePath);  // atomic on same filesystem
   console.log(`  Saved ${filePath}`);
 }
 
 export function loadJson<T>(outputDir: string, filename: string): T | null {
   const filePath = path.join(outputDir, filename);
   if (fs.existsSync(filePath)) {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    try {
+      return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    } catch (err) {
+      console.warn(`  [WARN] Could not parse ${filePath}: ${(err as Error).message}`);
+      return null;
+    }
   }
   return null;
 }

@@ -8,7 +8,7 @@
 
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import * as pg from 'pg';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
@@ -209,12 +209,27 @@ async function main() {
   });
   const db = drizzle(pool);
 
+  const forceReseed = process.argv.includes('--force');
+
   console.log('Checking for existing seed data...');
   const existing = await db.select({ userId: users.userId }).from(users).where(eq(users.userId, DR_CHEN_ID));
-  if (existing.length > 0) {
-    console.log('Seed data already exists (dr-chen found). Skipping.');
+
+  if (existing.length > 0 && !forceReseed) {
+    console.log('Seed data already exists (dr-chen found). Skipping. Use --force to re-seed.');
     await pool.end();
     return;
+  }
+
+  if (forceReseed && existing.length > 0) {
+    console.log('  --force: Truncating existing reference seed data...');
+    await db.execute(sql`TRUNCATE TABLE bundling_rules CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE explanatory_codes CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE governing_rules CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE hsc_modifier_eligibility CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE modifier_definitions CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE hsc_codes CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE reference_data_versions CASCADE`);
+    console.log('  Truncation complete. Re-seeding...');
   }
 
   console.log('Seeding test data...\n');
@@ -757,7 +772,7 @@ async function main() {
     {
       versionId: REF_VERSION_ID,
       dataSet: 'SOMB',
-      versionLabel: 'SOMB 2025 Q1 - Fee Navigator',
+      versionLabel: 'SOMB 2025-2026 - Fee Navigator (scraped 2026-03-03)',
       effectiveFrom: '2025-04-01',
       publishedBy: DR_CHEN_ID,
       publishedAt: daysAgo(60),
@@ -827,7 +842,7 @@ async function main() {
         hscCode: m.hscCode,
         modifierType: m.type,
         subCode: m.code,
-        calls: m.calls === '' ? null : m.calls,
+        calls: m.calls === '' ? '-' : m.calls,
         explicit: m.explicit === 'Yes',
         action: m.action,
         amount: m.amount,
@@ -926,13 +941,24 @@ async function main() {
   );
 
   // Explanatory Codes — all 123 from Fee Navigator (category → severity mapping)
+  const EXPL_SEVERITY_MAP: Record<string, string> = {
+    'PATIENT REGISTRATION': 'ERROR',
+    'PRACTITIONER REGISTRATION': 'ERROR',
+    'INELIGIBLE SERVICES': 'ERROR',
+    'ADJUSTMENTS': 'WARNING',
+    'SURGICAL PROCEDURES': 'WARNING',
+    'MINOR PROCEDURES': 'WARNING',
+    'ANESTHESIA': 'WARNING',
+    'CONSULTATIONS/VISITS': 'WARNING',
+    'DENTAL ASSESSMENT': 'WARNING',
+    'HOSPITAL RECIPROCAL': 'INFO',
+    'ALTERNATE PAYMENT PLAN': 'INFO',
+    'ADDITIONAL COMPENSATION IN ACCORDANCE WITH GR 2.6': 'INFO',
+    'ACRONYMS AND SPECIAL PROCESSING CODES': 'INFO',
+  };
   await tx.insert(explanatoryCodes).values(
     scrapedExplCodes.map((e) => {
-      const cat = (e.category ?? '').toLowerCase();
-      let severity = 'INFO';
-      if (cat.includes('reject')) severity = 'ERROR';
-      else if (cat.includes('adjust')) severity = 'WARNING';
-      else if (cat.includes('paid') || cat.includes('approv')) severity = 'INFO';
+      const severity = EXPL_SEVERITY_MAP[e.category] ?? 'INFO';
       return {
         explCode: e.code,
         description: e.description,
@@ -951,6 +977,8 @@ async function main() {
   for (const h of scrapedHsc) {
     if (!h.bundlingExclusions?.length) continue;
     for (const excl of h.bundlingExclusions) {
+      // Skip category markers — these are generic exclusions, not specific code pairs
+      if (excl.excludedCode.startsWith('*')) continue;
       // Skip self-referencing pairs
       if (h.hscCode === excl.excludedCode) continue;
       // Canonical ordering: codeA < codeB

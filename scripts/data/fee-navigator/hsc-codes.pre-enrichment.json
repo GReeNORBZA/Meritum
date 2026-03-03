@@ -2174,16 +2174,14 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "The receiving physician after 30 minutes of time related to care of the patient has been spent"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": {
-      "text": "Only one transfer may be claimed per patient, per calendar week",
-      "count": 1,
-      "period": "calendar_week"
-    },
+    "frequencyRestriction": null,
     "requiresAnesthesia": false
   },
   {
@@ -2222,11 +2220,7 @@
     "ageRestriction": null,
     "maxPerDay": null,
     "maxPerVisit": null,
-    "frequencyRestriction": {
-      "text": "Only one transfer may be claimed per patient, per calendar week",
-      "count": 1,
-      "period": "calendar_week"
-    },
+    "frequencyRestriction": null,
     "requiresAnesthesia": false
   },
   {
@@ -2776,6 +2770,7 @@
     "specialtyRestrictions": [
       "Pediatrics (including subspecialties)",
       "Clinical immunology",
+      "Allergy for patients 18 years of age",
       "Under",
       "Endocrinology/metabolism",
       "Gastroenterology",
@@ -2825,6 +2820,7 @@
     "specialtyRestrictions": [
       "Pediatrics (including subspecialties)",
       "Clinical immunology",
+      "Allergy for patients 18 years of age",
       "Under",
       "Endocrinology/metabolism",
       "Gastroenterology",
@@ -4733,6 +4729,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "The same physician who provided the initial assessment when a second call for attendance has been made by staff",
       "Another physician"
     ],
     "bundlingExclusions": [],
@@ -4761,6 +4758,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "The same physician who provided the initial assessment when a second call for attendance has been made by staff",
       "Another physician"
     ],
     "bundlingExclusions": [],
@@ -4789,6 +4787,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "The same physician who provided the initial assessment when a second call for attendance has been made by staff",
       "Another physician"
     ],
     "bundlingExclusions": [],
@@ -5261,6 +5260,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "Pediatricians (including subspecialties) for patients 18 years of age",
       "Under",
       "Medical geneticists (no age restriction)"
     ],
@@ -5294,6 +5294,7 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "Pediatricians (including subspecialties) for patients 18 years of age",
       "Under"
     ],
     "bundlingExclusions": [],
@@ -5966,7 +5967,9 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "Undermedical geneticists"
+      "Pediatricians (including subspecialties) for patients 18 years of age",
+      "Undermedical geneticists",
+      "Psychiatrists (no age restriction) when a minimum of 30 minutes has been spent"
     ],
     "bundlingExclusions": [],
     "ageRestriction": {
@@ -6579,7 +6582,9 @@
     "requiresReferral": true,
     "selfReferralBlocked": true,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "CPSA-approved physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -11057,7 +11062,9 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
-      "A general practitioner (GP)"
+      "A general practitioner (GP)",
+      "A generalist in mental health (GNMH) when providing services in the capacity of the second",
+      "Subsequent physician for psychotherapy of complex groups (HSC 08.44D)"
     ],
     "bundlingExclusions": [],
     "ageRestriction": {
@@ -11090,7 +11097,10 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "A physician other than a psychiatrist when a physician assessment has established (during the same",
+      "A previous visit) that the patient is suffering from a psychiatric disorder"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": {
       "text": "18 years of age or younger",
@@ -14582,6 +14592,7 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [
       "The physician when provided by a nurse",
+      "Other qualified health provider under direct physician supervision",
       "When the physician is on site",
       "Immediately available"
     ],
@@ -15333,6 +15344,8 @@
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
+      "A Critical Care Specialists whose role is to respond as part of a recognized hospital Rapid Response",
+      "Medical Emergency Team when patients fulfill activation criteria",
       "Where intervention by physician is required to prevent death",
       "Support failing organ systems"
     ],
@@ -44240,7 +44253,8 @@
     "facilityDesignation": null,
     "specialtyRestrictions": [
       "The facility responsible for the collection",
-      "Referral of the specimen"
+      "Referral of the specimen",
+      "If no examination is carried out on the specimen by the referring facility"
     ],
     "bundlingExclusions": [],
     "ageRestriction": null,
@@ -48164,11 +48178,11 @@
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "65.7 B",
+        "excludedCode": "65.7B",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "65.8 B",
+        "excludedCode": "65.8B",
         "relationship": "not_claimable_with"
       },
       {
@@ -56760,11 +56774,11 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [
       {
-        "excludedCode": "X 77A",
+        "excludedCode": "X77A",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 77B",
+        "excludedCode": "X77B",
         "relationship": "not_claimable_with"
       }
     ],
@@ -91362,7 +91376,9 @@
     "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
-    "specialtyRestrictions": [],
+    "specialtyRestrictions": [
+      "CPSA-approved physician"
+    ],
     "bundlingExclusions": [],
     "ageRestriction": null,
     "maxPerDay": null,
@@ -101319,7 +101335,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [
       {
-        "excludedCode": "X  4",
+        "excludedCode": "X 4",
         "relationship": "not_claimable_with"
       }
     ],
@@ -104111,11 +104127,11 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [
       {
-        "excludedCode": "X 26",
+        "excludedCode": "X26",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 27",
+        "excludedCode": "X27",
         "relationship": "not_claimable_with"
       },
       {
@@ -104162,19 +104178,19 @@
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 27C",
+        "excludedCode": "X27C",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 27D",
+        "excludedCode": "X27D",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 27E",
+        "excludedCode": "X27E",
         "relationship": "not_claimable_with"
       },
       {
-        "excludedCode": "X 27G",
+        "excludedCode": "X27G",
         "relationship": "not_claimable_with"
       }
     ],
@@ -105252,7 +105268,7 @@
     "commonTerms": [],
     "billingTips": "AMA billing tips:Minimally symptomatic hernias do not necessarily require an ultrasound. If the inguinal hernia is likely surgical or symptomatic, the appropriate referral should be made, the surgical specialist will determine if an ultrasound is necessary.ORDERING PHYSICIANS: please note a request for a hernia study from a physician that is not listed in the notes may not be granted.For more information regarding Choosing Wisely initiatives please consult their website:Read more",
     "governingRuleReferences": [],
-    "requiresReferral": true,
+    "requiresReferral": false,
     "selfReferralBlocked": false,
     "facilityDesignation": null,
     "specialtyRestrictions": [
@@ -107320,7 +107336,7 @@
     "specialtyRestrictions": [],
     "bundlingExclusions": [
       {
-        "excludedCode": "X  1",
+        "excludedCode": "X 1",
         "relationship": "not_claimable_with"
       }
     ],

@@ -204,7 +204,7 @@ async function discoverModifierCodes(): Promise<string[]> {
     if (key) expandableKeys.push(key);
   });
 
-  if (expandableKeys.length > 0 && codes.size === 0) {
+  if (expandableKeys.length > 0) {
     console.log(`  Found ${expandableKeys.length} expandable categories, expanding...`);
     const expandUrl = `${BASE_URL}/modifiers?ajax=expanded`;
     for (const key of expandableKeys) {
@@ -298,7 +298,8 @@ async function discoverAllHscCodes(): Promise<{ codes: string[]; rootSectionKeyC
         const ageDays = Math.round(cacheAge / (24 * 60 * 60 * 1000) * 10) / 10;
         console.log(`  Found cached discovery: ${cached.length} codes (${ageDays} days old). Reusing.`);
         console.log(`  (Use --force-discovery to bypass cache)`);
-        return { codes: cached, rootSectionKeyCount: 0 };
+        const prevMeta = loadJson<ScrapeMetadata>(OUTPUT_DIR, 'scrape-metadata.json');
+        return { codes: cached, rootSectionKeyCount: prevMeta?.counts?.rootSectionKeys ?? 0 };
       } else {
         console.log(`  Discovery cache is stale (>7 days). Re-discovering...`);
       }
@@ -325,19 +326,20 @@ async function discoverAllHscCodes(): Promise<{ codes: string[]; rootSectionKeyC
     const html = decodeHtmlEntities(xml);
     if (!html) return { expandables: [], viewables: [] };
 
-    // Expandable nodes have numeric data-key
-    const expandables =
-      html.match(/class="node expandable" data-key="(\d+)"/g)?.map((m) => {
-        const match = m.match(/data-key="(\d+)"/);
-        return match ? match[1] : '';
-      }).filter(Boolean) ?? [];
+    const $ = cheerio.load(html);
 
-    // Viewable nodes have code as data-key and href
-    const viewables =
-      html.match(/href="\/fee-navigator\/hsc\/([^"]+)"/g)?.map((m) => {
-        const match = m.match(/href="\/fee-navigator\/hsc\/([^"]+)"/);
-        return match ? decodeURIComponent(match[1]) : '';
-      }).filter(Boolean) ?? [];
+    const expandables: string[] = [];
+    $('div.node.expandable, a.node.expandable, [class*="expandable"]').each((_i, el) => {
+      const key = $(el).attr('data-key');
+      if (key && /^\d+$/.test(key)) expandables.push(key);
+    });
+
+    const viewables: string[] = [];
+    $('a[href*="/fee-navigator/hsc/"]').each((_i, el) => {
+      const href = $(el).attr('href') ?? '';
+      const match = href.match(/\/fee-navigator\/hsc\/([^"?&#]+)/);
+      if (match) viewables.push(decodeURIComponent(match[1]));
+    });
 
     return { expandables, viewables };
   }
@@ -581,6 +583,17 @@ async function scrapeHscCodes(
       hscModMap.get(m.hscCode)!.push(m);
     }
     console.log(`  Resuming from previous run: ${completedSet.size} already scraped`);
+
+    // Warn if existing data has enrichment fields (will be lost for re-scraped codes)
+    const hasEnrichment = existingHsc.some(h =>
+      (h as Record<string, unknown>).requiresReferral !== undefined ||
+      (h as Record<string, unknown>).specialtyRestrictions !== undefined ||
+      (h as Record<string, unknown>).bundlingExclusions !== undefined
+    );
+    if (hasEnrichment) {
+      console.warn('  [WARN] Existing hsc-codes.json contains enrichment fields.');
+      console.warn('  Re-scraped codes will lose enrichment. Run enrich-hsc-data.ts after scraping completes.');
+    }
   }
 
   const remaining = codes.filter((c) => !completedSet.has(c));
@@ -590,7 +603,7 @@ async function scrapeHscCodes(
 
   for (let i = 0; i < remaining.length; i++) {
     const code = remaining[i];
-    const overall = completedSet.size + i + 1;
+    const overall = i + 1;
 
     try {
       const url = `${BASE_URL}/hsc/${encodeURIComponent(code)}?ajax=detail`;
@@ -599,7 +612,7 @@ async function scrapeHscCodes(
 
       if (!html) {
         errors.push(`Empty response for ${code}`);
-        console.warn(`  [${overall}/${codes.length}] ${code} — empty response`);
+        console.warn(`  [${overall}/${remaining.length}] ${code} — empty response`);
         consecutiveErrors++;
         if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
           console.error(`\n  *** CIRCUIT BREAKER: ${consecutiveErrors} consecutive errors — aborting scrape ***`);
@@ -612,7 +625,7 @@ async function scrapeHscCodes(
       const result = parseHscDetailHtml(code, html);
       if (!result) {
         errors.push(`Could not parse ${code}`);
-        console.warn(`  [${overall}/${codes.length}] ${code} — parse failed`);
+        console.warn(`  [${overall}/${remaining.length}] ${code} — parse failed`);
         consecutiveErrors++;
         if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
           console.error(`\n  *** CIRCUIT BREAKER: ${consecutiveErrors} consecutive errors — aborting scrape ***`);
@@ -632,7 +645,7 @@ async function scrapeHscCodes(
 
       const fee = result.hsc.baseFee ? `$${result.hsc.baseFee}` : 'no fee';
       console.log(
-        `  [${overall}/${codes.length}] Scraped ${code} (${fee}, ${result.modifierRows.length} modifiers)`,
+        `  [${overall}/${remaining.length}] Scraped ${code} (${fee}, ${result.modifierRows.length} modifiers)`,
       );
 
       // Save progress periodically
@@ -649,7 +662,7 @@ async function scrapeHscCodes(
     } catch (err) {
       errors.push(`Error scraping ${code}: ${(err as Error).message}`);
       console.error(
-        `  [${overall}/${codes.length}] ERROR ${code}: ${(err as Error).message}`,
+        `  [${overall}/${remaining.length}] ERROR ${code}: ${(err as Error).message}`,
       );
       consecutiveErrors++;
       if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
@@ -1035,6 +1048,7 @@ async function scrapeExplanatoryCodes(): Promise<{
     console.log(`  Discovered ${allCodes.length} explanatory codes from tree expansion`);
 
     // Step 3: Optionally fetch each code's detail page for more info
+    let detailFetchErrors = 0;
     for (let i = 0; i < allCodes.length; i++) {
       const ec = allCodes[i];
       try {
@@ -1051,6 +1065,7 @@ async function scrapeExplanatoryCodes(): Promise<{
           }
         }
       } catch {
+        detailFetchErrors++;
         // Detail page may not exist for all codes; keep what we have
       }
 
@@ -1060,6 +1075,12 @@ async function scrapeExplanatoryCodes(): Promise<{
         );
       }
       await sleep(100);
+    }
+    if (detailFetchErrors > 0) {
+      console.log(`  ${detailFetchErrors} detail page fetches failed (using tree-expansion descriptions as fallback)`);
+    }
+    if (detailFetchErrors > 10) {
+      errors.push(`${detailFetchErrors} explanatory code detail fetches failed — descriptions may be incomplete`);
     }
   } catch (err) {
     errors.push(
@@ -1085,6 +1106,29 @@ async function scrapeExplanatoryCodes(): Promise<{
 // Main
 // ============================================================================
 
+const LOCK_FILE = path.join(OUTPUT_DIR, '.scraper.lock');
+
+function acquireLock(): void {
+  if (fs.existsSync(LOCK_FILE)) {
+    const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf-8').trim(), 10);
+    try {
+      process.kill(pid, 0); // Check if process is still running
+      console.error(`Another scraper instance is running (PID ${pid}). Exiting.`);
+      process.exit(1);
+    } catch {
+      console.warn(`  [WARN] Stale lock file found (PID ${pid} not running). Removing.`);
+      fs.unlinkSync(LOCK_FILE);
+    }
+  }
+  fs.writeFileSync(LOCK_FILE, String(process.pid));
+}
+
+function releaseLock(): void {
+  if (fs.existsSync(LOCK_FILE)) {
+    fs.unlinkSync(LOCK_FILE);
+  }
+}
+
 async function main(): Promise<void> {
   const startTime = Date.now();
   const allErrors: string[] = [];
@@ -1095,6 +1139,8 @@ async function main(): Promise<void> {
   console.log('=========================================');
 
   ensureDir(OUTPUT_DIR);
+  acquireLock();
+  process.on('exit', releaseLock);
 
   // Phase 1: Discover all HSC codes
   const { codes, rootSectionKeyCount } = await discoverAllHscCodes();
@@ -1151,7 +1197,7 @@ async function main(): Promise<void> {
       'validate-fee-navigator-data.ts',
     );
     const tsxPath = path.join(process.cwd(), 'apps', 'api', 'node_modules', '.bin', 'tsx');
-    execSync(`"${tsxPath}" "${validateScript}"`, { stdio: 'inherit' });
+    execSync(`"${tsxPath}" "${validateScript}" --skip-enrichment`, { stdio: 'inherit' });
     console.log('\n  Post-scrape validation: PASSED\n');
   } catch {
     console.error('\n  *** POST-SCRAPE VALIDATION FAILED ***');

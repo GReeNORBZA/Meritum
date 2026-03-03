@@ -18,6 +18,7 @@ const DATA_DIR = path.join(
 );
 
 const jsonMode = process.argv.includes('--json');
+const skipEnrichment = process.argv.includes('--skip-enrichment');
 
 let errors = 0;
 let warnings = 0;
@@ -470,14 +471,18 @@ const ENRICHMENT_MINIMUMS: Array<[string, number, number]> = [
   ['commonTerms', withCommonTerms, 80],
 ];
 
-for (const [label, count, min] of ENRICHMENT_MINIMUMS) {
-  if (count >= min) {
-    pass(`${label}: ${count} codes (min: ${min})`);
-    recordCheck(label, 'pass', count, min);
-  } else {
-    fail(`${label}: ${count} codes — below minimum ${min}`);
-    recordCheck(label, 'fail', count, min);
+if (!skipEnrichment) {
+  for (const [label, count, min] of ENRICHMENT_MINIMUMS) {
+    if (count >= min) {
+      pass(`${label}: ${count} codes (min: ${min})`);
+      recordCheck(label, 'pass', count, min);
+    } else {
+      fail(`${label}: ${count} codes — below minimum ${min}`);
+      recordCheck(label, 'fail', count, min);
+    }
   }
+} else {
+  if (!jsonMode) console.log('  (Enrichment checks skipped — run after enrichment)');
 }
 
 if (enrichErrors === 0) {

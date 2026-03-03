@@ -27,6 +27,9 @@ const DATA_DIR = path.join(
   'fee-navigator',
 );
 
+// Module-level code normalization map, built in main() before enrichment
+let codeNormMap = new Map<string, string>();
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -88,6 +91,12 @@ function normalizeSpecialty(s: string): string | null {
   let trimmed = s.trim();
   // Filter too short
   if (trimmed.length < 4) return null;
+
+  // Filter values that are too long to be a specialty name (likely a sentence fragment)
+  if (trimmed.length > 60) return null;
+
+  // Filter values containing numeric time/quantity phrases (likely conditional clauses)
+  if (/\d+\s*(?:minutes?|hours?|days?|months?|years?|times?)/.test(trimmed)) return null;
 
   // Extract specialty from "physicians with [a/an] X specialty" pattern
   const withSpecialtyMatch = trimmed.match(/^physicians?\s+with\s+(?:an?\s+)?(.+?)\s+specialty$/i);
@@ -455,7 +464,10 @@ function extractHscCodesFromText(text: string): string[] {
     codes.push(match[1]);
   }
 
-  return [...new Set(codes)];
+  return [...new Set(codes)].map(c => {
+    const noSpace = c.replace(/\s+/g, '');
+    return codeNormMap.get(noSpace) ?? c;
+  });
 }
 
 interface AgePattern {
@@ -516,6 +528,7 @@ function extractAgeRestriction(notes: string): AgeRestriction | null {
  * Convert word-form numbers to digits.
  */
 const WORD_NUMBERS: Record<string, number> = {
+  once: 1, twice: 2,
   one: 1, two: 2, three: 3, four: 4, five: 5,
   six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
   eleven: 11, twelve: 12, fifteen: 15, twenty: 20,
@@ -528,7 +541,7 @@ function parseNumberOrWord(digitGroup: string | undefined, wordGroup: string | u
 }
 
 // Regex fragment matching digit or word-form numbers
-const NUM = String.raw`(?:(\d+)\s*|(\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)\b)\s*)`;
+const NUM = String.raw`(?:(\d+)\s*|(\b(?:once|twice|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)\b)\s*)`;
 
 /**
  * Extract frequency limits from notes text.
@@ -637,6 +650,24 @@ function extractFrequencyLimit(notes: string): {
         count,
         period,
       };
+    }
+  }
+
+  // Fallback: "Only one/two [noun] per [period]"
+  if (!result.restriction && !result.maxPerDay) {
+    const onlyPattern = new RegExp(
+      String.raw`[Oo]nly\s+${NUM}(?:\([^)]*\)\s*)?(?:\w+\s+){0,3}(?:may\s+be\s+(?:claimed|billed)\s+)?per\s+(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(day|calendar year|benefit year|year|calendar month|month|calendar week|week|lifetime|shift|session)`,
+      'i',
+    );
+    const onlyMatch = notes.match(onlyPattern);
+    if (onlyMatch) {
+      const count = parseNumberOrWord(onlyMatch[1], onlyMatch[2]) ?? 1;
+      const period = onlyMatch[3].toLowerCase().replace(/\s+/g, '_');
+      if (period === 'day') {
+        result.maxPerDay = count;
+      } else {
+        result.restriction = { text: onlyMatch[0].trim(), count, period };
+      }
     }
   }
 
@@ -808,6 +839,19 @@ async function main(): Promise<void> {
   const hscCodes: HscCode[] = JSON.parse(fs.readFileSync(hscPath, 'utf-8'));
   console.log(`  Loaded ${hscCodes.length} HSC codes\n`);
 
+  // Build code normalization map: "03.7A" -> "03.7 A", etc.
+  const canonicalCodes = new Set(hscCodes.map(h => h.hscCode));
+  codeNormMap = new Map<string, string>();
+  for (const canonical of canonicalCodes) {
+    const noSpace = canonical.replace(/\s+/g, '');
+    if (noSpace !== canonical) {
+      codeNormMap.set(noSpace, canonical);
+    }
+  }
+  if (codeNormMap.size > 0) {
+    console.log(`  Code normalization map: ${codeNormMap.size} entries\n`);
+  }
+
   // Fetch GR 4 page (contains 4.4.8 referral requirements)
   console.log('  Fetching GR 4 page...');
   let gr4Html: string;
@@ -857,7 +901,7 @@ async function main(): Promise<void> {
 
     // Notes-based referral detection (supplement GR 4.4.8)
     if (!hsc.requiresReferral && hsc.notes) {
-      if (/(?:referral\s+(?:must|is\s+required|required)|must\s+be\s+referred|requires?\s+(?:a\s+)?referral)/i.test(hsc.notes)) {
+      if (/(?:referral\s+(?:must|is\s+required|required|is\s+supplied)|must\s+be\s+referred|requires?\s+(?:a\s+)?referral|when\s+the\s+referral\s+is\s+(?:supplied|provided))/i.test(hsc.notes)) {
         hsc.requiresReferral = true;
       }
     }
@@ -929,8 +973,15 @@ async function main(): Promise<void> {
     if (hsc.requiresAnesthesia) anesthesiaCount++;
   }
 
-  // Write enriched data back
-  fs.writeFileSync(hscPath, JSON.stringify(hscCodes, null, 2));
+  // Backup original before enrichment
+  const backupPath = hscPath.replace(/\.json$/, '.pre-enrichment.json');
+  fs.copyFileSync(hscPath, backupPath);
+  console.log(`  Backup saved to ${backupPath}`);
+
+  // Atomic write
+  const tmpPath = hscPath + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(hscCodes, null, 2));
+  fs.renameSync(tmpPath, hscPath);
   console.log(`  Enriched hsc-codes.json written to ${hscPath}`);
 
   console.log('\n=========================================');
