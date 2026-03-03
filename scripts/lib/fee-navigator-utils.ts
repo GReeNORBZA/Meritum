@@ -6,6 +6,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
 // ============================================================================
 // Constants
@@ -15,9 +16,12 @@ export const BASE_URL = 'https://apps.albertadoctors.org/fee-navigator';
 export const DELAY_MS = 200;
 export const MAX_RETRIES = 3;
 
+export const STEALTH_MODE = process.argv.includes('--stealth');
+
 export const HEADERS: Record<string, string> = {
-  'User-Agent':
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': STEALTH_MODE
+    ? 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    : 'Meritum-SOMB-Scraper/1.0 (+https://meritum.ca; contact@meritum.ca)',
   Referer: `${BASE_URL}/hsc`,
   'X-Requested-With': 'XMLHttpRequest',
 };
@@ -164,4 +168,74 @@ export function loadJson<T>(outputDir: string, filename: string): T | null {
     }
   }
   return null;
+}
+
+/**
+ * Check robots.txt for the target host. Returns an object indicating
+ * whether scraping is allowed and any crawl-delay.
+ */
+export async function checkRobotsTxt(baseUrl: string): Promise<{
+  allowed: boolean;
+  crawlDelay: number | null;
+  raw: string | null;
+}> {
+  const url = new URL(baseUrl);
+  const robotsUrl = `${url.protocol}//${url.host}/robots.txt`;
+
+  try {
+    const resp = await fetch(robotsUrl, {
+      headers: { 'User-Agent': HEADERS['User-Agent'] },
+    });
+
+    if (resp.status === 404) {
+      // No robots.txt — everything is allowed
+      return { allowed: true, crawlDelay: null, raw: null };
+    }
+
+    if (!resp.ok) {
+      console.warn(`  [WARN] robots.txt returned HTTP ${resp.status} — proceeding with caution`);
+      return { allowed: true, crawlDelay: null, raw: null };
+    }
+
+    const body = await resp.text();
+
+    // Parse for our user-agent or wildcard
+    const lines = body.split('\n').map(l => l.trim().toLowerCase());
+    let inOurSection = false;
+    let inWildcard = false;
+    let disallowed = false;
+    let crawlDelay: number | null = null;
+
+    for (const line of lines) {
+      if (line.startsWith('user-agent:')) {
+        const ua = line.replace('user-agent:', '').trim();
+        inOurSection = ua === 'meritum-somb-scraper' || ua === 'meritum';
+        inWildcard = ua === '*';
+      } else if (inOurSection || inWildcard) {
+        if (line.startsWith('disallow:')) {
+          const path = line.replace('disallow:', '').trim();
+          // Check if our target paths are disallowed
+          if (path === '/' || path === '/fee-navigator' || path === '/fee-navigator/') {
+            disallowed = true;
+          }
+        }
+        if (line.startsWith('crawl-delay:')) {
+          const delay = parseFloat(line.replace('crawl-delay:', '').trim());
+          if (!isNaN(delay)) crawlDelay = delay;
+        }
+      }
+    }
+
+    // Our specific UA section takes precedence over wildcard
+    return { allowed: !disallowed, crawlDelay, raw: body };
+  } catch (err) {
+    console.warn(`  [WARN] Could not fetch robots.txt: ${(err as Error).message} — proceeding`);
+    return { allowed: true, crawlDelay: null, raw: null };
+  }
+}
+
+/** Compute SHA-256 hash of a file's contents */
+export function computeFileHash(filePath: string): string {
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash('sha256').update(content).digest('hex');
 }

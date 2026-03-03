@@ -15,6 +15,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  foreignKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -132,7 +133,7 @@ export const hscCodes = pgTable(
     effectiveTo: date('effective_to', { mode: 'string' }),
   },
   (table) => [
-    index('hsc_codes_hsc_code_version_id_idx').on(
+    uniqueIndex('hsc_codes_hsc_code_version_id_unique_idx').on(
       table.hscCode,
       table.versionId,
     ),
@@ -285,6 +286,11 @@ export const hscModifierEligibility = pgTable(
       table.calls,
       table.versionId,
     ),
+    // FK to hsc_codes on (hsc_code, version_id)
+    foreignKey({
+      columns: [table.hscCode, table.versionId],
+      foreignColumns: [hscCodes.hscCode, hscCodes.versionId],
+    }),
   ],
 );
 
@@ -302,6 +308,7 @@ export const governingRules = pgTable(
     ruleName: varchar('rule_name', { length: 200 }).notNull(),
     ruleCategory: varchar('rule_category', { length: 30 }).notNull(),
     description: text('description').notNull(),
+    descriptionHtml: text('description_html'),
     ruleLogic: jsonb('rule_logic')
       .notNull()
       .$type<Record<string, unknown>>(),

@@ -795,6 +795,10 @@ Build domains in this order. Each domain's FRD is in `docs/frd/`.
 - **Verify auth:** Run `gh auth status` to confirm the token is active. If expired, run `gh auth login`.
 - **No SSH key** in `~/.ssh/` — do not attempt SSH-based git operations. The HTTPS remote + gh credential helper is the intended setup.
 
+## Communication Style
+
+- **Always use full absolute paths** when referencing files (e.g., `/workspace/projects/scripts/lib/fee-navigator-utils.ts`, not `fee-navigator-utils.ts` or `scripts/lib/fee-navigator-utils.ts`).
+
 ## Working With This Codebase
 
 ### Build-Test-Fix Loop (MANDATORY)

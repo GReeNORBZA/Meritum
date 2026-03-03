@@ -742,6 +742,7 @@ async function main() {
     ruleNumber: string;
     title: string;
     fullText: string;
+    fullHtml?: string | null;
     referencedHscCodes: string[];
   }
   interface ScrapedExplanatoryCode {
@@ -930,6 +931,7 @@ async function main() {
       ruleName: r.title,
       ruleCategory: 'GENERAL',
       description: r.fullText,
+      descriptionHtml: r.fullHtml ?? null,
       ruleLogic: { referencedHscCodes: r.referencedHscCodes },
       severity: 'ERROR',
       errorMessage: `Governing Rule ${r.ruleNumber} violation: ${r.title}`,

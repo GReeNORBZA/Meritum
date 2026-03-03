@@ -19,7 +19,11 @@ import {
   ensureDir,
   BASE_URL,
   DELAY_MS,
+  STEALTH_MODE,
+  checkRobotsTxt,
+  computeFileHash,
 } from './lib/fee-navigator-utils.js';
+import { SELECTORS, resolveSelector } from './lib/fee-navigator-selectors.js';
 
 // ============================================================================
 // Configuration
@@ -76,6 +80,7 @@ interface GoverningRule {
   ruleNumber: string;
   title: string;
   fullText: string;
+  fullHtml: string | null;
   referencedHscCodes: string[];
 }
 
@@ -98,6 +103,17 @@ interface ScrapeMetadata {
     explanatoryCodes: number;
   };
   errors: string[];
+  contentHashes?: Record<string, string>;
+  previousHashes?: Record<string, string>;
+  codeChanges?: {
+    deprecated: string[];
+    added: string[];
+  };
+  selectorHealth?: {
+    totalResolutions: number;
+    fallbacksUsed: number;
+    failedSelectors: string[];
+  };
 }
 
 // ============================================================================
@@ -409,6 +425,21 @@ function deduplicateModifierRows(rows: HscModifierRow[]): HscModifierRow[] {
 // Phase 2: Scrape each HSC code detail page
 // ============================================================================
 
+// Selector health tracking for metadata
+let selectorResolutions = 0;
+let selectorFallbacksUsed = 0;
+const selectorFailures: string[] = [];
+
+function trackSelector($: cheerio.CheerioAPI, selectorDef: (typeof SELECTORS)[keyof typeof SELECTORS]) {
+  const result = resolveSelector($, selectorDef);
+  selectorResolutions++;
+  if (result.usedFallback) selectorFallbacksUsed++;
+  if ($(result.selector).length === 0 && selectorDef.fallbacks.length > 0) {
+    selectorFailures.push(selectorDef.name);
+  }
+  return result;
+}
+
 function parseHscDetailHtml(
   hscCode: string,
   html: string,
@@ -416,17 +447,20 @@ function parseHscDetailHtml(
   const $ = cheerio.load(html);
 
   // Code heading
-  const codeHeading = $('h2.code').text().replace('Health Service Code', '').trim();
+  const { selector: codeSel } = trackSelector($, SELECTORS.codeHeading);
+  const codeHeading = $(codeSel).text().replace('Health Service Code', '').trim();
   const code = codeHeading || hscCode;
 
   // Description
-  const description = $('h1.title').text().trim();
+  const { selector: titleSel } = trackSelector($, SELECTORS.title);
+  const description = $(titleSel).text().trim();
   if (!description) {
     return null;
   }
 
   // Notes
-  const noteEl = $('div.note');
+  const { selector: noteSel } = trackSelector($, SELECTORS.noteBlock);
+  const noteEl = $(noteSel);
   const notes = noteEl.length ? noteEl.text().replace(/\s+/g, ' ').trim() : null;
 
   // Basic info table
@@ -434,7 +468,8 @@ function parseHscDetailHtml(
   let baseFee: string | null = null;
   const commonTerms: string[] = [];
 
-  $('table.basic-info tr').each((_i, row) => {
+  const { selector: basicInfoSel } = trackSelector($, SELECTORS.basicInfoTable);
+  $(basicInfoSel).each((_i, row) => {
     const th = $(row).find('th').text().trim();
     const td = $(row).find('td').text().trim();
 
@@ -454,12 +489,14 @@ function parseHscDetailHtml(
   });
 
   // Billing tips
-  const tipsEl = $('div.billing-tips');
+  const { selector: tipsSel } = trackSelector($, SELECTORS.billingTips);
+  const tipsEl = $(tipsSel);
   const billingTips = tipsEl.length ? tipsEl.text().replace(/\s+/g, ' ').trim() : null;
 
   // Governing rule references (div.governing-rules section)
   const governingRuleReferences: string[] = [];
-  const govRulesEl = $('div.governing-rules');
+  const { selector: govRulesSel } = trackSelector($, SELECTORS.governingRulesBlock);
+  const govRulesEl = $(govRulesSel);
   if (govRulesEl.length) {
     // Try structured list first: ul > li with div.title containing rule numbers
     govRulesEl.find('li').each((_i, el) => {
@@ -505,7 +542,8 @@ function parseHscDetailHtml(
   const modifierCodes = new Set<string>();
   let surchargeEligible = false;
 
-  $('div.modifiers table tr').each((_i, row) => {
+  const { selector: modSel } = trackSelector($, SELECTORS.modifierTable);
+  $(modSel).each((_i, row) => {
     const tds = $(row).find('td');
     if (tds.length === 0) return; // Skip header row
 
@@ -816,11 +854,18 @@ function parseGoverningRulePage(
     record.find('h1').text().trim() ||
     '';
 
-  // Full text — get all text content
+  // Plain text for search indexing (existing behavior)
   const fullText = record
     .text()
     .replace(/\s+/g, ' ')
     .trim();
+
+  // Sanitized HTML for UI rendering — strip scripts/styles but keep structure
+  const rawHtml = record.html() ?? '';
+  const $sanitized = cheerio.load(rawHtml);
+  $sanitized('script, style, link, meta').remove();
+  $sanitized('div.disclaimer, .footer-note').remove();
+  const fullHtml = $sanitized.html()?.trim() ?? null;
 
   // Referenced HSC codes
   const referencedHscCodes = new Set<string>();
@@ -836,6 +881,7 @@ function parseGoverningRulePage(
     ruleNumber,
     title: title || `Governing Rule ${ruleNumber}`,
     fullText,
+    fullHtml,
     referencedHscCodes: Array.from(referencedHscCodes),
   };
 }
@@ -1136,14 +1182,62 @@ async function main(): Promise<void> {
   console.log('=========================================');
   console.log('  AMA Fee Navigator Scraper');
   console.log(`  Output: ${OUTPUT_DIR}`);
+  console.log(`  User-Agent: ${STEALTH_MODE ? 'stealth (Chrome)' : 'honest (Meritum-SOMB-Scraper/1.0)'}`);
   console.log('=========================================');
 
   ensureDir(OUTPUT_DIR);
   acquireLock();
   process.on('exit', releaseLock);
 
+  // Check robots.txt
+  const robotsResult = await checkRobotsTxt(BASE_URL);
+  if (!robotsResult.allowed) {
+    console.error('  robots.txt disallows scraping /fee-navigator. Aborting.');
+    console.error('  Contact the AMA to request scraping permission.');
+    releaseLock();
+    process.exit(1);
+  }
+  if (robotsResult.crawlDelay !== null) {
+    console.log(`  robots.txt crawl-delay: ${robotsResult.crawlDelay}s (adjusting delay)`);
+  }
+  if (robotsResult.raw) {
+    console.log(`  robots.txt found (${robotsResult.raw.length} bytes)`);
+  } else {
+    console.log('  robots.txt: not found (404) — no restrictions');
+  }
+
   // Phase 1: Discover all HSC codes
   const { codes, rootSectionKeyCount } = await discoverAllHscCodes();
+
+  // Detect deprecated codes (present in previous scrape but absent from discovery)
+  let codeChanges: { deprecated: string[]; added: string[] } | undefined;
+  const prevHscCodes = loadJson<Array<{ hscCode: string }>>(OUTPUT_DIR, 'hsc-codes.json');
+  if (prevHscCodes && prevHscCodes.length > 0) {
+    const prevCodeSet = new Set(prevHscCodes.map(h => h.hscCode));
+    const currentCodeSet = new Set(codes);
+
+    const deprecated = [...prevCodeSet].filter(c => !currentCodeSet.has(c));
+    const newCodes = [...currentCodeSet].filter(c => !prevCodeSet.has(c));
+
+    if (deprecated.length > 0) {
+      console.warn(`\n  [WARN] ${deprecated.length} codes from previous scrape not found in discovery:`);
+      for (const code of deprecated.slice(0, 20)) {
+        console.warn(`    - ${code}`);
+      }
+      if (deprecated.length > 20) {
+        console.warn(`    ... and ${deprecated.length - 20} more`);
+      }
+      console.warn('  These codes may have been removed from Fee Navigator.');
+      console.warn('  They will remain in hsc-codes.json from the previous run but should be reviewed.\n');
+      allErrors.push(`${deprecated.length} codes from previous scrape not found in current discovery: ${deprecated.slice(0, 5).join(', ')}${deprecated.length > 5 ? '...' : ''}`);
+    }
+
+    if (newCodes.length > 0) {
+      console.log(`  ${newCodes.length} new codes discovered (not in previous scrape)`);
+    }
+
+    codeChanges = { deprecated, added: newCodes };
+  }
 
   // Phase 2: Scrape each HSC code detail page
   const { hscCodes, hscModifiers, errors: hscErrors } = await scrapeHscCodes(codes);
@@ -1162,6 +1256,35 @@ async function main(): Promise<void> {
     await scrapeExplanatoryCodes();
   allErrors.push(...explErrors);
 
+  // Compute content hashes for freshness detection
+  const prevMetadata = loadJson<ScrapeMetadata>(OUTPUT_DIR, 'scrape-metadata.json');
+  const contentHashes: Record<string, string> = {};
+  for (const file of ['hsc-codes.json', 'hsc-modifiers.json', 'modifiers.json', 'governing-rules.json', 'explanatory-codes.json']) {
+    const filePath = path.join(OUTPUT_DIR, file);
+    if (fs.existsSync(filePath)) {
+      contentHashes[file] = computeFileHash(filePath);
+    }
+  }
+
+  // Compare with previous hashes
+  if (prevMetadata?.contentHashes) {
+    const changed: string[] = [];
+    const unchanged: string[] = [];
+    for (const [file, hash] of Object.entries(contentHashes)) {
+      if (prevMetadata.contentHashes[file] === hash) {
+        unchanged.push(file);
+      } else {
+        changed.push(file);
+      }
+    }
+    if (changed.length === 0) {
+      console.log('\n  Content hashes: ALL FILES UNCHANGED from previous scrape');
+    } else {
+      console.log(`\n  Content changes detected: ${changed.join(', ')}`);
+      console.log(`  Unchanged: ${unchanged.join(', ')}`);
+    }
+  }
+
   // Save metadata
   const durationSeconds = Math.round((Date.now() - startTime) / 1000);
   const topLevelRuleCount = rules.filter((r) => !r.ruleNumber.includes('.')).length;
@@ -1179,6 +1302,14 @@ async function main(): Promise<void> {
       explanatoryCodes: explCodes.length,
     },
     errors: allErrors,
+    contentHashes,
+    previousHashes: prevMetadata?.contentHashes ?? undefined,
+    codeChanges,
+    selectorHealth: {
+      totalResolutions: selectorResolutions,
+      fallbacksUsed: selectorFallbacksUsed,
+      failedSelectors: [...new Set(selectorFailures)],
+    },
   };
   saveJson(OUTPUT_DIR, 'scrape-metadata.json', metadata);
 
