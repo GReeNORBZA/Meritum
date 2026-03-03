@@ -261,7 +261,7 @@ export const hscModifierEligibility = pgTable(
     subCode: varchar('sub_code', { length: 20 }).notNull(),
     calls: varchar('calls', { length: 20 }),
     explicit: boolean('explicit').notNull().default(false),
-    action: varchar('action', { length: 30 }).notNull(),
+    action: varchar('action', { length: 50 }).notNull(),
     amount: varchar('amount', { length: 20 }).notNull(),
     versionId: uuid('version_id')
       .notNull()
@@ -278,10 +278,11 @@ export const hscModifierEligibility = pgTable(
       table.modifierType,
       table.versionId,
     ),
-    uniqueIndex('hsc_modifier_elig_code_type_sub_version_idx').on(
+    uniqueIndex('hsc_modifier_elig_code_type_sub_calls_version_idx').on(
       table.hscCode,
       table.modifierType,
       table.subCode,
+      table.calls,
       table.versionId,
     ),
   ],

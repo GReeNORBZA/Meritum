@@ -26,6 +26,9 @@ import {
 // ============================================================================
 
 const BATCH_SAVE_SIZE = 100; // Save progress every N codes
+const FORCE_DISCOVERY = process.argv.includes('--force-discovery');
+const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7-day TTL for discovery cache
+const CIRCUIT_BREAKER_THRESHOLD = 20; // Abort after this many consecutive errors
 const OUTPUT_DIR = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   'data',
@@ -282,14 +285,26 @@ async function discoverSubRulePages(
 // Phase 1: Discover all HSC codes via tree expansion
 // ============================================================================
 
-async function discoverAllHscCodes(): Promise<string[]> {
+async function discoverAllHscCodes(): Promise<{ codes: string[]; rootSectionKeyCount: number }> {
   console.log('\n=== Phase 1: Discovering HSC codes via tree expansion ===\n');
 
-  // Check for cached discovery
-  const cached = loadJson<string[]>(OUTPUT_DIR, '_discovered-codes.json');
-  if (cached && cached.length > 0) {
-    console.log(`  Found cached discovery: ${cached.length} codes. Reusing.`);
-    return cached;
+  // Check for cached discovery (skip if --force-discovery or cache is stale)
+  const cachePath = path.join(OUTPUT_DIR, '_discovered-codes.json');
+  if (!FORCE_DISCOVERY && fs.existsSync(cachePath)) {
+    const cacheAge = Date.now() - fs.statSync(cachePath).mtimeMs;
+    const cached = loadJson<string[]>(OUTPUT_DIR, '_discovered-codes.json');
+    if (cached && cached.length > 0) {
+      if (cacheAge < CACHE_MAX_AGE_MS) {
+        const ageDays = Math.round(cacheAge / (24 * 60 * 60 * 1000) * 10) / 10;
+        console.log(`  Found cached discovery: ${cached.length} codes (${ageDays} days old). Reusing.`);
+        console.log(`  (Use --force-discovery to bypass cache)`);
+        return { codes: cached, rootSectionKeyCount: 0 };
+      } else {
+        console.log(`  Discovery cache is stale (>7 days). Re-discovering...`);
+      }
+    }
+  } else if (FORCE_DISCOVERY) {
+    console.log(`  --force-discovery: bypassing cache`);
   }
 
   const allCodes = new Set<string>();
@@ -365,7 +380,27 @@ async function discoverAllHscCodes(): Promise<string[]> {
   // Cache discovery results
   saveJson(OUTPUT_DIR, '_discovered-codes.json', codes);
 
-  return codes;
+  return { codes, rootSectionKeyCount: rootKeys.length };
+}
+
+// ============================================================================
+// Modifier Row Deduplication (SCR-150)
+// ============================================================================
+
+function deduplicateModifierRows(rows: HscModifierRow[]): HscModifierRow[] {
+  const seen = new Set<string>();
+  const unique: HscModifierRow[] = [];
+  for (const row of rows) {
+    const key = `${row.hscCode}|${row.type}|${row.code}|${row.calls}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(row);
+    }
+  }
+  if (unique.length < rows.length) {
+    console.log(`  Deduplicated modifier rows: ${rows.length} → ${unique.length} (${rows.length - unique.length} duplicates removed)`);
+  }
+  return unique;
 }
 
 // ============================================================================
@@ -551,6 +586,8 @@ async function scrapeHscCodes(
   const remaining = codes.filter((c) => !completedSet.has(c));
   console.log(`  ${remaining.length} codes to scrape (${completedSet.size} already done)\n`);
 
+  let consecutiveErrors = 0;
+
   for (let i = 0; i < remaining.length; i++) {
     const code = remaining[i];
     const overall = completedSet.size + i + 1;
@@ -563,6 +600,12 @@ async function scrapeHscCodes(
       if (!html) {
         errors.push(`Empty response for ${code}`);
         console.warn(`  [${overall}/${codes.length}] ${code} — empty response`);
+        consecutiveErrors++;
+        if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
+          console.error(`\n  *** CIRCUIT BREAKER: ${consecutiveErrors} consecutive errors — aborting scrape ***`);
+          console.error(`  Saving progress before exit. Resume by re-running the scraper.\n`);
+          break;
+        }
         continue;
       }
 
@@ -570,8 +613,17 @@ async function scrapeHscCodes(
       if (!result) {
         errors.push(`Could not parse ${code}`);
         console.warn(`  [${overall}/${codes.length}] ${code} — parse failed`);
+        consecutiveErrors++;
+        if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
+          console.error(`\n  *** CIRCUIT BREAKER: ${consecutiveErrors} consecutive errors — aborting scrape ***`);
+          console.error(`  Saving progress before exit. Resume by re-running the scraper.\n`);
+          break;
+        }
         continue;
       }
+
+      // Success — reset circuit breaker
+      consecutiveErrors = 0;
 
       // Map-based storage: automatically overwrites any existing entry for this code
       hscMap.set(result.hsc.hscCode, result.hsc);
@@ -599,12 +651,18 @@ async function scrapeHscCodes(
       console.error(
         `  [${overall}/${codes.length}] ERROR ${code}: ${(err as Error).message}`,
       );
+      consecutiveErrors++;
+      if (consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
+        console.error(`\n  *** CIRCUIT BREAKER: ${consecutiveErrors} consecutive errors — aborting scrape ***`);
+        console.error(`  Saving progress before exit. Resume by re-running the scraper.\n`);
+        break;
+      }
     }
   }
 
-  // Final save — convert Maps to arrays
+  // Final save — convert Maps to arrays, deduplicate modifiers
   const hscCodes = Array.from(hscMap.values());
-  const hscModifiers = Array.from(hscModMap.values()).flat();
+  const hscModifiers = deduplicateModifierRows(Array.from(hscModMap.values()).flat());
   saveJson(OUTPUT_DIR, 'hsc-codes.json', hscCodes);
   saveJson(OUTPUT_DIR, 'hsc-modifiers.json', hscModifiers);
   saveJson(OUTPUT_DIR, progressFile, { completed: Array.from(completedSet) });
@@ -638,7 +696,15 @@ function parseModifierPage(
     const text = $(el).text().trim();
     if (text) descParts.push(text);
   });
-  const description = descParts.join(' ').replace(/\s+/g, ' ').trim() || name;
+  let description = descParts.join(' ').replace(/\s+/g, ' ').trim() || name;
+  // Remove AMA footer text
+  description = description.replace(/\s*Alberta Medical Association.*$/i, '').trim();
+  // Remove leading modifier name duplication
+  if (name && description.toLowerCase().startsWith(name.toLowerCase())) {
+    description = description.slice(name.length).replace(/^[\s:.\-–]+/, '').trim();
+  }
+  // Fallback to name if nothing remains
+  if (!description) description = name;
 
   // Sub-codes from table
   const subCodes: Array<{ code: string; description: string }> = [];
@@ -761,6 +827,42 @@ function parseGoverningRulePage(
   };
 }
 
+async function discoverTopLevelRuleIds(): Promise<number[]> {
+  console.log('  Discovering top-level governing rule IDs...');
+  const ids = new Set<number>();
+
+  try {
+    const html = await fetchWithRetry(`${BASE_URL}/governing-rules`);
+    const $ = cheerio.load(html);
+
+    // Extract from links matching /governing-rules/N
+    $('a[href*="/governing-rules/"]').each((_i, el) => {
+      const href = $(el).attr('href') ?? '';
+      const match = href.match(/\/governing-rules\/(\d+)(?:\?|$|#)/);
+      if (match) ids.add(parseInt(match[1], 10));
+    });
+
+    // Also check expandable/viewable tree nodes
+    $('div.node.expandable, a.node.expandable, div.node.viewable, a.node.viewable').each((_i, el) => {
+      const key = $(el).attr('data-key');
+      if (key && /^\d+$/.test(key)) {
+        ids.add(parseInt(key, 10));
+      }
+    });
+  } catch (err) {
+    console.warn(`  [WARN] Could not discover governing rule IDs: ${(err as Error).message}`);
+  }
+
+  if (ids.size === 0) {
+    console.warn('  [WARN] No governing rule IDs discovered — falling back to 1-19');
+    return Array.from({ length: 19 }, (_, i) => i + 1);
+  }
+
+  const sorted = Array.from(ids).sort((a, b) => a - b);
+  console.log(`  Found ${sorted.length} top-level rule IDs: [${sorted.join(', ')}]`);
+  return sorted;
+}
+
 async function scrapeGoverningRules(): Promise<{
   rules: GoverningRule[];
   errors: string[];
@@ -770,36 +872,40 @@ async function scrapeGoverningRules(): Promise<{
   const rules: GoverningRule[] = [];
   const errors: string[] = [];
 
-  // Rules 1-19 (some may have sub-rules like 6.8.1)
-  for (let i = 1; i <= 19; i++) {
+  // Dynamically discover top-level rule IDs
+  const topLevelIds = await discoverTopLevelRuleIds();
+  console.log(`  Scraping ${topLevelIds.length} top-level governing rules...\n`);
+
+  for (let idx = 0; idx < topLevelIds.length; idx++) {
+    const ruleId = topLevelIds[idx];
     try {
       // Try AJAX first, fall back to full page
       let html: string;
       try {
         const xml = await fetchWithRetry(
-          `${BASE_URL}/governing-rules/${i}?ajax=detail`,
+          `${BASE_URL}/governing-rules/${ruleId}?ajax=detail`,
         );
         html = decodeHtmlEntities(xml);
         if (!html) throw new Error('empty');
       } catch {
-        html = await fetchWithRetry(`${BASE_URL}/governing-rules/${i}`);
+        html = await fetchWithRetry(`${BASE_URL}/governing-rules/${ruleId}`);
       }
 
-      const result = parseGoverningRulePage(String(i), html);
+      const result = parseGoverningRulePage(String(ruleId), html);
       if (result) {
         rules.push(result);
         console.log(
-          `  [${i}/19] GR ${i}: ${result.title.slice(0, 60)} (${result.referencedHscCodes.length} HSC refs)`,
+          `  [${idx + 1}/${topLevelIds.length}] GR ${ruleId}: ${result.title.slice(0, 60)} (${result.referencedHscCodes.length} HSC refs)`,
         );
       } else {
-        errors.push(`Could not parse governing rule ${i}`);
-        console.warn(`  [${i}/19] GR ${i} — parse failed`);
+        errors.push(`Could not parse governing rule ${ruleId}`);
+        console.warn(`  [${idx + 1}/${topLevelIds.length}] GR ${ruleId} — parse failed`);
       }
 
       await sleep(DELAY_MS);
     } catch (err) {
-      errors.push(`Error scraping GR ${i}: ${(err as Error).message}`);
-      console.error(`  [${i}/19] ERROR GR ${i}: ${(err as Error).message}`);
+      errors.push(`Error scraping GR ${ruleId}: ${(err as Error).message}`);
+      console.error(`  [${idx + 1}/${topLevelIds.length}] ERROR GR ${ruleId}: ${(err as Error).message}`);
     }
   }
 
@@ -991,7 +1097,7 @@ async function main(): Promise<void> {
   ensureDir(OUTPUT_DIR);
 
   // Phase 1: Discover all HSC codes
-  const codes = await discoverAllHscCodes();
+  const { codes, rootSectionKeyCount } = await discoverAllHscCodes();
 
   // Phase 2: Scrape each HSC code detail page
   const { hscCodes, hscModifiers, errors: hscErrors } = await scrapeHscCodes(codes);
@@ -1018,7 +1124,7 @@ async function main(): Promise<void> {
     timestamp: new Date().toISOString(),
     durationSeconds,
     counts: {
-      rootSectionKeys: 0, // Will be set by discoverAllHscCodes context
+      rootSectionKeys: rootSectionKeyCount,
       hscCodes: hscCodes.length,
       hscModifierRows: hscModifiers.length,
       modifiers: modifiers.length,

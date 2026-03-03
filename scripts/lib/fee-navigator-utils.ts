@@ -42,12 +42,15 @@ export function validateResponse(url: string, body: string): void {
   }
 
   // Check for common block/CAPTCHA indicators
-  const lower = body.slice(0, 2000).toLowerCase();
+  const lower = body.slice(0, 5000).toLowerCase();
   if (
     lower.includes('captcha') ||
     lower.includes('access denied') ||
     lower.includes('rate limit exceeded') ||
-    lower.includes('too many requests')
+    lower.includes('too many requests') ||
+    lower.includes('blocked') ||
+    lower.includes('cloudflare') ||
+    lower.includes('please verify you are human')
   ) {
     throw new Error(
       `Possible block detected from ${url}: response contains block indicators. ` +
@@ -71,9 +74,10 @@ export async function fetchWithRetry(
         signal: controller.signal,
         headers: { ...HEADERS, ...(options.headers as Record<string, string>) },
       });
-      clearTimeout(timer);
+      // Don't clearTimeout here — body may still be streaming
 
       if (resp.status === 429 || resp.status === 503) {
+        clearTimeout(timer);
         const backoff = Math.pow(2, attempt) * 1000;
         console.warn(
           `  [RETRY] ${resp.status} on ${url} — waiting ${backoff}ms (attempt ${attempt}/${retries})`,
@@ -82,9 +86,11 @@ export async function fetchWithRetry(
         continue;
       }
       if (!resp.ok) {
+        clearTimeout(timer);
         throw new Error(`HTTP ${resp.status} for ${url}`);
       }
-      const body = await resp.text();
+      const body = await resp.text(); // Timer still running — abort on body stall
+      clearTimeout(timer); // NOW safe to clear
       validateResponse(url, body);
       return body;
     } catch (err) {
@@ -115,6 +121,14 @@ export function decodeHtmlEntities(xml: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, '\u00A0')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&ldquo;/g, '\u201C')
+    .replace(/&hellip;/g, '\u2026')
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
     .replace(/&amp;/g, '&'); // MUST be last — earlier replacements may produce & chars

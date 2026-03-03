@@ -219,11 +219,13 @@ async function main() {
 
   console.log('Seeding test data...\n');
 
+  await db.transaction(async (tx) => {
+
   // ========================================================================
   // 1. IAM — Users
   // ========================================================================
   console.log('  [1/16] Users...');
-  await db.insert(users).values([
+  await tx.insert(users).values([
     {
       userId: DR_CHEN_ID,
       email: 'dr.chen@meritum.test',
@@ -278,7 +280,7 @@ async function main() {
   // 2. Providers
   // ========================================================================
   console.log('  [2/16] Providers...');
-  await db.insert(providers).values([
+  await tx.insert(providers).values([
     {
       providerId: DR_CHEN_ID,
       billingNumber: '123456',
@@ -324,7 +326,7 @@ async function main() {
   // 3. Business Arrangements
   // ========================================================================
   console.log('  [3/16] Business Arrangements & Locations...');
-  await db.insert(businessArrangements).values([
+  await tx.insert(businessArrangements).values([
     {
       baId: BA_CHEN_1,
       providerId: DR_CHEN_ID,
@@ -364,7 +366,7 @@ async function main() {
   ]);
 
   // Practice Locations
-  await db.insert(practiceLocations).values([
+  await tx.insert(practiceLocations).values([
     {
       locationId: LOC_CHEN_CLINIC,
       providerId: DR_CHEN_ID,
@@ -418,7 +420,7 @@ async function main() {
   ]);
 
   // WCB Configuration (for Dr. Okafor — ED physician)
-  await db.insert(wcbConfigurations).values([
+  await tx.insert(wcbConfigurations).values([
     {
       providerId: DR_OKAFOR_ID,
       contractId: 'WCB-9001',
@@ -430,7 +432,7 @@ async function main() {
   ]);
 
   // Delegate Relationship
-  await db.insert(delegateRelationships).values([
+  await tx.insert(delegateRelationships).values([
     {
       physicianId: DR_CHEN_ID,
       delegateUserId: DELEGATE_ID,
@@ -442,7 +444,7 @@ async function main() {
   ]);
 
   // Submission Preferences
-  await db.insert(submissionPreferences).values([
+  await tx.insert(submissionPreferences).values([
     {
       providerId: DR_CHEN_ID,
       ahcipSubmissionMode: 'AUTO_CLEAN',
@@ -462,7 +464,7 @@ async function main() {
   ]);
 
   // H-Link Configuration
-  await db.insert(hlinkConfigurations).values([
+  await tx.insert(hlinkConfigurations).values([
     {
       providerId: DR_CHEN_ID,
       submitterPrefix: 'MC',
@@ -507,7 +509,7 @@ async function main() {
     { idx: 23, providerId: DR_OKAFOR_ID, phn: '656789012', firstName: 'Carol', lastName: 'Redcrow', dob: '1960-03-04', gender: 'F' },
   ];
 
-  await db.insert(patients).values(
+  await tx.insert(patients).values(
     patientData.map(p => ({
       patientId: patientIds[p.idx],
       providerId: p.providerId,
@@ -581,7 +583,7 @@ async function main() {
     });
   }
 
-  await db.insert(claims).values(ahcipClaimInserts);
+  await tx.insert(claims).values(ahcipClaimInserts);
 
   // ========================================================================
   // 6. AHCIP Claim Details
@@ -603,11 +605,11 @@ async function main() {
       submittedFee: ((ci + 1) * 35.5).toFixed(2),
     });
   }
-  await db.insert(ahcipClaimDetails).values(ahcipDetailInserts);
+  await tx.insert(ahcipClaimDetails).values(ahcipDetailInserts);
 
   // WCB details for claims 12-14
   for (let i = 12; i < 15; i++) {
-    await db.insert(wcbClaimDetails).values({
+    await tx.insert(wcbClaimDetails).values({
       claimId: claimIds[i],
       formId: 'C050E',
       submitterTxnId: `MER${String(i).padStart(12, '0')}`,
@@ -633,7 +635,7 @@ async function main() {
     });
 
     // WCB injuries
-    await db.insert(wcbInjuries).values({
+    await tx.insert(wcbInjuries).values({
       wcbClaimDetailId: (
         await db.select({ id: wcbClaimDetails.wcbClaimDetailId })
           .from(wcbClaimDetails)
@@ -650,7 +652,7 @@ async function main() {
   // 7. AHCIP Batches
   // ========================================================================
   console.log('  [7/16] Batches...');
-  await db.insert(ahcipBatches).values([
+  await tx.insert(ahcipBatches).values([
     {
       physicianId: DR_CHEN_ID,
       baNumber: 'BA001',
@@ -751,7 +753,7 @@ async function main() {
   console.log(`    Loading ${scrapedHsc.length} HSC codes, ${scrapedModifiers.length} modifiers, ${scrapedRules.length} governing rules, ${scrapedExplCodes.length} explanatory codes, ${scrapedHscModifiers.length} HSC modifier eligibility rows`);
 
   // Version
-  await db.insert(referenceDataVersions).values([
+  await tx.insert(referenceDataVersions).values([
     {
       versionId: REF_VERSION_ID,
       dataSet: 'SOMB',
@@ -767,7 +769,7 @@ async function main() {
   ]);
 
   // RRNP Community (not from Fee Navigator — kept as manual entry)
-  await db.insert(rrnpCommunities).values([
+  await tx.insert(rrnpCommunities).values([
     {
       communityId: RRNP_COMMUNITY_ID,
       communityName: 'Peace River',
@@ -783,7 +785,7 @@ async function main() {
   const HSC_BATCH_SIZE = 500;
   for (let i = 0; i < scrapedHsc.length; i += HSC_BATCH_SIZE) {
     const batch = scrapedHsc.slice(i, i + HSC_BATCH_SIZE);
-    await db.insert(hscCodes).values(
+    await tx.insert(hscCodes).values(
       batch.map((h) => ({
         hscCode: h.hscCode,
         description: h.description,
@@ -820,12 +822,12 @@ async function main() {
   const MOD_ELIG_BATCH_SIZE = 500;
   for (let i = 0; i < scrapedHscModifiers.length; i += MOD_ELIG_BATCH_SIZE) {
     const batch = scrapedHscModifiers.slice(i, i + MOD_ELIG_BATCH_SIZE);
-    await db.insert(hscModifierEligibility).values(
+    await tx.insert(hscModifierEligibility).values(
       batch.map((m) => ({
         hscCode: m.hscCode,
         modifierType: m.type,
         subCode: m.code,
-        calls: m.calls || null,
+        calls: m.calls === '' ? null : m.calls,
         explicit: m.explicit === 'Yes',
         action: m.action,
         amount: m.amount,
@@ -862,7 +864,7 @@ async function main() {
     { code: '428', desc: 'Heart failure', cat: 'Circulatory' },
   ];
 
-  await db.insert(diCodes).values(
+  await tx.insert(diCodes).values(
     diSeedData.map(d => ({
       diCode: d.code,
       description: d.desc,
@@ -873,7 +875,7 @@ async function main() {
   );
 
   // Functional Centres (not from Fee Navigator — kept as manual entry)
-  await db.insert(functionalCentres).values([
+  await tx.insert(functionalCentres).values([
     { code: 'OFFC', name: 'Office / Clinic', facilityType: 'OFFICE', active: true, versionId: REF_VERSION_ID, effectiveFrom: '2025-04-01' },
     { code: 'HOSP', name: 'Hospital Inpatient', facilityType: 'HOSPITAL', active: true, versionId: REF_VERSION_ID, effectiveFrom: '2025-04-01' },
     { code: 'EMER', name: 'Emergency Department', facilityType: 'EMERGENCY', active: true, versionId: REF_VERSION_ID, effectiveFrom: '2025-04-01' },
@@ -881,7 +883,7 @@ async function main() {
   ]);
 
   // Modifier Definitions — all 42 from Fee Navigator (with applicableHscFilter)
-  await db.insert(modifierDefinitions).values(
+  await tx.insert(modifierDefinitions).values(
     scrapedModifiers.map((m) => {
       const hscSet = modifierHscMap.get(m.modifierCode);
       let applicableHscFilter: Record<string, unknown> = {};
@@ -907,7 +909,7 @@ async function main() {
   );
 
   // Governing Rules — all 19 from Fee Navigator
-  await db.insert(governingRules).values(
+  await tx.insert(governingRules).values(
     scrapedRules.map((r) => ({
       ruleId: `GR-${r.ruleNumber}`,
       ruleName: r.title,
@@ -923,15 +925,25 @@ async function main() {
     })),
   );
 
-  // Explanatory Codes — all 123 from Fee Navigator
-  await db.insert(explanatoryCodes).values(
-    scrapedExplCodes.map((e) => ({
-      explCode: e.code,
-      description: e.description,
-      severity: 'INFO',
-      versionId: REF_VERSION_ID,
-      effectiveFrom: '2025-04-01',
-    })),
+  // Explanatory Codes — all 123 from Fee Navigator (category → severity mapping)
+  await tx.insert(explanatoryCodes).values(
+    scrapedExplCodes.map((e) => {
+      const cat = (e.category ?? '').toLowerCase();
+      let severity = 'INFO';
+      if (cat.includes('reject')) severity = 'ERROR';
+      else if (cat.includes('adjust')) severity = 'WARNING';
+      else if (cat.includes('paid') || cat.includes('approv')) severity = 'INFO';
+      return {
+        explCode: e.code,
+        description: e.description,
+        severity,
+        commonCause: null,
+        suggestedAction: null,
+        helpText: null,
+        versionId: REF_VERSION_ID,
+        effectiveFrom: '2025-04-01',
+      };
+    }),
   );
 
   // Bundling Rules — extracted from HSC notes text
@@ -939,6 +951,8 @@ async function main() {
   for (const h of scrapedHsc) {
     if (!h.bundlingExclusions?.length) continue;
     for (const excl of h.bundlingExclusions) {
+      // Skip self-referencing pairs
+      if (h.hscCode === excl.excludedCode) continue;
       // Canonical ordering: codeA < codeB
       const [codeA, codeB] =
         h.hscCode < excl.excludedCode
@@ -954,7 +968,7 @@ async function main() {
           codeA,
           codeB,
           relationship: rel,
-          description: `${h.hscCode} may not be claimed with ${excl.excludedCode}`,
+          description: `${codeA} and ${codeB} may not be claimed together`,
         });
       }
     }
@@ -965,7 +979,7 @@ async function main() {
     const BUNDLING_BATCH_SIZE = 500;
     for (let i = 0; i < bundlingRows.length; i += BUNDLING_BATCH_SIZE) {
       const batch = bundlingRows.slice(i, i + BUNDLING_BATCH_SIZE);
-      await db.insert(bundlingRules).values(
+      await tx.insert(bundlingRules).values(
         batch.map((b) => ({
           codeA: b.codeA,
           codeB: b.codeB,
@@ -986,7 +1000,7 @@ async function main() {
   const aiRule1Id = seedUuid('ai-rule-cmgp');
   const aiRule2Id = seedUuid('ai-rule-lscd');
 
-  await db.insert(aiRules).values([
+  await tx.insert(aiRules).values([
     {
       ruleId: aiRule1Id,
       name: 'Missing CMGP modifier',
@@ -1030,7 +1044,7 @@ async function main() {
   ]);
 
   // Provider Learning
-  await db.insert(aiProviderLearning).values([
+  await tx.insert(aiProviderLearning).values([
     {
       providerId: DR_CHEN_ID,
       ruleId: aiRule1Id,
@@ -1047,7 +1061,7 @@ async function main() {
   // ========================================================================
   console.log('  [10/16] Subscriptions...');
 
-  await db.insert(subscriptions).values([
+  await tx.insert(subscriptions).values([
     {
       subscriptionId: SUB_CHEN,
       providerId: DR_CHEN_ID,
@@ -1082,7 +1096,7 @@ async function main() {
   ]);
 
   // Payment History
-  await db.insert(paymentHistory).values([
+  await tx.insert(paymentHistory).values([
     {
       subscriptionId: SUB_CHEN,
       stripeInvoiceId: 'inv_test_chen_001',
@@ -1104,7 +1118,7 @@ async function main() {
   ]);
 
   // Status Components
-  await db.insert(statusComponents).values([
+  await tx.insert(statusComponents).values([
     { name: 'web_app', displayName: 'Web Application', status: 'operational', sortOrder: 0 },
     { name: 'api', displayName: 'API', status: 'operational', sortOrder: 1 },
     { name: 'hlink', displayName: 'H-Link Gateway', status: 'operational', sortOrder: 2 },
@@ -1116,7 +1130,7 @@ async function main() {
   ]);
 
   // Referral Codes
-  await db.insert(referralCodes).values([
+  await tx.insert(referralCodes).values([
     { referrerUserId: DR_CHEN_ID, code: 'CHEN2026', isActive: true },
     { referrerUserId: DR_PATEL_ID, code: 'PATEL2026', isActive: true },
   ]);
@@ -1126,7 +1140,7 @@ async function main() {
   // ========================================================================
   console.log('  [11/16] Notifications...');
 
-  await db.insert(notifications).values([
+  await tx.insert(notifications).values([
     {
       recipientId: DR_CHEN_ID,
       eventType: 'claim.assessed',
@@ -1172,7 +1186,7 @@ async function main() {
   ]);
 
   // Notification Preferences
-  await db.insert(notificationPreferences).values([
+  await tx.insert(notificationPreferences).values([
     { providerId: DR_CHEN_ID, eventCategory: 'claim', inAppEnabled: true, emailEnabled: true, digestMode: 'IMMEDIATE' },
     { providerId: DR_CHEN_ID, eventCategory: 'batch', inAppEnabled: true, emailEnabled: true, digestMode: 'DAILY' },
     { providerId: DR_CHEN_ID, eventCategory: 'billing', inAppEnabled: true, emailEnabled: false, digestMode: 'IMMEDIATE' },
@@ -1184,7 +1198,7 @@ async function main() {
   // ========================================================================
   console.log('  [12/16] Onboarding...');
 
-  await db.insert(onboardingProgress).values([
+  await tx.insert(onboardingProgress).values([
     {
       userId: DR_CHEN_ID,
       stepsCompleted: ['profile', 'billing_number', 'business_arrangement', 'practice_location', 'hlink', 'first_claim'],
@@ -1215,7 +1229,7 @@ async function main() {
   ];
 
   for (const { offset, label } of analyticsPeriods) {
-    await db.insert(analyticsCache).values([
+    await tx.insert(analyticsCache).values([
       {
         providerId: DR_CHEN_ID,
         metricKey: 'revenue_monthly',
@@ -1244,7 +1258,7 @@ async function main() {
   }
 
   // Report Subscriptions
-  await db.insert(reportSubscriptions).values([
+  await tx.insert(reportSubscriptions).values([
     {
       providerId: DR_CHEN_ID,
       reportType: 'monthly_summary',
@@ -1266,7 +1280,7 @@ async function main() {
   // ========================================================================
   console.log('  [14/16] Support & Help...');
 
-  await db.insert(helpArticles).values([
+  await tx.insert(helpArticles).values([
     {
       slug: 'getting-started-overview',
       title: 'Getting Started with Meritum',
@@ -1324,7 +1338,7 @@ async function main() {
   ]);
 
   // Support Tickets
-  await db.insert(supportTickets).values([
+  await tx.insert(supportTickets).values([
     {
       providerId: DR_CHEN_ID,
       subject: 'Claim batch stuck in ASSEMBLING status',
@@ -1350,7 +1364,7 @@ async function main() {
 
   // Shift Schedules
   const scheduleId = seedUuid('schedule-okafor-1');
-  await db.insert(shiftSchedules).values([
+  await tx.insert(shiftSchedules).values([
     {
       scheduleId,
       providerId: DR_OKAFOR_ID,
@@ -1363,7 +1377,7 @@ async function main() {
   ]);
 
   // ED Shifts
-  await db.insert(edShifts).values([
+  await tx.insert(edShifts).values([
     {
       providerId: DR_OKAFOR_ID,
       locationId: LOC_OKAFOR_ED,
@@ -1389,7 +1403,7 @@ async function main() {
   ]);
 
   // Favourite Codes
-  await db.insert(favouriteCodes).values([
+  await tx.insert(favouriteCodes).values([
     { providerId: DR_CHEN_ID, healthServiceCode: '03.03A', displayName: 'Office — Comprehensive', sortOrder: 0 },
     { providerId: DR_CHEN_ID, healthServiceCode: '03.04A', displayName: 'Office — Limited', sortOrder: 1 },
     { providerId: DR_CHEN_ID, healthServiceCode: '03.05A', displayName: 'Office — Follow-up', sortOrder: 2 },
@@ -1405,7 +1419,7 @@ async function main() {
   // ========================================================================
   console.log('  [16/16] Templates & Referrers...');
 
-  await db.insert(claimTemplates).values([
+  await tx.insert(claimTemplates).values([
     {
       physicianId: DR_CHEN_ID,
       name: 'Standard Office Visit',
@@ -1443,14 +1457,14 @@ async function main() {
   ]);
 
   // Recent Referrers
-  await db.insert(recentReferrers).values([
+  await tx.insert(recentReferrers).values([
     { physicianId: DR_CHEN_ID, referrerCpsa: 'AB99001', referrerName: 'Dr. A. Singh (Cardiology)', useCount: 5, lastUsedAt: daysAgo(3) },
     { physicianId: DR_CHEN_ID, referrerCpsa: 'AB99002', referrerName: 'Dr. B. Lee (Orthopedics)', useCount: 3, lastUsedAt: daysAgo(10) },
     { physicianId: DR_PATEL_ID, referrerCpsa: 'AB99003', referrerName: 'Dr. C. Makokis (GP)', useCount: 8, lastUsedAt: daysAgo(1) },
   ]);
 
   // Field Mapping Template (for Connect Care imports)
-  await db.insert(fieldMappingTemplates).values([
+  await tx.insert(fieldMappingTemplates).values([
     {
       physicianId: DR_CHEN_ID,
       name: 'Connect Care SCC Export',
@@ -1469,7 +1483,7 @@ async function main() {
   ]);
 
   // Audit log entry
-  await db.insert(auditLog).values([
+  await tx.insert(auditLog).values([
     {
       userId: DR_CHEN_ID,
       action: 'seed_data_created',
@@ -1479,6 +1493,8 @@ async function main() {
       details: { message: 'Test data seeded successfully', physicians: 3, patients: 24, claims: 18 },
     },
   ]);
+
+  }); // end transaction
 
   console.log('\nSeed complete!');
   console.log('  3 physicians, 1 delegate');

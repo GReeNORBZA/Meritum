@@ -1,0 +1,514 @@
+{
+  "domainNumber": "SCR",
+  "domainName": "Fee Navigator Scraper Pipeline V2",
+  "manifestFile": "scraper-pipeline-v2.tasks",
+  "promptPrefix": "scr-v2",
+  "modulePath": "scripts",
+  "prerequisites": [],
+  "sections": [
+    {
+      "title": "Phase 1: Enrichment Regex Fixes",
+      "tasks": [
+        {
+          "id": "SCR-110",
+          "description": "Fix HSC code extraction from text: space-aware regex, match.index context, letter-prefix codes",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix `extractHscCodesFromText` in `scripts/enrich-hsc-data.ts` (line ~163):",
+            "",
+            "**Bug 1 — Space-containing codes:** Current regex `/\\b(\\d{2}\\.\\d{2,3}[A-Z]{0,3})\\b/g` cannot match codes like '03.7 A' or 'E  1'. Add space-tolerant pattern: `/\\b(\\d{2}\\.\\d{1,3}\\s?[A-Z]{0,3})\\b/g`.",
+            "",
+            "**Bug 2 — Context check uses indexOf:** Line 172 uses `text.indexOf(code)` which finds the first occurrence, not the current match. Replace with `match.index` for correct position-based context checking.",
+            "",
+            "**Bug 3 — No letter-prefix pattern:** Add second pattern `/\\b([A-Z]\\s*\\d{1,3}[A-Z]?)\\b/g` for E/X-prefixed codes.",
+            "",
+            "Deduplicate results with `[...new Set(codes)]`."
+          ],
+          "frd": [
+            "V2 FRD Section 3, SCR-110: Fix HSC code extraction from text"
+          ]
+        },
+        {
+          "id": "SCR-111",
+          "description": "Fix age restriction and anesthesia extraction: missing patterns, dead code removal",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix `extractAgeRestriction` in `scripts/enrich-hsc-data.ts` (line ~203):",
+            "",
+            "**Bug 1 — Missing 'under X years' pattern:** Add patterns for 'under X years of age' and 'younger than X years' where the keyword appears BEFORE the number.",
+            "Add to AGE_PATTERNS: `{ tag: 'max_years', regex: /(?:under|younger\\s+than)\\s+(\\d+)\\s*years/i }` and similar for months.",
+            "",
+            "**Bug 2 — Compound age dead code:** Remove the compound check at lines 227-241 — it can never trigger because AGE_PATTERNS already matches 'under X years' individually.",
+            "",
+            "**Bug 3 — Anesthesia regex too strict:** Fix `extractAnesthesiaRequirement` (line ~314) to match 'under anesthesia' without requiring 'general'. Change to: `/(?:under\\s+(?:general\\s+)?anesthesia|requires?\\s+(?:general\\s+)?anesthesia|procedural\\s+sedation)/i`"
+          ],
+          "frd": [
+            "V2 FRD Section 3, SCR-111: Fix age restriction extraction"
+          ]
+        },
+        {
+          "id": "SCR-112",
+          "description": "Fix frequency restriction extraction: 'once every N years', 'per shift', compound patterns",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix `extractFrequencyLimit` in `scripts/enrich-hsc-data.ts` (line ~254):",
+            "",
+            "**Bug 1 — 'once every N years' not captured:** The general frequency regex uses `(?:per|every|each)` but the 'every' path doesn't work correctly for 'once every 3 years'. Add `in\\s+a` as alternative connector.",
+            "",
+            "**Bug 2 — 'per shift' missing:** Add 'shift', 'session', 'admission' to the period alternation in the freqPattern regex (line ~291).",
+            "",
+            "**Bug 3 — Compound frequency:** For patterns like 'maximum of 15 calls or 6 hours per day', capture the first part (15 calls per day) and log the compound nature."
+          ],
+          "frd": [
+            "V2 FRD Section 3, SCR-112: Fix frequency restriction extraction"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 2: Enrichment Coverage Expansion",
+      "tasks": [
+        {
+          "id": "SCR-120",
+          "description": "Fix specialty restriction extraction: colon-delimited lists, fragment filtering",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "depends": ["SCR-110"],
+          "build": [
+            "Fix `extractSpecialtyRestrictions` in `scripts/enrich-hsc-data.ts` (line ~88):",
+            "",
+            "**Add colon splitting:** Handle colon-delimited specialty lists like 'Psychiatry: Adult Psychiatry' by splitting on `: ` when followed by a capital letter.",
+            "",
+            "**Add semicolon splitting:** Handle semicolons as delimiters.",
+            "",
+            "**Add 'those' to filter list:** The existing filter at line 104 skips common stopwords but misses 'those'."
+          ],
+          "frd": [
+            "V2 FRD Section 4, SCR-120: Fix specialty restriction extraction"
+          ]
+        },
+        {
+          "id": "SCR-121",
+          "description": "Fix GR 1.33 code pattern to allow codes without alpha suffix",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix `parseGR133` in `scripts/enrich-hsc-data.ts` (line ~407):",
+            "",
+            "Change code pattern from `/\\b(\\d{2}\\.\\d{2}[A-Z]{1,3})\\b/g` (requires alpha suffix) to `/\\b(\\d{2}\\.\\d{2,3}[A-Z]{0,3})\\b/g` (allows zero alpha suffix characters).",
+            "",
+            "This ensures codes like '03.03' without alpha suffixes are captured from GR 1.33 text."
+          ],
+          "frd": [
+            "V2 FRD Section 4, SCR-121: Fix GR 1.33 code pattern"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 3: Scraper Safety & Robustness",
+      "tasks": [
+        {
+          "id": "SCR-130",
+          "description": "Add discovery cache invalidation with --force-discovery flag and staleness check",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/scrape-fee-navigator.ts'\" 2>&1 | head -5",
+          "build": [
+            "Modify `discoverAllHscCodes` in `scripts/scrape-fee-navigator.ts` (line ~285):",
+            "",
+            "1. Add `const FORCE_DISCOVERY = process.argv.includes('--force-discovery');` at module level.",
+            "2. Add `const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;` (7-day TTL).",
+            "3. Before using cached codes, check file age via `fs.statSync(cachePath).mtimeMs`.",
+            "4. Skip cache if `FORCE_DISCOVERY` is true or cache is older than 7 days.",
+            "5. Log cache age and --force-discovery hint when using cache."
+          ],
+          "frd": [
+            "V2 FRD Section 5, SCR-130: Add discovery cache invalidation"
+          ]
+        },
+        {
+          "id": "SCR-131",
+          "description": "Add circuit breaker for mass scraping failure",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/scrape-fee-navigator.ts'\" 2>&1 | head -5",
+          "build": [
+            "Modify `scrapeHscCodes` in `scripts/scrape-fee-navigator.ts` (line ~554):",
+            "",
+            "1. Add `const CIRCUIT_BREAKER_THRESHOLD = 20;` at module level.",
+            "2. Track `let consecutiveErrors = 0;` inside the scrape loop.",
+            "3. Reset to 0 on each successful scrape.",
+            "4. Increment on each error. If `consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD`, log a clear error message and break out of the loop.",
+            "5. Save progress before breaking to preserve successfully scraped data."
+          ],
+          "frd": [
+            "V2 FRD Section 5, SCR-131: Add circuit breaker for mass failure"
+          ]
+        },
+        {
+          "id": "SCR-132",
+          "description": "Replace hardcoded governing rule range 1-19 with dynamic discovery",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/scrape-fee-navigator.ts'\" 2>&1 | head -5",
+          "build": [
+            "Add `discoverTopLevelRuleIds` function in `scripts/scrape-fee-navigator.ts`:",
+            "",
+            "1. Fetch the governing rules listing page at `${BASE_URL}/governing-rules`.",
+            "2. Extract rule IDs from links matching `/governing-rules/(\\d+)`.",
+            "3. Also check expandable/viewable tree nodes for data-key attributes.",
+            "4. Fallback to 1-19 if discovery finds nothing.",
+            "5. Replace `for (let i = 1; i <= 19; i++)` in `scrapeGoverningRules` with the discovered IDs."
+          ],
+          "frd": [
+            "V2 FRD Section 5, SCR-132: Dynamic governing rule discovery"
+          ]
+        },
+        {
+          "id": "SCR-133",
+          "description": "Fix metadata rootSectionKeys count to use actual discovered count",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/scrape-fee-navigator.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix metadata in `scripts/scrape-fee-navigator.ts`:",
+            "",
+            "1. Change `discoverAllHscCodes` return type to `{ codes: string[]; rootSectionKeyCount: number }`.",
+            "2. Return `rootKeys.length` from inside the function.",
+            "3. In `main()`, destructure the return value and set `counts.rootSectionKeys` to the actual count instead of 0.",
+            "4. Update line 1021 from `rootSectionKeys: 0` to use the actual value."
+          ],
+          "frd": [
+            "V2 FRD Section 5, SCR-133: Fix metadata rootSectionKeys count"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 4: Shared Utilities Hardening",
+      "tasks": [
+        {
+          "id": "SCR-140",
+          "description": "Fix fetchWithRetry to cover response body transfer in timeout",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/lib/fee-navigator-utils.ts'\" 2>&1",
+          "build": [
+            "Fix `fetchWithRetry` in `scripts/lib/fee-navigator-utils.ts` (line ~66):",
+            "",
+            "**Problem:** `clearTimeout(timer)` is called at line 74 after `await fetch()` resolves (headers received). But `await resp.text()` at line 87 can still hang if the body stalls.",
+            "",
+            "**Fix:** Move `clearTimeout(timer)` to AFTER `await resp.text()` completes. Keep clearTimeout in error/retry branches.",
+            "",
+            "```",
+            "const resp = await fetch(url, { ...options, signal: controller.signal, ... });",
+            "// Don't clearTimeout here — body may still be streaming",
+            "if (resp.status === 429 || resp.status === 503) { clearTimeout(timer); /* backoff */ continue; }",
+            "if (!resp.ok) { clearTimeout(timer); throw ...; }",
+            "const body = await resp.text(); // Timer still running — abort on stall",
+            "clearTimeout(timer); // NOW safe to clear",
+            "```"
+          ],
+          "frd": [
+            "V2 FRD Section 6, SCR-140: Cover response body transfer in timeout"
+          ]
+        },
+        {
+          "id": "SCR-141",
+          "description": "Add common named HTML entity decoding (nbsp, ndash, mdash, smart quotes)",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/lib/fee-navigator-utils.ts'\" 2>&1",
+          "build": [
+            "Extend `decodeHtmlEntities` in `scripts/lib/fee-navigator-utils.ts` (line ~109):",
+            "",
+            "Add these replacements BEFORE the numeric entity handlers and AFTER the existing named entities:",
+            "- `&nbsp;` → `\\u00A0` (non-breaking space)",
+            "- `&ndash;` → `\\u2013`",
+            "- `&mdash;` → `\\u2014`",
+            "- `&rsquo;` → `\\u2019`",
+            "- `&lsquo;` → `\\u2018`",
+            "- `&rdquo;` → `\\u201D`",
+            "- `&ldquo;` → `\\u201C`",
+            "- `&hellip;` → `\\u2026`",
+            "",
+            "Keep `&amp;` replacement LAST."
+          ],
+          "frd": [
+            "V2 FRD Section 6, SCR-141: Add common named HTML entity decoding"
+          ]
+        },
+        {
+          "id": "SCR-142",
+          "description": "Extend validateResponse block indicator check window and add indicators",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/lib/fee-navigator-utils.ts'\" 2>&1",
+          "build": [
+            "Extend `validateResponse` in `scripts/lib/fee-navigator-utils.ts` (line ~33):",
+            "",
+            "1. Increase check window from 2000 to 5000 characters.",
+            "2. Add block indicators: 'blocked', 'cloudflare', 'please verify you are human'.",
+            "3. Keep existing indicators: 'captcha', 'access denied', 'rate limit exceeded', 'too many requests'."
+          ],
+          "frd": [
+            "V2 FRD Section 6, SCR-142: Extend validateResponse block indicator check"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 5: Seed & Schema Fixes",
+      "tasks": [
+        {
+          "id": "SCR-150",
+          "description": "Fix modifier eligibility deduplication in scraper and unique index in schema",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "**Part A — Scraper dedup:** Add `deduplicateModifierRows` function in `scripts/scrape-fee-navigator.ts`:",
+            "Key by `${hscCode}|${type}|${code}|${calls}` to deduplicate rows. Call after flattening modifier Maps to arrays in the save step.",
+            "",
+            "**Part B — Schema fix:** In `packages/shared/src/schemas/db/reference.schema.ts`, update the `hsc_modifier_eligibility` unique index to include the `calls` column:",
+            "Change from `.on(table.hscCode, table.modifierType, table.subCode, table.versionId)` to `.on(table.hscCode, table.modifierType, table.subCode, table.calls, table.versionId)`.",
+            "",
+            "Generate migration with `pnpm --filter api drizzle-kit generate`."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-150: Fix modifier eligibility deduplication"
+          ]
+        },
+        {
+          "id": "SCR-151",
+          "description": "Fix calls empty string handling in seed to use explicit check",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "In `apps/api/src/seed.ts` line 828:",
+            "Change `calls: m.calls || null` to `calls: m.calls === '' ? null : m.calls`.",
+            "",
+            "This makes the empty-string-to-null conversion explicit rather than relying on JS falsy coercion."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-151: Fix calls empty string handling in seed"
+          ]
+        },
+        {
+          "id": "SCR-152",
+          "description": "Preserve explanatory code category in seed as severity mapping",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "In `apps/api/src/seed.ts` line 927-934:",
+            "",
+            "Map the scraped `e.category` to the `severity` column instead of hardcoding 'INFO':",
+            "- Category containing 'reject' → severity 'ERROR'",
+            "- Category containing 'adjust' → severity 'WARNING'",
+            "- Category containing 'paid' or 'approv' → severity 'INFO'",
+            "- Default → 'INFO'",
+            "",
+            "Also set `commonCause`, `suggestedAction`, and `helpText` to null explicitly."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-152: Preserve explanatory code category in seed"
+          ]
+        },
+        {
+          "id": "SCR-153",
+          "description": "Filter self-referencing bundling pairs and fix description direction",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "In `apps/api/src/seed.ts` lines 938-978:",
+            "",
+            "1. Add `if (h.hscCode === excl.excludedCode) continue;` to skip self-referencing pairs.",
+            "2. Fix description to use canonical form: `${codeA} and ${codeB} may not be claimed together` instead of using the original direction which may be reversed after canonical reordering."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-153: Filter self-referencing bundling pairs"
+          ]
+        },
+        {
+          "id": "SCR-154",
+          "description": "Wrap all seed inserts in a database transaction",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "In `apps/api/src/seed.ts`:",
+            "",
+            "Wrap all insert operations inside `await db.transaction(async (tx) => { ... })`. Replace all `db.insert(...)` calls with `tx.insert(...)` inside the transaction callback.",
+            "",
+            "The idempotency check (line 213-218) should remain OUTSIDE the transaction.",
+            "",
+            "This ensures that if any insert fails, all changes are rolled back atomically."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-154: Wrap seed inserts in transaction"
+          ]
+        },
+        {
+          "id": "SCR-155",
+          "description": "Widen action varchar margin in modifier eligibility schema",
+          "verify": "pnpm --filter shared build 2>&1",
+          "build": [
+            "In `packages/shared/src/schemas/db/reference.schema.ts`:",
+            "",
+            "Change the `action` column in `hsc_modifier_eligibility` from `varchar(30)` to `varchar(50)` to prevent truncation of longer modifier action descriptions.",
+            "",
+            "Generate migration."
+          ],
+          "frd": [
+            "V2 FRD Section 7, SCR-155: Widen action varchar margin"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 6: Validation Hardening",
+      "tasks": [
+        {
+          "id": "SCR-160",
+          "description": "Tighten validation completeness thresholds",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1",
+          "depends": ["SCR-150"],
+          "build": [
+            "In `scripts/validate-fee-navigator-data.ts` line 152:",
+            "",
+            "Update THRESHOLDS to be closer to known counts with ~5% margin:",
+            "- HSC codes: 2900 (was 3000)",
+            "- Modifier rows: 38000 (was 40000)",
+            "- Modifier definitions: 38 (was 40)",
+            "- Governing rules: 15 (keep)",
+            "- Explanatory codes: 100 (keep)"
+          ],
+          "frd": [
+            "V2 FRD Section 8, SCR-160: Tighten completeness thresholds"
+          ]
+        },
+        {
+          "id": "SCR-161",
+          "description": "Add modifier row deduplication check to validation",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1",
+          "depends": ["SCR-150"],
+          "build": [
+            "In `scripts/validate-fee-navigator-data.ts`, add after section E1 (modifier row validation):",
+            "",
+            "Add E2: dedup check — key modifier rows by `${hscCode}|${type}|${code}|${calls}`, count duplicates.",
+            "If 0 duplicates: pass('No duplicate modifier rows').",
+            "If > 0: fail with count."
+          ],
+          "frd": [
+            "V2 FRD Section 8, SCR-161: Add modifier row deduplication check"
+          ]
+        },
+        {
+          "id": "SCR-162",
+          "description": "Add enrichment minimum thresholds to validation (replace unconditional pass)",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1",
+          "build": [
+            "In `scripts/validate-fee-navigator-data.ts`, replace the unconditional pass() calls at lines 366-374:",
+            "",
+            "Add ENRICHMENT_MINIMUMS array with [label, count, minimum] tuples:",
+            "- requiresReferral: min 300",
+            "- specialtyRestrictions: min 100",
+            "- bundlingExclusions: min 120",
+            "- ageRestriction: min 20",
+            "- frequencyRestriction: min 15",
+            "- facilityDesignation: min 20",
+            "- category: min 95% of total codes",
+            "- billingTips: min 150",
+            "- commonTerms: min 80",
+            "",
+            "fail() if count < minimum, pass() otherwise."
+          ],
+          "frd": [
+            "V2 FRD Section 8, SCR-162: Add enrichment minimum thresholds"
+          ]
+        },
+        {
+          "id": "SCR-163",
+          "description": "Add governing rule reference resolution check to validation",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1",
+          "build": [
+            "In `scripts/validate-fee-navigator-data.ts`, add to section F (Cross-file):",
+            "",
+            "F3: For each HSC code's governingRuleReferences, check if the reference (or its parent rule number) exists in governing-rules.json.",
+            "",
+            "Use warn() (not fail()) for unresolved references since sub-rules may not have dedicated entries."
+          ],
+          "frd": [
+            "V2 FRD Section 8, SCR-163: Add governing rule reference resolution check"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 7: Data Quality & Cleanup",
+      "tasks": [
+        {
+          "id": "SCR-170",
+          "description": "Normalize specialty restrictions: filter garbage fragments, title-case",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/enrich-hsc-data.ts'\" 2>&1 | head -5",
+          "depends": ["SCR-120"],
+          "build": [
+            "Add `normalizeSpecialty` function in `scripts/enrich-hsc-data.ts`:",
+            "",
+            "1. Filter values starting with common fragment prefixes: 'physicians', 'those', 'with', 'working', 'in', 'at', 'for', 'by'.",
+            "2. Filter values shorter than 4 characters.",
+            "3. Filter values ending with prepositions: 'in', 'at', 'for', 'by', 'with', 'of', 'who', 'that'.",
+            "4. Title-case the first character.",
+            "5. Apply in `extractSpecialtyRestrictions` after splitting, before dedup."
+          ],
+          "frd": [
+            "V2 FRD Section 9, SCR-170: Normalize specialty restrictions"
+          ]
+        },
+        {
+          "id": "SCR-171",
+          "description": "Clean modifier definition descriptions: remove AMA footer, de-duplicate name",
+          "verify": "./apps/api/node_modules/.bin/tsx --eval \"import './scripts/scrape-fee-navigator.ts'\" 2>&1 | head -5",
+          "build": [
+            "Fix `parseModifierPage` in `scripts/scrape-fee-navigator.ts` (line ~619):",
+            "",
+            "After joining description parts:",
+            "1. Remove AMA footer text: `.replace(/\\s*Alberta Medical Association.*$/i, '').trim()`",
+            "2. Remove leading modifier name duplication: if description starts with `name`, strip it.",
+            "3. If nothing remains after cleanup, fall back to using `name` as the description."
+          ],
+          "frd": [
+            "V2 FRD Section 9, SCR-171: Clean modifier definition descriptions"
+          ]
+        },
+        {
+          "id": "SCR-172",
+          "description": "Add visit-codes-without-modifiers audit check to validation",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1",
+          "depends": ["SCR-162"],
+          "build": [
+            "Add section H (Data Quality) to `scripts/validate-fee-navigator-data.ts`:",
+            "",
+            "H1: Count HSC codes where feeType is 'VISIT' that have zero rows in hsc-modifiers.json.",
+            "If count <= 70: pass (within expected range).",
+            "If count > 70: warn (may indicate scraping issue).",
+            "",
+            "This is a warning, not an error — some visit codes genuinely lack modifiers."
+          ],
+          "frd": [
+            "V2 FRD Section 9, SCR-172: Audit visit codes without modifiers"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Phase 8: Re-scrape & Verify",
+      "tasks": [
+        {
+          "id": "SCR-180",
+          "description": "Re-run full pipeline (scrape, enrich, validate) and verify improvements",
+          "verify": "./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1 && pnpm --filter shared build 2>&1 && pnpm --filter api vitest run src/domains/reference/reference.test.ts 2>&1",
+          "depends": ["SCR-110", "SCR-111", "SCR-112", "SCR-120", "SCR-121", "SCR-130", "SCR-131", "SCR-132", "SCR-133", "SCR-140", "SCR-141", "SCR-142", "SCR-150", "SCR-151", "SCR-152", "SCR-153", "SCR-154", "SCR-155", "SCR-160", "SCR-161", "SCR-162", "SCR-163", "SCR-170", "SCR-171", "SCR-172"],
+          "build": [
+            "Run the full pipeline end-to-end:",
+            "",
+            "1. `./apps/api/node_modules/.bin/tsx scripts/scrape-fee-navigator.ts --force-discovery`",
+            "2. `./apps/api/node_modules/.bin/tsx scripts/enrich-hsc-data.ts`",
+            "3. `./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts`",
+            "4. `pnpm --filter shared build`",
+            "5. `pnpm --filter api vitest run src/domains/reference/reference.test.ts`",
+            "",
+            "**Expected improvements over pre-V2 baseline:**",
+            "- Bundling exclusions: 135 → 300+",
+            "- Age restrictions: 23 → 50+",
+            "- Frequency restrictions: 21 → 40+",
+            "- Modifier row duplicates: 4955 → 0",
+            "- Validation errors: 0",
+            "- All reference tests pass"
+          ],
+          "frd": [
+            "V2 FRD Section 10, SCR-180: Re-run full pipeline and verify improvements"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -82,6 +82,21 @@ interface FrequencyRestriction {
 // ============================================================================
 
 /**
+ * Normalize a specialty string: filter garbage fragments, title-case.
+ */
+function normalizeSpecialty(s: string): string | null {
+  const trimmed = s.trim();
+  // Filter too short
+  if (trimmed.length < 4) return null;
+  // Filter values starting with common fragment prefixes
+  if (/^(?:physicians?|those|with|working|in|at|for|by)\b/i.test(trimmed)) return null;
+  // Filter values ending with prepositions
+  if (/\b(?:in|at|for|by|with|of|who|that)$/i.test(trimmed)) return null;
+  // Title-case the first character
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+/**
  * Extract specialty restrictions from notes text.
  * Pattern: "May only be claimed by [specialty]"
  */
@@ -93,18 +108,20 @@ function extractSpecialtyRestrictions(notes: string): string[] {
     /(?:May only be claimed by|only\s+.*?claimed by)\s+(.+?)(?:\.(?!\d)|$)/gi;
   let match;
   while ((match = pattern.exec(notes)) !== null) {
-    // Split on "or" / "and" / commas for multi-specialty restrictions
+    // Split on "or" / "and" / commas / colons / semicolons for multi-specialty restrictions
     const raw = match[1].trim();
     const parts = raw
-      .split(/\s*(?:,(?!\d)\s*(?:or|and)\s*|,(?!\d)\s*|\s+or\s+|\s+and\s+)\s*/i)
+      .split(/\s*(?:,(?!\d)\s*(?:or|and)\s*|,(?!\d)\s*|\s+or\s+|\s+and\s+|;\s*|:\s*(?=[A-Z]))\s*/i)
       .map((s) => s.trim())
       .filter(
         (s) =>
           s.length > 2 &&
           !s.match(
-            /^(?:a|an|the|physicians?|who|with|working|in|at|for)$/i,
+            /^(?:a|an|the|physicians?|who|with|working|in|at|for|those)$/i,
           ),
-      );
+      )
+      .map(normalizeSpecialty)
+      .filter((s): s is string => s !== null);
     restrictions.push(...parts);
   }
   return [...new Set(restrictions)];
@@ -158,25 +175,34 @@ function extractBundlingExclusions(
 
 /**
  * Extract HSC code references from a text fragment.
- * Matches patterns like: 01.03, 03.08A, 48.15B, 95.14C
+ * Matches patterns like: 01.03, 03.08A, 03.7 A, 48.15B, 95.14C, E  1, X 38
  */
 function extractHscCodesFromText(text: string): string[] {
-  const codePattern = /\b(\d{2}\.\d{2,3}[A-Z]{0,3})\b/g;
   const codes: string[] = [];
+
+  // Pattern 1: Standard numeric codes (space-tolerant for codes like "03.7 A")
+  const numericPattern = /\b(\d{2}\.\d{1,3}\s?[A-Z]{0,3})\b/g;
   let match;
-  while ((match = codePattern.exec(text)) !== null) {
+  while ((match = numericPattern.exec(text)) !== null) {
     const code = match[1];
     const prefix = parseInt(code.split('.')[0], 10);
     if (prefix >= 1 && prefix <= 99) {
       // Skip if preceded by $ or "fee" (looks like a dollar amount)
-      const contextStart = Math.max(0, text.indexOf(code) - 10);
-      const context = text.slice(contextStart, text.indexOf(code));
+      const contextStart = Math.max(0, match.index - 10);
+      const context = text.slice(contextStart, match.index);
       if (!context.includes('$') && !context.match(/fee\s*$/i)) {
         codes.push(code);
       }
     }
   }
-  return codes;
+
+  // Pattern 2: Letter-prefix codes (E/X-prefixed, e.g., "E  1", "E103", "E121A", "X 38")
+  const letterPattern = /\b([A-Z]\s*\d{1,3}[A-Z]?)\b/g;
+  while ((match = letterPattern.exec(text)) !== null) {
+    codes.push(match[1]);
+  }
+
+  return [...new Set(codes)];
 }
 
 interface AgePattern {
@@ -186,8 +212,11 @@ interface AgePattern {
 
 const AGE_PATTERNS: AgePattern[] = [
   { tag: 'max_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'max_months', regex: /(?:under|younger\s+than)\s+(\d+)\s*months/i },
   { tag: 'max_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'max_years',  regex: /(?:under|younger\s+than)\s+(\d+)\s*years/i },
   { tag: 'min_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
+  { tag: 'min_years',  regex: /(?:over|older\s+than)\s+(\d+)\s*years/i },
   { tag: 'min_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
   { tag: 'range_years', regex: /between\s+(\d+)\s*and\s*(\d+)\s*years/i },
   { tag: 'range_ages',  regex: /aged?\s+(\d+)\s*(?:to|-)\s*(\d+)/i },
@@ -222,22 +251,6 @@ function extractAgeRestriction(notes: string): AgeRestriction | null {
           maxYears: parseInt(match[2], 10),
         };
     }
-  }
-
-  // Compound restriction: both "under X years" and "over Y years" in same notes
-  const underMatch = notes.match(
-    /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i,
-  );
-  const overMatch = notes.match(
-    /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i,
-  );
-
-  if (underMatch && overMatch) {
-    return {
-      text: `${underMatch[0]} and ${overMatch[0]}`,
-      maxYears: parseInt(underMatch[1], 10),
-      minYears: parseInt(overMatch[1], 10),
-    };
   }
 
   return null;
@@ -288,7 +301,7 @@ function extractFrequencyLimit(notes: string): {
 
   // General frequency pattern for non-day/visit periods
   const freqPattern =
-    /(?:(?:once|(\d+)\s*times?)|(?:a\s+)?maximum\s+(?:of\s+)?(\d+)(?:\s+(?:calls?|claims?|sessions?))?)\s*(?:per|every|each)\s*(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(year|calendar year|benefit year|lifetime|12[- ]?month|pregnancy|calendar week|calendar month|week|month|365[- ]?day)/i;
+    /(?:(?:once|(\d+)\s*times?)|(?:a\s+)?maximum\s+(?:of\s+)?(\d+)(?:\s+(?:calls?|claims?|sessions?))?)\s*(?:per|every|each|in\s+a)\s*(?:patient\s*,?\s*(?:per\s*)?)?(?:physician\s*,?\s*(?:per\s*)?)?(year|calendar year|benefit year|lifetime|12[- ]?month|pregnancy|calendar week|calendar month|week|month|365[- ]?day|shift|session|admission)/i;
   const freqMatch = notes.match(freqPattern);
   if (freqMatch) {
     const count = freqMatch[1]
@@ -304,6 +317,20 @@ function extractFrequencyLimit(notes: string): {
     };
   }
 
+  // Fallback: "once every N years/months" pattern (e.g., "once every 3 years")
+  if (!result.restriction) {
+    const everyMatch = notes.match(
+      /once\s+every\s+(\d+)\s*(years?|months?|weeks?)/i,
+    );
+    if (everyMatch) {
+      result.restriction = {
+        text: everyMatch[0].trim(),
+        count: 1,
+        period: `every_${everyMatch[1]}_${everyMatch[2].toLowerCase().replace(/\s+/g, '_')}`,
+      };
+    }
+  }
+
   return result;
 }
 
@@ -312,7 +339,7 @@ function extractFrequencyLimit(notes: string): {
  * Pattern: "under general anesthesia" / "procedural sedation"
  */
 function extractAnesthesiaRequirement(notes: string): boolean {
-  return /(?:under\s+general\s+anesthesia|requires?\s+(?:general\s+)?anesthesia)/i.test(
+  return /(?:under\s+(?:general\s+)?anesthesia|requires?\s+(?:general\s+)?anesthesia|procedural\s+sedation)/i.test(
     notes,
   );
 }
@@ -404,7 +431,7 @@ function parseGR133(html: string): {
       /out.of.office[\s\S]*/i,
     );
 
-    const codePattern = /\b(\d{2}\.\d{2}[A-Z]{1,3})\b/g;
+    const codePattern = /\b(\d{2}\.\d{2,3}[A-Z]{0,3})\b/g;
 
     if (inOfficeMatch) {
       let match;

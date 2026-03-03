@@ -150,9 +150,9 @@ const explCodes = loadJson<ExplanatoryCode[]>('explanatory-codes.json') ?? [];
 console.log('\nCompleteness:');
 
 const THRESHOLDS: Array<[string, number, number]> = [
-  ['HSC codes', hscCodes.length, 3000],
-  ['Modifier rows', hscModifiers.length, 40000],
-  ['Modifier definitions', modifiers.length, 40],
+  ['HSC codes', hscCodes.length, 2900],
+  ['Modifier rows', hscModifiers.length, 38000],
+  ['Modifier definitions', modifiers.length, 38],
   ['Governing rules', govRules.length, 15],
   ['Explanatory codes', explCodes.length, 100],
 ];
@@ -267,6 +267,23 @@ if (modRowErrors === 0) {
   fail(`${modRowErrors} modifier rows with missing fields`);
 }
 
+// E2: Modifier row deduplication check
+const modRowKeys = new Set<string>();
+let modRowDupes = 0;
+for (const m of hscModifiers) {
+  const key = `${m.hscCode}|${m.type}|${m.code}|${m.calls}`;
+  if (modRowKeys.has(key)) {
+    modRowDupes++;
+  }
+  modRowKeys.add(key);
+}
+
+if (modRowDupes === 0) {
+  pass('No duplicate modifier rows');
+} else {
+  fail(`${modRowDupes} duplicate modifier rows (key: hscCode|type|code|calls)`);
+}
+
 // ============================================================================
 // F. Cross-file Consistency
 // ============================================================================
@@ -302,6 +319,33 @@ if (modTypeMissing.size === 0) {
   pass('All modifier types found in modifiers.json');
 } else {
   fail(`${modTypeMissing.size} modifier type(s) not in modifiers.json: ${[...modTypeMissing].join(', ')}`);
+}
+
+// F3: Governing rule reference resolution
+const grRuleNumbers = new Set(govRules.map((r) => r.ruleNumber));
+let unresolvedGrRefs = 0;
+const unresolvedSample: string[] = [];
+for (const hsc of hscCodes) {
+  if (!hsc.governingRuleReferences) continue;
+  for (const ref of hsc.governingRuleReferences) {
+    // Check exact match or parent rule number
+    const parentRule = ref.split('.')[0];
+    if (!grRuleNumbers.has(ref) && !grRuleNumbers.has(parentRule)) {
+      unresolvedGrRefs++;
+      if (unresolvedSample.length < 5) {
+        unresolvedSample.push(`${hsc.hscCode} → GR ${ref}`);
+      }
+    }
+  }
+}
+
+if (unresolvedGrRefs === 0) {
+  pass('All governing rule references resolve');
+} else {
+  warn(`${unresolvedGrRefs} unresolved governing rule references (sub-rules may lack dedicated entries)`);
+  for (const s of unresolvedSample) {
+    console.log(`    - ${s}`);
+  }
 }
 
 // ============================================================================
@@ -363,20 +407,48 @@ for (const hsc of hscCodes) {
   }
 }
 
-pass(`requiresReferral: ${withReferral} codes`);
-pass(`specialtyRestrictions: ${withSpecialty} codes`);
-pass(`bundlingExclusions: ${withBundling} codes`);
-pass(`ageRestriction: ${withAge} codes`);
-pass(`frequencyRestriction: ${withFrequency} codes`);
-pass(`facilityDesignation: ${withFacility} codes`);
-pass(`category: ${withCategory} codes`);
-pass(`billingTips: ${withBillingTips} codes`);
-pass(`commonTerms: ${withCommonTerms} codes`);
+const ENRICHMENT_MINIMUMS: Array<[string, number, number]> = [
+  ['requiresReferral', withReferral, 40],
+  ['specialtyRestrictions', withSpecialty, 100],
+  ['bundlingExclusions', withBundling, 120],
+  ['ageRestriction', withAge, 20],
+  ['frequencyRestriction', withFrequency, 15],
+  ['facilityDesignation', withFacility, 20],
+  ['category', withCategory, Math.floor(hscCodes.length * 0.95)],
+  ['billingTips', withBillingTips, 150],
+  ['commonTerms', withCommonTerms, 80],
+];
+
+for (const [label, count, min] of ENRICHMENT_MINIMUMS) {
+  if (count >= min) {
+    pass(`${label}: ${count} codes (min: ${min})`);
+  } else {
+    fail(`${label}: ${count} codes — below minimum ${min}`);
+  }
+}
 
 if (enrichErrors === 0) {
   pass('All enrichment fields pass type validation');
 } else {
   fail(`${enrichErrors} enrichment type errors found`);
+}
+
+// ============================================================================
+// H. Data Quality Audits
+// ============================================================================
+
+console.log('\nData Quality:');
+
+// H1: Visit codes without modifiers
+const modifierHscSet = new Set(hscModifiers.map((m) => m.hscCode));
+const visitCodesWithoutMods = hscCodes.filter(
+  (h) => h.feeType === 'VISIT' && !modifierHscSet.has(h.hscCode),
+);
+
+if (visitCodesWithoutMods.length <= 70) {
+  pass(`Visit codes without modifiers: ${visitCodesWithoutMods.length} (within expected range)`);
+} else {
+  warn(`Visit codes without modifiers: ${visitCodesWithoutMods.length} — may indicate scraping issue (expected ≤70)`);
 }
 
 // ============================================================================

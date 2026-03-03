@@ -1,0 +1,58 @@
+# ============================================================================
+# Domain SCR: Fee Navigator Scraper Pipeline V2 — Build Tasks
+# Run: ./scripts/task-runner.sh tasks/scraper-pipeline-v2.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Language: typescript
+# Generated: 2026-03-03
+# ============================================================================
+
+## Phase 1: Enrichment Regex Fixes
+
+SCR-110 | Fix HSC code extraction from text: space-aware regex, match.index context, letter-prefix codes | tasks/prompts/scr-v2/SCR-110.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-111 | Fix age restriction and anesthesia extraction: missing patterns, dead code removal | tasks/prompts/scr-v2/SCR-111.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-112 | Fix frequency restriction extraction: 'once every N years', 'per shift', compound patterns | tasks/prompts/scr-v2/SCR-112.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+
+## Phase 2: Enrichment Coverage Expansion
+
+SCR-120 | Fix specialty restriction extraction: colon-delimited lists, fragment filtering | tasks/prompts/scr-v2/SCR-120.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-121 | Fix GR 1.33 code pattern to allow codes without alpha suffix | tasks/prompts/scr-v2/SCR-121.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+
+## Phase 3: Scraper Safety & Robustness
+
+SCR-130 | Add discovery cache invalidation with --force-discovery flag and staleness check | tasks/prompts/scr-v2/SCR-130.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-131 | Add circuit breaker for mass scraping failure | tasks/prompts/scr-v2/SCR-131.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-132 | Replace hardcoded governing rule range 1-19 with dynamic discovery | tasks/prompts/scr-v2/SCR-132.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-133 | Fix metadata rootSectionKeys count to use actual discovered count | tasks/prompts/scr-v2/SCR-133.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+
+## Phase 4: Shared Utilities Hardening
+
+SCR-140 | Fix fetchWithRetry to cover response body transfer in timeout | tasks/prompts/scr-v2/SCR-140.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/lib/fee-navigator-utils.ts'" 2>&1
+SCR-141 | Add common named HTML entity decoding (nbsp, ndash, mdash, smart quotes) | tasks/prompts/scr-v2/SCR-141.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/lib/fee-navigator-utils.ts'" 2>&1
+SCR-142 | Extend validateResponse block indicator check window and add indicators | tasks/prompts/scr-v2/SCR-142.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/lib/fee-navigator-utils.ts'" 2>&1
+
+## Phase 5: Seed & Schema Fixes
+
+SCR-150 | Fix modifier eligibility deduplication in scraper and unique index in schema | tasks/prompts/scr-v2/SCR-150.md | pnpm --filter shared build 2>&1
+SCR-151 | Fix calls empty string handling in seed to use explicit check | tasks/prompts/scr-v2/SCR-151.md | pnpm --filter shared build 2>&1
+SCR-152 | Preserve explanatory code category in seed as severity mapping | tasks/prompts/scr-v2/SCR-152.md | pnpm --filter shared build 2>&1
+SCR-153 | Filter self-referencing bundling pairs and fix description direction | tasks/prompts/scr-v2/SCR-153.md | pnpm --filter shared build 2>&1
+SCR-154 | Wrap all seed inserts in a database transaction | tasks/prompts/scr-v2/SCR-154.md | pnpm --filter shared build 2>&1
+SCR-155 | Widen action varchar margin in modifier eligibility schema | tasks/prompts/scr-v2/SCR-155.md | pnpm --filter shared build 2>&1
+
+## Phase 6: Validation Hardening
+
+SCR-160 | Tighten validation completeness thresholds | tasks/prompts/scr-v2/SCR-160.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+SCR-161 | Add modifier row deduplication check to validation | tasks/prompts/scr-v2/SCR-161.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+SCR-162 | Add enrichment minimum thresholds to validation (replace unconditional pass) | tasks/prompts/scr-v2/SCR-162.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+SCR-163 | Add governing rule reference resolution check to validation | tasks/prompts/scr-v2/SCR-163.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+
+## Phase 7: Data Quality & Cleanup
+
+SCR-170 | Normalize specialty restrictions: filter garbage fragments, title-case | tasks/prompts/scr-v2/SCR-170.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-171 | Clean modifier definition descriptions: remove AMA footer, de-duplicate name | tasks/prompts/scr-v2/SCR-171.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-172 | Add visit-codes-without-modifiers audit check to validation | tasks/prompts/scr-v2/SCR-172.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+
+## Phase 8: Re-scrape & Verify
+
+SCR-180 | Re-run full pipeline (scrape, enrich, validate) and verify improvements | tasks/prompts/scr-v2/SCR-180.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1 && pnpm --filter shared build 2>&1 && pnpm --filter api vitest run src/domains/reference/reference.test.ts 2>&1
