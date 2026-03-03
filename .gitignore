@@ -46,5 +46,12 @@ meritum/
 # Claude Code local settings
 claude-settings-local.json
 
+# Scraper runtime artifacts
+scripts/data/fee-navigator/.scraper.lock
+scripts/data/fee-navigator/*.pre-enrichment.json
+
+# Build state (task runner)
+.build-state/
+
 # Misc
 *.tsbuildinfo

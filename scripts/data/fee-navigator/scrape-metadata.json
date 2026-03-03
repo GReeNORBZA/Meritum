@@ -1,11 +1,13 @@
 {
-  "timestamp": "2026-03-03T06:05:05.275Z",
-  "durationSeconds": 1154,
+  "timestamp": "2026-03-03T20:45:11.527Z",
+  "durationSeconds": 1224,
   "counts": {
-    "hscCodes": 3089,
-    "hscModifierRows": 41328,
+    "rootSectionKeys": 20,
+    "hscCodes": 3079,
+    "hscModifierRows": 41269,
     "modifiers": 42,
     "governingRules": 19,
+    "governingRuleSubRules": 0,
     "explanatoryCodes": 123
   },
   "errors": []
