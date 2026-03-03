@@ -20,7 +20,7 @@
 // Output: scripts/data/fee-navigator/exploration-report.json
 // ============================================================================
 
-import { chromium, type Browser, type Page, type ElementHandle } from 'playwright';
+import { chromium, type Browser, type Page } from 'playwright';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -138,11 +138,17 @@ interface GlobalFindings {
 // Load existing scraped data for comparison
 // ============================================================================
 
+let _scrapedCodesCache: Array<Record<string, unknown>> | null = null;
+
 function loadScrapedCode(hscCode: string): Record<string, unknown> | null {
-  const filePath = path.join(OUTPUT_DIR, 'hsc-codes.json');
-  if (!fs.existsSync(filePath)) return null;
-  const allCodes = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  return allCodes.find((c: { hscCode: string }) => c.hscCode === hscCode) ?? null;
+  if (!_scrapedCodesCache) {
+    const filePath = path.join(OUTPUT_DIR, 'hsc-codes.json');
+    if (!fs.existsSync(filePath)) return null;
+    _scrapedCodesCache = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  }
+  return _scrapedCodesCache!.find(
+    (c: Record<string, unknown>) => c.hscCode === hscCode,
+  ) ?? null;
 }
 
 // ============================================================================
@@ -247,8 +253,8 @@ async function findClickableElements(page: Page): Promise<ClickableElement[]> {
 async function probeForPopups(page: Page): Promise<PopupContent[]> {
   const popups: PopupContent[] = [];
 
-  // Listen for dialog events
-  page.on('dialog', async (dialog) => {
+  // Listen for dialog events — use named handler so we can remove it
+  const dialogHandler = async (dialog: import('playwright').Dialog) => {
     popups.push({
       triggerElement: 'browser-dialog',
       triggerText: '',
@@ -256,55 +262,61 @@ async function probeForPopups(page: Page): Promise<PopupContent[]> {
       dialogTitle: dialog.type(),
     });
     await dialog.dismiss();
-  });
+  };
 
-  // Find elements that look like they trigger popups
-  const popupTriggers = await page.$$(
-    '[data-toggle="modal"], [data-bs-toggle="modal"], ' +
-    '[data-popup], [aria-haspopup="true"], [aria-haspopup="dialog"], ' +
-    'a[target="_blank"], a[href^="javascript:"], ' +
-    'button:not(.node), [onclick*="modal"], [onclick*="popup"], ' +
-    '[onclick*="dialog"], [onclick*="window.open"]',
-  );
+  page.on('dialog', dialogHandler);
 
-  for (const trigger of popupTriggers) {
-    const triggerText = await trigger.textContent() ?? '';
-    const triggerTag = await trigger.evaluate((el) => el.tagName.toLowerCase());
+  try {
+    // Find elements that look like they trigger popups
+    const popupTriggers = await page.$$(
+      '[data-toggle="modal"], [data-bs-toggle="modal"], ' +
+      '[data-popup], [aria-haspopup="true"], [aria-haspopup="dialog"], ' +
+      'a[target="_blank"], a[href^="javascript:"], ' +
+      'button:not(.node), [onclick*="modal"], [onclick*="popup"], ' +
+      '[onclick*="dialog"], [onclick*="window.open"]',
+    );
 
-    try {
-      // Take a snapshot before clicking
-      const beforeModals = await page.$$('.modal, .dialog, .popup, [role="dialog"], [role="alertdialog"]');
-      const beforeCount = beforeModals.length;
+    for (const trigger of popupTriggers) {
+      const triggerText = await trigger.textContent() ?? '';
+      const triggerTag = await trigger.evaluate((el) => el.tagName.toLowerCase());
 
-      // Click the trigger
-      await trigger.click({ timeout: 2000 }).catch(() => {});
-      await page.waitForTimeout(800);
+      try {
+        // Take a snapshot before clicking
+        const beforeModals = await page.$$('.modal, .dialog, .popup, [role="dialog"], [role="alertdialog"]');
+        const beforeCount = beforeModals.length;
 
-      // Check for new modals/dialogs
-      const afterModals = await page.$$('.modal, .dialog, .popup, [role="dialog"], [role="alertdialog"], .overlay');
-      if (afterModals.length > beforeCount) {
-        for (const modal of afterModals.slice(beforeCount)) {
-          const content = await modal.textContent() ?? '';
-          const title = await modal.$eval('.modal-title, .dialog-title, h2, h3', (el) => el.textContent?.trim() ?? '').catch(() => null);
-          popups.push({
-            triggerElement: triggerTag,
-            triggerText: triggerText.trim().slice(0, 100),
-            dialogContent: content.trim().slice(0, 2000),
-            dialogTitle: title,
-          });
+        // Click the trigger
+        await trigger.click({ timeout: 2000 }).catch(() => {});
+        await page.waitForTimeout(800);
 
-          // Try to close it
-          await modal.$eval('.close, .modal-close, button[aria-label="Close"]', (el: HTMLElement) => el.click()).catch(() => {});
-          await page.keyboard.press('Escape');
-          await page.waitForTimeout(300);
+        // Check for new modals/dialogs
+        const afterModals = await page.$$('.modal, .dialog, .popup, [role="dialog"], [role="alertdialog"], .overlay');
+        if (afterModals.length > beforeCount) {
+          for (const modal of afterModals.slice(beforeCount)) {
+            const content = await modal.textContent() ?? '';
+            const title = await modal.$eval('.modal-title, .dialog-title, h2, h3', (el) => el.textContent?.trim() ?? '').catch(() => null);
+            popups.push({
+              triggerElement: triggerTag,
+              triggerText: triggerText.trim().slice(0, 100),
+              dialogContent: content.trim().slice(0, 2000),
+              dialogTitle: title,
+            });
+
+            // Try to close it
+            await modal.$eval('.close, .modal-close, button[aria-label="Close"]', (el: HTMLElement) => el.click()).catch(() => {});
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+          }
         }
-      }
 
-      // Check for new page/popup windows
-      // (handled via browser context newPage events below)
-    } catch {
-      // Element may have become stale
+        // Check for new page/popup windows
+        // (handled via browser context newPage events below)
+      } catch {
+        // Element may have become stale
+      }
     }
+  } finally {
+    page.removeListener('dialog', dialogHandler);
   }
 
   return popups;
@@ -748,29 +760,35 @@ async function monitorNetworkRequests(
 ): Promise<string[]> {
   const ajaxUrls: string[] = [];
 
-  page.on('request', (request) => {
+  const requestHandler = (request: import('playwright').Request) => {
     const url = request.url();
     if (url.includes('fee-navigator') && request.resourceType() !== 'image') {
       ajaxUrls.push(`${request.method()} ${url}`);
     }
-  });
+  };
 
-  // Navigate to the page and interact with it
-  await page.goto(`${BASE_URL}/hsc/${encodeURIComponent(hscCode)}`, {
-    waitUntil: 'networkidle',
-    timeout: 30000,
-  });
-  await waitForDynamicContent(page);
+  page.on('request', requestHandler);
 
-  // Click on anything interactive
-  const interactiveElements = await page.$$('button, [role="button"], [data-toggle], details summary');
-  for (const el of interactiveElements.slice(0, 10)) {
-    try {
-      await el.click({ timeout: 1000 });
-      await page.waitForTimeout(500);
-    } catch {
-      // Element may not be clickable
+  try {
+    // Navigate to the page and interact with it
+    await page.goto(`${BASE_URL}/hsc/${encodeURIComponent(hscCode)}`, {
+      waitUntil: 'networkidle',
+      timeout: 30000,
+    });
+    await waitForDynamicContent(page);
+
+    // Click on anything interactive
+    const interactiveElements = await page.$$('button, [role="button"], [data-toggle], details summary');
+    for (const el of interactiveElements.slice(0, 10)) {
+      try {
+        await el.click({ timeout: 1000 });
+        await page.waitForTimeout(500);
+      } catch {
+        // Element may not be clickable
+      }
     }
+  } finally {
+    page.removeListener('request', requestHandler);
   }
 
   return ajaxUrls;

@@ -70,6 +70,7 @@ export const hscCodes = pgTable(
     description: text('description').notNull(),
     baseFee: decimal('base_fee', { precision: 10, scale: 2 }),
     feeType: varchar('fee_type', { length: 20 }).notNull(),
+    category: varchar('category', { length: 100 }),
     specialtyRestrictions: jsonb('specialty_restrictions')
       .notNull()
       .default(sql`'[]'::jsonb`)
@@ -119,6 +120,11 @@ export const hscCodes = pgTable(
     facilityDesignation: varchar('facility_designation', { length: 20 }),
     notes: text('notes'),
     helpText: text('help_text'),
+    billingTips: text('billing_tips'),
+    commonTerms: jsonb('common_terms')
+      .notNull()
+      .default(sql`'[]'::jsonb`)
+      .$type<string[]>(),
     versionId: uuid('version_id')
       .notNull()
       .references(() => referenceDataVersions.versionId),

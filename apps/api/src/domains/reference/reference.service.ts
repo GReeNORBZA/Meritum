@@ -120,6 +120,7 @@ export interface HscDetailResult {
   description: string;
   baseFee: string | null;
   feeType: string;
+  category: string | null;
   helpText: string | null;
   specialtyRestrictions: string[];
   facilityRestrictions: string[];
@@ -147,6 +148,8 @@ export interface HscDetailResult {
   governingRuleReferences: string[];
   facilityDesignation: string | null;
   notes: string | null;
+  billingTips: string | null;
+  commonTerms: string[];
   applicableModifiers: Array<{
     modifierCode: string;
     name: string;
@@ -188,6 +191,7 @@ export async function getHscDetail(
     description: code.description,
     baseFee: code.baseFee ?? null,
     feeType: code.feeType,
+    category: code.category ?? null,
     helpText: code.helpText ?? null,
     specialtyRestrictions: (code.specialtyRestrictions ?? []) as string[],
     facilityRestrictions: (code.facilityRestrictions ?? []) as string[],
@@ -205,6 +209,8 @@ export async function getHscDetail(
     governingRuleReferences: (code.governingRuleReferences ?? []) as string[],
     facilityDesignation: code.facilityDesignation ?? null,
     notes: code.notes ?? null,
+    billingTips: code.billingTips ?? null,
+    commonTerms: (code.commonTerms ?? []) as string[],
     applicableModifiers: modifiers.map((m) => ({
       modifierCode: m.modifierCode,
       name: m.name,

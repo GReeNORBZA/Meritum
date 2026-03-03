@@ -1,0 +1,48 @@
+# ============================================================================
+# Scraper Pipeline: Fee Navigator Correctness, Robustness & Data Quality
+# Run: ./scripts/task-runner.sh scripts/tasks/scraper-pipeline.tasks
+#
+# Format: TASK_ID | DESCRIPTION | PROMPT_FILE | VERIFY_COMMAND
+# Generated: 2026-03-03
+#
+# FRD: docs/frd/Meritum_Fee_Navigator_Pipeline_FRD.md
+# ============================================================================
+
+## Phase 1: Shared Infrastructure
+
+SCR-001 | Extract shared scraper utilities into scripts/lib/fee-navigator-utils.ts | scripts/tasks/prompts/scr/SCR-001.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/lib/fee-navigator-utils.ts'" 2>&1
+SCR-002 | Harden fetch with AbortController timeout, fix entity decoding, add response validation | scripts/tasks/prompts/scr/SCR-002.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/lib/fee-navigator-utils.ts'" 2>&1
+
+## Phase 2: Scraper Correctness
+
+SCR-010 | Fix baseFee comma stripping and surcharge detection in scraper | scripts/tasks/prompts/scr/SCR-010.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-011 | Fix progress resume deduplication to prevent duplicate HSC entries | scripts/tasks/prompts/scr/SCR-011.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-012 | Improve categoryToFeeType mapping with full-string prefix lookup | scripts/tasks/prompts/scr/SCR-012.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+
+## Phase 3: Dynamic Discovery
+
+SCR-020 | Replace hardcoded ROOT_SECTION_KEYS with dynamic discovery | scripts/tasks/prompts/scr/SCR-020.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-021 | Replace hardcoded MODIFIER_CODES with dynamic discovery | scripts/tasks/prompts/scr/SCR-021.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+SCR-022 | Add governing rule sub-section discovery and scraping | scripts/tasks/prompts/scr/SCR-022.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+
+## Phase 4: Enrichment Correctness
+
+SCR-040 | Refactor age restriction extraction with explicit pattern tags | scripts/tasks/prompts/scr/SCR-040.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-041 | Tighten GR 4.4.8 referral parsing to scoped section only | scripts/tasks/prompts/scr/SCR-041.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-042 | Fix GR 1.33 facility designation Z-suffix heuristic | scripts/tasks/prompts/scr/SCR-042.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+SCR-043 | Fix bundling exclusion regex greediness and HSC code validation | scripts/tasks/prompts/scr/SCR-043.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/enrich-hsc-data.ts'" 2>&1 | head -5
+
+## Phase 5: Data Completeness & Schema Alignment
+
+SCR-050 | Add category column to hsc_codes schema and seed pipeline | scripts/tasks/prompts/scr/SCR-050.md | pnpm --filter shared build 2>&1
+SCR-051 | Seed bundling exclusions into bundling_rules table | scripts/tasks/prompts/scr/SCR-051.md | pnpm --filter shared build 2>&1
+SCR-052 | Add billingTips and commonTerms columns to hsc_codes schema and seed | scripts/tasks/prompts/scr/SCR-052.md | pnpm --filter shared build 2>&1 && pnpm --filter api vitest run src/domains/reference/reference.test.ts 2>&1
+
+## Phase 6: Pipeline Validation
+
+SCR-060 | Create post-scrape validation script | scripts/tasks/prompts/scr/SCR-060.md | ./apps/api/node_modules/.bin/tsx scripts/validate-fee-navigator-data.ts 2>&1
+SCR-061 | Integrate validation into scraper and enrichment pipelines | scripts/tasks/prompts/scr/SCR-061.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/scrape-fee-navigator.ts'" 2>&1 | head -5
+
+## Phase 7: Exploration Script Cleanup
+
+SCR-070 | Clean up exploration script: unused imports, JSON caching, event listeners | scripts/tasks/prompts/scr/SCR-070.md | ./apps/api/node_modules/.bin/tsx --eval "import './scripts/explore-fee-navigator.ts'" 2>&1 | head -5

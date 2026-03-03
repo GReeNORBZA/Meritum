@@ -10,14 +10,21 @@
 import * as cheerio from 'cheerio';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import {
+  sleep,
+  fetchWithRetry,
+  decodeHtmlEntities,
+  saveJson,
+  loadJson,
+  ensureDir,
+  BASE_URL,
+  DELAY_MS,
+} from './lib/fee-navigator-utils.js';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const BASE_URL = 'https://apps.albertadoctors.org/fee-navigator';
-const DELAY_MS = 200; // Polite crawling delay between requests
-const MAX_RETRIES = 3;
 const BATCH_SAVE_SIZE = 100; // Save progress every N codes
 const OUTPUT_DIR = path.join(
   path.dirname(new URL(import.meta.url).pathname),
@@ -25,27 +32,6 @@ const OUTPUT_DIR = path.join(
   'fee-navigator',
 );
 
-const HEADERS: Record<string, string> = {
-  'User-Agent':
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Referer: `${BASE_URL}/hsc`,
-  'X-Requested-With': 'XMLHttpRequest',
-};
-
-// Root section data-keys from the HSC main page tree
-const ROOT_SECTION_KEYS = [
-  2, 147, 232, 246, 351, 385, 466, 526, 679, 704, 879, 952, 1090, 1322, 1342,
-  1390, 1394, 1421, 1462,
-];
-
-// All 42 modifier codes from the modifiers listing page
-const MODIFIER_CODES = [
-  'AGE', 'ANEU', 'ANU', 'ARFC', 'BMI', 'CAGE', 'CALL', 'CARE', 'CMPD',
-  'CMPX', 'INCS', 'LEVL', 'LMTS', 'LVP', 'NBPG', 'NBTR', 'NOFL', 'RECO',
-  'REDO', 'REPT', 'ROLE', 'SAQU', 'SAU', 'SESU', 'SKLL', 'SOSU', 'SSOU',
-  'SSPU', 'SUBD', 'SURC', 'SURT', 'TELE', 'TRAY', 'TSAR', 'UGA', 'UNDP',
-  'VANE', 'XRAY', '2ANU', '2MNU', '2MPU', '2MSU',
-];
 
 // ============================================================================
 // Types
@@ -100,123 +86,196 @@ interface ScrapeMetadata {
   timestamp: string;
   durationSeconds: number;
   counts: {
+    rootSectionKeys: number;
     hscCodes: number;
     hscModifierRows: number;
     modifiers: number;
     governingRules: number;
+    governingRuleSubRules: number;
     explanatoryCodes: number;
   };
   errors: string[];
 }
 
 // ============================================================================
-// Utility functions
+// Fee Type Mapping
 // ============================================================================
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit = {},
-  retries = MAX_RETRIES,
-): Promise<string> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const resp = await fetch(url, {
-        ...options,
-        headers: { ...HEADERS, ...(options.headers as Record<string, string>) },
-      });
-      if (resp.status === 429 || resp.status === 503) {
-        const backoff = Math.pow(2, attempt) * 1000;
-        console.warn(
-          `  [RETRY] ${resp.status} on ${url} — waiting ${backoff}ms (attempt ${attempt}/${retries})`,
-        );
-        await sleep(backoff);
-        continue;
-      }
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status} for ${url}`);
-      }
-      return await resp.text();
-    } catch (err) {
-      if (attempt === retries) throw err;
-      const backoff = Math.pow(2, attempt) * 1000;
-      console.warn(
-        `  [RETRY] Error on ${url}: ${(err as Error).message} — waiting ${backoff}ms (attempt ${attempt}/${retries})`,
-      );
-      await sleep(backoff);
-    }
-  }
-  throw new Error(`Failed after ${retries} retries: ${url}`);
-}
-
-function decodeHtmlEntities(xml: string): string {
-  const contentMatch = xml.match(/<content>([\s\S]*?)<\/content>/);
-  if (!contentMatch) return '';
-  // The content is HTML-escaped inside XML
-  return contentMatch[1]
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'");
-}
+/** Category prefix → fee type, checked in order (longest match wins) */
+const CATEGORY_FEE_TYPE_MAP: Array<[string, string]> = [
+  // Specific multi-word prefixes first (before their single-letter fallbacks)
+  ['C Ana',      'ANESTHESIA'],
+  ['R Surg',     'PROCEDURE'],
+  // Single-letter prefixes
+  ['V',          'VISIT'],
+  ['P',          'PROCEDURE'],
+  ['M',          'FIXED'],
+  ['C',          'CONSULTATION'],
+  ['L',          'LABORATORY'],
+  ['R',          'RADIOLOGY'],
+  ['A',          'ANESTHESIA'],
+  ['T',          'THERAPEUTIC'],
+];
 
 /** Map category string to fee type */
 function categoryToFeeType(category: string | null): string {
   if (!category) return 'UNKNOWN';
   const cat = category.trim();
 
-  // Numeric-prefixed categories are Major Procedures (e.g. "14 Major Procedure ...")
+  // Numeric-prefixed categories are Major Procedures (e.g., "14 Major Procedure ...")
   if (/^\d+\s/.test(cat)) return 'PROCEDURE';
 
-  const letter = cat.charAt(0).toUpperCase();
-  switch (letter) {
-    case 'V':
-      return 'VISIT';
-    case 'P':
-      return 'PROCEDURE';
-    case 'M':
-      return 'FIXED';
-    case 'C':
-      // "C Anaesthetic" is anesthesia, not consultation
-      return cat.startsWith('C Ana') ? 'ANESTHESIA' : 'CONSULTATION';
-    case 'L':
-      return 'LABORATORY';
-    case 'R':
-      // "R Surgical Assist" is procedural, not radiology
-      return cat.startsWith('R Surg') ? 'PROCEDURE' : 'RADIOLOGY';
-    case 'A':
-      return 'ANESTHESIA';
-    case 'T':
-      return 'THERAPEUTIC';
-    default:
-      return 'OTHER';
+  for (const [prefix, feeType] of CATEGORY_FEE_TYPE_MAP) {
+    if (cat.startsWith(prefix)) return feeType;
   }
+
+  console.warn(`  [WARN] Unknown category for fee type mapping: "${cat}" — defaulting to OTHER`);
+  return 'OTHER';
 }
 
-function ensureDir(dir: string): void {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+
+// ============================================================================
+// Dynamic Discovery Functions
+// ============================================================================
+
+async function discoverRootSectionKeys(): Promise<string[]> {
+  console.log('  Discovering root section keys from HSC main page...');
+  const html = await fetchWithRetry(`${BASE_URL}/hsc`);
+  const $ = cheerio.load(html);
+
+  const keys: string[] = [];
+  $('div.node.expandable, a.node.expandable').each((_i, el) => {
+    const key = $(el).attr('data-key');
+    if (key && /^\d+$/.test(key)) {
+      keys.push(key);
+    }
+  });
+
+  if (keys.length === 0) {
+    throw new Error(
+      'No root section keys found on HSC main page — the site structure may have changed. ' +
+      'Check https://apps.albertadoctors.org/fee-navigator/hsc manually.',
+    );
   }
+
+  // Warn if count changed from previous scrape
+  const prevMetadata = loadJson<ScrapeMetadata>(OUTPUT_DIR, 'scrape-metadata.json');
+  if (prevMetadata?.counts?.rootSectionKeys && prevMetadata.counts.rootSectionKeys !== keys.length) {
+    console.warn(
+      `  [WARN] Root section count changed: ${prevMetadata.counts.rootSectionKeys} → ${keys.length}`,
+    );
+  }
+
+  console.log(`  Found ${keys.length} root section keys: [${keys.join(', ')}]`);
+  return keys;
 }
 
-function saveJson(filename: string, data: unknown): void {
-  ensureDir(OUTPUT_DIR);
-  const filePath = path.join(OUTPUT_DIR, filename);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  console.log(`  Saved ${filePath}`);
+async function discoverModifierCodes(): Promise<string[]> {
+  console.log('  Discovering modifier codes from modifiers listing page...');
+  const html = await fetchWithRetry(`${BASE_URL}/modifiers`);
+  const $ = cheerio.load(html);
+
+  const codes = new Set<string>();
+
+  // Method 1: Extract from viewable node links
+  $('a.node.viewable, a[href*="/fee-navigator/modifiers/"]').each((_i, el) => {
+    const href = $(el).attr('href') ?? '';
+    const match = href.match(/\/fee-navigator\/modifiers\/([^?&#]+)/);
+    if (match) {
+      codes.add(decodeURIComponent(match[1]));
+    }
+  });
+
+  // Method 2: Extract from data-key attributes on viewable nodes
+  $('div.node.viewable, a.node.viewable').each((_i, el) => {
+    const key = $(el).attr('data-key');
+    if (key && /^[A-Z0-9]+$/.test(key)) {
+      codes.add(key);
+    }
+  });
+
+  // Method 3: If page uses tree expansion, expand categories
+  const expandableKeys: string[] = [];
+  $('div.node.expandable, a.node.expandable').each((_i, el) => {
+    const key = $(el).attr('data-key');
+    if (key) expandableKeys.push(key);
+  });
+
+  if (expandableKeys.length > 0 && codes.size === 0) {
+    console.log(`  Found ${expandableKeys.length} expandable categories, expanding...`);
+    const expandUrl = `${BASE_URL}/modifiers?ajax=expanded`;
+    for (const key of expandableKeys) {
+      try {
+        const body = `expanded=${key}&expand=${key}`;
+        const xml = await fetchWithRetry(expandUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        const innerHtml = decodeHtmlEntities(xml);
+        if (innerHtml) {
+          const $inner = cheerio.load(innerHtml);
+          $inner('a[href*="/fee-navigator/modifiers/"]').each((_i, el) => {
+            const href = $inner(el).attr('href') ?? '';
+            const match = href.match(/\/fee-navigator\/modifiers\/([^?&#]+)/);
+            if (match) codes.add(decodeURIComponent(match[1]));
+          });
+        }
+        await sleep(100);
+      } catch (err) {
+        console.warn(`  [WARN] Error expanding modifier category ${key}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  const unique = Array.from(codes).sort();
+
+  if (unique.length === 0) {
+    throw new Error(
+      'No modifier codes found on modifiers listing page — the site structure may have changed. ' +
+      'Check https://apps.albertadoctors.org/fee-navigator/modifiers manually.',
+    );
+  }
+
+  console.log(`  Found ${unique.length} modifier codes`);
+  return unique;
 }
 
-function loadProgress<T>(filename: string): T | null {
-  const filePath = path.join(OUTPUT_DIR, filename);
-  if (fs.existsSync(filePath)) {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+async function discoverSubRulePages(
+  parentRules: GoverningRule[],
+): Promise<string[]> {
+  const subRuleIds = new Set<string>();
+
+  // Method 1: Extract sub-rule URLs from parent rule content
+  for (const rule of parentRules) {
+    const linkPattern = /\/governing-rules\/([\d]+\.[\d]+(?:\.[\d]+)*)/g;
+    let match;
+    while ((match = linkPattern.exec(rule.fullText)) !== null) {
+      const subRuleId = match[1];
+      if (subRuleId.includes('.')) {
+        subRuleIds.add(subRuleId);
+      }
+    }
   }
-  return null;
+
+  // Method 2: Check the governing rules listing page
+  try {
+    const listingHtml = await fetchWithRetry(`${BASE_URL}/governing-rules`);
+    const $ = cheerio.load(listingHtml);
+    $('a[href*="/governing-rules/"]').each((_i, el) => {
+      const href = $(el).attr('href') ?? '';
+      const match = href.match(/\/governing-rules\/([\d]+\.[\d]+(?:\.[\d]+)*)/);
+      if (match) {
+        subRuleIds.add(match[1]);
+      }
+    });
+  } catch (err) {
+    console.warn(`  [WARN] Could not fetch governing rules listing: ${(err as Error).message}`);
+  }
+
+  const subRules = Array.from(subRuleIds).sort();
+  console.log(`  Discovered ${subRules.length} sub-rule pages: [${subRules.join(', ')}]`);
+  return subRules;
 }
 
 // ============================================================================
@@ -227,7 +286,7 @@ async function discoverAllHscCodes(): Promise<string[]> {
   console.log('\n=== Phase 1: Discovering HSC codes via tree expansion ===\n');
 
   // Check for cached discovery
-  const cached = loadProgress<string[]>('_discovered-codes.json');
+  const cached = loadJson<string[]>(OUTPUT_DIR, '_discovered-codes.json');
   if (cached && cached.length > 0) {
     console.log(`  Found cached discovery: ${cached.length} codes. Reusing.`);
     return cached;
@@ -268,11 +327,10 @@ async function discoverAllHscCodes(): Promise<string[]> {
     return { expandables, viewables };
   }
 
+  const rootKeys = await discoverRootSectionKeys();
+
   // BFS queue: [keyToExpand, expandedKeysSoFar[]]
-  const queue: Array<[string, string[]]> = ROOT_SECTION_KEYS.map((k) => [
-    String(k),
-    [String(k)],
-  ]);
+  const queue: Array<[string, string[]]> = rootKeys.map((k) => [k, [k]]);
 
   let requestCount = 0;
 
@@ -305,7 +363,7 @@ async function discoverAllHscCodes(): Promise<string[]> {
   );
 
   // Cache discovery results
-  saveJson('_discovered-codes.json', codes);
+  saveJson(OUTPUT_DIR, '_discovered-codes.json', codes);
 
   return codes;
 }
@@ -348,7 +406,7 @@ function parseHscDetailHtml(
     } else if (th.includes('Base rate') || th.includes('base rate')) {
       // Extract dollar amount: "$25.09" -> "25.09"
       const feeMatch = td.match(/\$?([\d,]+\.\d{2})/);
-      baseFee = feeMatch ? feeMatch[1].replace(',', '') : null;
+      baseFee = feeMatch ? feeMatch[1].replace(/,/g, '') : null;
     } else if (th.includes('Common terms')) {
       $(row)
         .find('li')
@@ -432,7 +490,7 @@ function parseHscDetailHtml(
     });
 
     modifierCodes.add(type);
-    if (type === 'SURC' || type === 'SURT' || modCode.includes('SURC')) {
+    if (type === 'SURC' || type === 'SURT' || modCode.includes('SURC') || modCode.includes('SURT')) {
       surchargeEligible = true;
     }
   });
@@ -463,22 +521,30 @@ async function scrapeHscCodes(
 ): Promise<{ hscCodes: HscCode[]; hscModifiers: HscModifierRow[]; errors: string[] }> {
   console.log('\n=== Phase 2: Scraping HSC code detail pages ===\n');
 
-  const hscCodes: HscCode[] = [];
-  const hscModifiers: HscModifierRow[] = [];
+  // Use Maps for automatic deduplication on resume
+  const hscMap = new Map<string, HscCode>();
+  const hscModMap = new Map<string, HscModifierRow[]>();
   const errors: string[] = [];
 
   // Load progress if available
   const progressFile = '_scrape-progress.json';
-  const progress = loadProgress<{ completed: string[] }>(progressFile);
+  const progress = loadJson<{ completed: string[] }>(OUTPUT_DIR, progressFile);
   const completedSet = new Set(progress?.completed ?? []);
 
-  // Load previously scraped data
-  const existingHsc = loadProgress<HscCode[]>('hsc-codes.json') ?? [];
-  const existingMods = loadProgress<HscModifierRow[]>('hsc-modifiers.json') ?? [];
+  // Load previously scraped data into Maps
+  const existingHsc = loadJson<HscCode[]>(OUTPUT_DIR, 'hsc-codes.json') ?? [];
+  const existingMods = loadJson<HscModifierRow[]>(OUTPUT_DIR, 'hsc-modifiers.json') ?? [];
 
   if (existingHsc.length > 0 && completedSet.size > 0) {
-    hscCodes.push(...existingHsc);
-    hscModifiers.push(...existingMods);
+    for (const h of existingHsc) {
+      hscMap.set(h.hscCode, h);
+    }
+    for (const m of existingMods) {
+      if (!hscModMap.has(m.hscCode)) {
+        hscModMap.set(m.hscCode, []);
+      }
+      hscModMap.get(m.hscCode)!.push(m);
+    }
     console.log(`  Resuming from previous run: ${completedSet.size} already scraped`);
   }
 
@@ -487,7 +553,7 @@ async function scrapeHscCodes(
 
   for (let i = 0; i < remaining.length; i++) {
     const code = remaining[i];
-    const overall = i + 1;
+    const overall = completedSet.size + i + 1;
 
     try {
       const url = `${BASE_URL}/hsc/${encodeURIComponent(code)}?ajax=detail`;
@@ -507,8 +573,9 @@ async function scrapeHscCodes(
         continue;
       }
 
-      hscCodes.push(result.hsc);
-      hscModifiers.push(...result.modifierRows);
+      // Map-based storage: automatically overwrites any existing entry for this code
+      hscMap.set(result.hsc.hscCode, result.hsc);
+      hscModMap.set(result.hsc.hscCode, result.modifierRows);
       completedSet.add(code);
 
       const fee = result.hsc.baseFee ? `$${result.hsc.baseFee}` : 'no fee';
@@ -518,9 +585,11 @@ async function scrapeHscCodes(
 
       // Save progress periodically
       if ((i + 1) % BATCH_SAVE_SIZE === 0) {
-        saveJson('hsc-codes.json', hscCodes);
-        saveJson('hsc-modifiers.json', hscModifiers);
-        saveJson(progressFile, { completed: Array.from(completedSet) });
+        const hscCodes = Array.from(hscMap.values());
+        const hscModifiers = Array.from(hscModMap.values()).flat();
+        saveJson(OUTPUT_DIR, 'hsc-codes.json', hscCodes);
+        saveJson(OUTPUT_DIR, 'hsc-modifiers.json', hscModifiers);
+        saveJson(OUTPUT_DIR, progressFile, { completed: Array.from(completedSet) });
         console.log(`  --- Saved progress: ${hscCodes.length} codes ---`);
       }
 
@@ -533,10 +602,12 @@ async function scrapeHscCodes(
     }
   }
 
-  // Final save
-  saveJson('hsc-codes.json', hscCodes);
-  saveJson('hsc-modifiers.json', hscModifiers);
-  saveJson(progressFile, { completed: Array.from(completedSet) });
+  // Final save — convert Maps to arrays
+  const hscCodes = Array.from(hscMap.values());
+  const hscModifiers = Array.from(hscModMap.values()).flat();
+  saveJson(OUTPUT_DIR, 'hsc-codes.json', hscCodes);
+  saveJson(OUTPUT_DIR, 'hsc-modifiers.json', hscModifiers);
+  saveJson(OUTPUT_DIR, progressFile, { completed: Array.from(completedSet) });
 
   return { hscCodes, hscModifiers, errors };
 }
@@ -595,11 +666,12 @@ async function scrapeModifiers(): Promise<{
 }> {
   console.log('\n=== Phase 3: Scraping modifier definitions ===\n');
 
+  const modifierCodes = await discoverModifierCodes();
   const modifiers: ModifierDefinition[] = [];
   const errors: string[] = [];
 
-  for (let i = 0; i < MODIFIER_CODES.length; i++) {
-    const code = MODIFIER_CODES[i];
+  for (let i = 0; i < modifierCodes.length; i++) {
+    const code = modifierCodes[i];
     try {
       const url = `${BASE_URL}/modifiers/${encodeURIComponent(code)}?ajax=detail`;
       const xml = await fetchWithRetry(url);
@@ -614,12 +686,12 @@ async function scrapeModifiers(): Promise<{
         if (result) {
           modifiers.push(result);
           console.log(
-            `  [${i + 1}/${MODIFIER_CODES.length}] ${code}: ${result.name} (${result.subCodes.length} sub-codes)`,
+            `  [${i + 1}/${modifierCodes.length}] ${code}: ${result.name} (${result.subCodes.length} sub-codes)`,
           );
         } else {
           errors.push(`Could not parse modifier ${code}`);
           console.warn(
-            `  [${i + 1}/${MODIFIER_CODES.length}] ${code} — parse failed`,
+            `  [${i + 1}/${modifierCodes.length}] ${code} — parse failed`,
           );
         }
       } else {
@@ -627,7 +699,7 @@ async function scrapeModifiers(): Promise<{
         if (result) {
           modifiers.push(result);
           console.log(
-            `  [${i + 1}/${MODIFIER_CODES.length}] ${code}: ${result.name} (${result.subCodes.length} sub-codes)`,
+            `  [${i + 1}/${modifierCodes.length}] ${code}: ${result.name} (${result.subCodes.length} sub-codes)`,
           );
         } else {
           errors.push(`Could not parse modifier ${code}`);
@@ -637,11 +709,11 @@ async function scrapeModifiers(): Promise<{
       await sleep(DELAY_MS);
     } catch (err) {
       errors.push(`Error scraping modifier ${code}: ${(err as Error).message}`);
-      console.error(`  [${i + 1}/${MODIFIER_CODES.length}] ERROR ${code}: ${(err as Error).message}`);
+      console.error(`  [${i + 1}/${modifierCodes.length}] ERROR ${code}: ${(err as Error).message}`);
     }
   }
 
-  saveJson('modifiers.json', modifiers);
+  saveJson(OUTPUT_DIR, 'modifiers.json', modifiers);
   return { modifiers, errors };
 }
 
@@ -731,7 +803,56 @@ async function scrapeGoverningRules(): Promise<{
     }
   }
 
-  saveJson('governing-rules.json', rules);
+  // Discover and fetch sub-rule pages (SCR-022)
+  const subRuleIds = await discoverSubRulePages(rules);
+  let subRuleCount = 0;
+
+  for (const subRuleId of subRuleIds) {
+    try {
+      let html: string;
+      try {
+        const xml = await fetchWithRetry(`${BASE_URL}/governing-rules/${subRuleId}?ajax=detail`);
+        html = decodeHtmlEntities(xml);
+        if (!html) throw new Error('empty');
+      } catch {
+        html = await fetchWithRetry(`${BASE_URL}/governing-rules/${subRuleId}`);
+      }
+
+      const result = parseGoverningRulePage(subRuleId, html);
+      if (result && result.referencedHscCodes.length > 0) {
+        // Merge HSC refs into parent rule
+        const parentId = subRuleId.split('.')[0];
+        const parentRule = rules.find((r) => r.ruleNumber === parentId);
+        if (parentRule) {
+          const existingCodes = new Set(parentRule.referencedHscCodes);
+          for (const code of result.referencedHscCodes) {
+            existingCodes.add(code);
+          }
+          parentRule.referencedHscCodes = Array.from(existingCodes);
+          console.log(
+            `  Sub-rule ${subRuleId}: ${result.referencedHscCodes.length} HSC refs merged into GR ${parentId}`,
+          );
+        }
+
+        // Store as its own entry
+        rules.push(result);
+        subRuleCount++;
+        console.log(
+          `  Scraped sub-rule ${subRuleId}: ${result.title.slice(0, 60)} (${result.referencedHscCodes.length} HSC refs)`,
+        );
+      }
+
+      await sleep(DELAY_MS);
+    } catch {
+      console.log(`  Sub-rule ${subRuleId}: page not found or empty (skipping)`);
+    }
+  }
+
+  if (subRuleCount > 0) {
+    console.log(`  ${subRuleCount} sub-rules added`);
+  }
+
+  saveJson(OUTPUT_DIR, 'governing-rules.json', rules);
   return { rules, errors };
 }
 
@@ -850,7 +971,7 @@ async function scrapeExplanatoryCodes(): Promise<{
   }
   const deduped = Array.from(uniqueCodes.values());
 
-  saveJson('explanatory-codes.json', deduped);
+  saveJson(OUTPUT_DIR, 'explanatory-codes.json', deduped);
   return { codes: deduped, errors };
 }
 
@@ -891,24 +1012,46 @@ async function main(): Promise<void> {
 
   // Save metadata
   const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+  const topLevelRuleCount = rules.filter((r) => !r.ruleNumber.includes('.')).length;
+  const subRuleCount = rules.length - topLevelRuleCount;
   const metadata: ScrapeMetadata = {
     timestamp: new Date().toISOString(),
     durationSeconds,
     counts: {
+      rootSectionKeys: 0, // Will be set by discoverAllHscCodes context
       hscCodes: hscCodes.length,
       hscModifierRows: hscModifiers.length,
       modifiers: modifiers.length,
       governingRules: rules.length,
+      governingRuleSubRules: subRuleCount,
       explanatoryCodes: explCodes.length,
     },
     errors: allErrors,
   };
-  saveJson('scrape-metadata.json', metadata);
+  saveJson(OUTPUT_DIR, 'scrape-metadata.json', metadata);
 
   // Clean up progress file
   const progressPath = path.join(OUTPUT_DIR, '_scrape-progress.json');
   if (fs.existsSync(progressPath)) {
     fs.unlinkSync(progressPath);
+  }
+
+  // Run post-scrape validation
+  console.log('\n=== Running post-scrape validation ===\n');
+  try {
+    const { execSync } = await import('node:child_process');
+    const validateScript = path.join(
+      path.dirname(new URL(import.meta.url).pathname),
+      'validate-fee-navigator-data.ts',
+    );
+    const tsxPath = path.join(process.cwd(), 'apps', 'api', 'node_modules', '.bin', 'tsx');
+    execSync(`"${tsxPath}" "${validateScript}"`, { stdio: 'inherit' });
+    console.log('\n  Post-scrape validation: PASSED\n');
+  } catch {
+    console.error('\n  *** POST-SCRAPE VALIDATION FAILED ***');
+    console.error('  Review the validation output above before using this data.');
+    console.error('  The scraped data may be incomplete or corrupted.\n');
+    process.exit(2);
   }
 
   console.log('\n=========================================');

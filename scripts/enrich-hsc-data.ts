@@ -10,20 +10,16 @@
 import * as cheerio from 'cheerio';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import {
+  sleep,
+  fetchWithRetry,
+  decodeHtmlEntities,
+  BASE_URL,
+} from './lib/fee-navigator-utils.js';
 
 // ============================================================================
 // Configuration
 // ============================================================================
-
-const BASE_URL = 'https://apps.albertadoctors.org/fee-navigator';
-const MAX_RETRIES = 3;
-
-const HEADERS: Record<string, string> = {
-  'User-Agent':
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Referer: `${BASE_URL}/governing-rules`,
-  'X-Requested-With': 'XMLHttpRequest',
-};
 
 const DATA_DIR = path.join(
   path.dirname(new URL(import.meta.url).pathname),
@@ -82,57 +78,6 @@ interface FrequencyRestriction {
 }
 
 // ============================================================================
-// Utilities
-// ============================================================================
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(
-  url: string,
-  retries = MAX_RETRIES,
-): Promise<string> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const resp = await fetch(url, { headers: HEADERS });
-      if (resp.status === 429 || resp.status === 503) {
-        const backoff = Math.pow(2, attempt) * 1000;
-        console.warn(
-          `  [RETRY] ${resp.status} on ${url} — waiting ${backoff}ms (attempt ${attempt}/${retries})`,
-        );
-        await sleep(backoff);
-        continue;
-      }
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status} for ${url}`);
-      }
-      return await resp.text();
-    } catch (err) {
-      if (attempt === retries) throw err;
-      const backoff = Math.pow(2, attempt) * 1000;
-      console.warn(
-        `  [RETRY] Error on ${url}: ${(err as Error).message} — waiting ${backoff}ms (attempt ${attempt}/${retries})`,
-      );
-      await sleep(backoff);
-    }
-  }
-  throw new Error(`Failed after ${retries} retries: ${url}`);
-}
-
-function decodeHtmlEntities(xml: string): string {
-  const contentMatch = xml.match(/<content>([\s\S]*?)<\/content>/);
-  if (!contentMatch) return '';
-  return contentMatch[1]
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'");
-}
-
-// ============================================================================
 // Notes Text Extraction — Structured data from notes field
 // ============================================================================
 
@@ -179,10 +124,9 @@ function extractBundlingExclusions(
   const exclusions: BundlingExclusion[] = [];
   const seen = new Set<string>();
 
-  // Pattern 1: Direct "not claimed with" pattern
-  // Terminator: period NOT followed by digit (sentence end, not code-internal period)
+  // Pattern 1: "not claimed with" — sentence-bounded
   const withPattern =
-    /(?:May not be claimed|not\s+(?:be\s+)?payable|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed)).*?(?:with|in addition to)\s+HSC[s]?\s+([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
+    /(?:May not be claimed|not\s+(?:be\s+)?payable|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed))(?:[^.]|\.(?=\d))*?(?:with|in addition to)\s+HSC[s]?\s+([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
   let match;
   while ((match = withPattern.exec(notes)) !== null) {
     const codes = extractHscCodesFromText(match[1]);
@@ -195,9 +139,9 @@ function extractBundlingExclusions(
     }
   }
 
-  // Pattern 2: Same-day exclusions
+  // Pattern 2: Same-day exclusions — sentence-bounded
   const sameDayPattern =
-    /(?:May not be claimed|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed)).*?(?:on the same day|same date of service|same shift|same visit|same encounter|same session).*?(?:as\s+)?(?:HSC[s]?\s+)?([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
+    /(?:May not be claimed|not\s+(?:be\s+)?claimed|shall not be (?:submitted|claimed))(?:[^.]|\.(?=\d))*?(?:on the same day|same date of service|same shift|same visit|same encounter|same session)(?:[^.]|\.(?=\d))*?(?:as\s+)?(?:HSC[s]?\s+)?([\d.,\s/andor\w]+?)(?:\.(?!\d)|$)/gi;
   while ((match = sameDayPattern.exec(notes)) !== null) {
     const codes = extractHscCodesFromText(match[1]);
     for (const code of codes) {
@@ -221,10 +165,33 @@ function extractHscCodesFromText(text: string): string[] {
   const codes: string[] = [];
   let match;
   while ((match = codePattern.exec(text)) !== null) {
-    codes.push(match[1]);
+    const code = match[1];
+    const prefix = parseInt(code.split('.')[0], 10);
+    if (prefix >= 1 && prefix <= 99) {
+      // Skip if preceded by $ or "fee" (looks like a dollar amount)
+      const contextStart = Math.max(0, text.indexOf(code) - 10);
+      const context = text.slice(contextStart, text.indexOf(code));
+      if (!context.includes('$') && !context.match(/fee\s*$/i)) {
+        codes.push(code);
+      }
+    }
   }
   return codes;
 }
+
+interface AgePattern {
+  tag: 'max_months' | 'max_years' | 'min_years' | 'min_months' | 'range_years' | 'range_ages';
+  regex: RegExp;
+}
+
+const AGE_PATTERNS: AgePattern[] = [
+  { tag: 'max_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'max_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i },
+  { tag: 'min_years',  regex: /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
+  { tag: 'min_months', regex: /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i },
+  { tag: 'range_years', regex: /between\s+(\d+)\s*and\s*(\d+)\s*years/i },
+  { tag: 'range_ages',  regex: /aged?\s+(\d+)\s*(?:to|-)\s*(\d+)/i },
+];
 
 /**
  * Extract age restrictions from notes text.
@@ -234,63 +201,30 @@ function extractHscCodesFromText(text: string): string[] {
  *   - "65 years and older"
  */
 function extractAgeRestriction(notes: string): AgeRestriction | null {
-  // Match various age patterns
-  const agePatterns = [
-    // "X months or younger/under"
-    /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i,
-    // "X years of age and under / or younger"
-    /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i,
-    // "X years of age and older / or older"
-    /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i,
-    // "X months or older"
-    /(\d+)\s*months?\s*(?:of age\s+)?(?:or\s+)?(?:older|over|and\s+(?:older|over))/i,
-    // "between X and Y years"
-    /between\s+(\d+)\s*and\s*(\d+)\s*years/i,
-    // "aged X to Y"
-    /aged?\s+(\d+)\s*(?:to|-)\s*(\d+)/i,
-  ];
-
-  for (const pattern of agePatterns) {
-    const match = notes.match(pattern);
+  for (const { tag, regex } of AGE_PATTERNS) {
+    const match = notes.match(regex);
     if (!match) continue;
 
-    const patternStr = pattern.source;
-
-    // Determine what was matched
-    if (patternStr.includes('months') && patternStr.includes('younger|under')) {
-      return {
-        text: match[0],
-        maxMonths: parseInt(match[1], 10),
-      };
-    }
-    if (patternStr.includes('years') && patternStr.includes('younger|under')) {
-      return {
-        text: match[0],
-        maxYears: parseInt(match[1], 10),
-      };
-    }
-    if (patternStr.includes('years') && patternStr.includes('older|over')) {
-      return {
-        text: match[0],
-        minYears: parseInt(match[1], 10),
-      };
-    }
-    if (patternStr.includes('months') && patternStr.includes('older|over')) {
-      return {
-        text: match[0],
-        minMonths: parseInt(match[1], 10),
-      };
-    }
-    if (patternStr.includes('between') || patternStr.includes('to|-')) {
-      return {
-        text: match[0],
-        minYears: parseInt(match[1], 10),
-        maxYears: parseInt(match[2], 10),
-      };
+    switch (tag) {
+      case 'max_months':
+        return { text: match[0], maxMonths: parseInt(match[1], 10) };
+      case 'max_years':
+        return { text: match[0], maxYears: parseInt(match[1], 10) };
+      case 'min_years':
+        return { text: match[0], minYears: parseInt(match[1], 10) };
+      case 'min_months':
+        return { text: match[0], minMonths: parseInt(match[1], 10) };
+      case 'range_years':
+      case 'range_ages':
+        return {
+          text: match[0],
+          minYears: parseInt(match[1], 10),
+          maxYears: parseInt(match[2], 10),
+        };
     }
   }
 
-  // Also check for compound restrictions: "18 and under ... 65 and older"
+  // Compound restriction: both "under X years" and "over Y years" in same notes
   const underMatch = notes.match(
     /(\d+)\s*years?\s*(?:of age\s+)?(?:or\s+)?(?:younger|under|and\s+under)/i,
   );
@@ -395,65 +329,48 @@ function parseGR448(html: string): {
   const requiresReferral = new Set<string>();
   const selfReferralBlocked = new Set<string>();
 
-  // Get the full text content to search for GR 4.4.8 section
-  const fullText = $.text();
+  const fullText = $('body').text();
 
-  // Strategy 1: Find internal-link anchors to HSC codes in the 4.4.8 section
-  // The GR 4 page contains multiple sub-sections. Look for 4.4.8 content.
-  const allText = $('body').text();
+  // Step 1: Isolate the 4.4.8 section text only
+  const section448Match = fullText.match(
+    /4\.4\.8\b([\s\S]*?)(?=\b4\.4\.9\b|\b4\.5\b|\b4\.6\b|\b4\.7\b|\b5\.\b|$)/i,
+  );
 
-  // Find all HSC code references via links
-  $('a[href*="/fee-navigator/hsc/"], a.internal-link').each((_i, el) => {
+  if (!section448Match) {
+    console.warn('  [WARN] Could not locate GR 4.4.8 section in GR 4 page');
+    return { requiresReferral, selfReferralBlocked };
+  }
+
+  const sectionText = section448Match[0];
+  console.log(`  GR 4.4.8 section: ${sectionText.length} chars extracted from GR 4 page`);
+
+  // Step 2: Extract HSC codes from the scoped section text
+  const codePattern = /\b(\d{2}\.\d{2,3}[A-Z]{0,3})\s*(\*)?/g;
+  let match;
+  while ((match = codePattern.exec(sectionText)) !== null) {
+    requiresReferral.add(match[1]);
+    if (match[2] === '*') {
+      selfReferralBlocked.add(match[1]);
+    }
+  }
+
+  // Step 3: Also extract from links, but ONLY if surrounding context mentions "4.4.8"
+  $('a[href*="/fee-navigator/hsc/"]').each((_i, el) => {
     const href = $(el).attr('href') ?? '';
     const codeMatch = href.match(/\/fee-navigator\/hsc\/([^?&#]+)/);
-    if (codeMatch) {
+    if (!codeMatch) return;
+
+    const parentText = $(el).closest('div, section, li, td, tr').text();
+    if (parentText.includes('4.4.8')) {
       const code = decodeURIComponent(codeMatch[1]);
       requiresReferral.add(code);
     }
   });
 
-  // Strategy 2: Extract HSC codes from text near "4.4.8" and "referring"
-  // Look for patterns like "03.08A*" or "03.08A" in text
-  const section448Match = allText.match(
-    /4\.4\.8[\s\S]*?(?:referring|referral)[\s\S]*?(?=4\.4\.9|\b4\.5\b|$)/i,
+  console.log(
+    `  GR 4.4.8 parsed: ${requiresReferral.size} codes require referral, ` +
+    `${selfReferralBlocked.size} self-referral blocked`,
   );
-
-  if (section448Match) {
-    const sectionText = section448Match[0];
-
-    // Extract HSC codes (format: XX.XXY or XX.XXYY where X=digit, Y=letter)
-    const codePattern = /\b(\d{2}\.\d{2}[A-Z]{1,3})\s*(\*)?/g;
-    let match;
-    while ((match = codePattern.exec(sectionText)) !== null) {
-      const code = match[1];
-      const hasAsterisk = match[2] === '*';
-      requiresReferral.add(code);
-      if (hasAsterisk) {
-        selfReferralBlocked.add(code);
-      }
-    }
-  }
-
-  // Strategy 3: Parse structured list items
-  // GR pages may use <li> elements or structured divs with HSC codes
-  $('li, p, td').each((_i, el) => {
-    const text = $(el).text();
-    // Match HSC code patterns followed by optional asterisk
-    const codePattern = /\b(\d{2}\.\d{2}[A-Z]{1,3})\s*(\*)?/g;
-    let match;
-    while ((match = codePattern.exec(text)) !== null) {
-      // Only include if we're in a section that mentions referral
-      if (
-        fullText.includes('4.4.8') &&
-        (text.includes('referr') || text.includes('4.4.8'))
-      ) {
-        requiresReferral.add(match[1]);
-        if (match[2] === '*') {
-          selfReferralBlocked.add(match[1]);
-        }
-      }
-    }
-  });
 
   return { requiresReferral, selfReferralBlocked };
 }
@@ -469,10 +386,10 @@ function parseGR133(html: string): {
   const $ = cheerio.load(html);
   const inOffice = new Set<string>();
   const outOfOffice = new Set<string>();
+  const textClassified = new Set<string>();
 
   const allText = $('body').text();
 
-  // Find the 1.33 section about "in office" and "out of office"
   const section133Match = allText.match(
     /1\.33[\s\S]*?(?=1\.34|\b1\.4\b|\b2\.\b|$)/i,
   );
@@ -480,8 +397,6 @@ function parseGR133(html: string): {
   if (section133Match) {
     const sectionText = section133Match[0];
 
-    // Split into "in office" and "out of office" subsections
-    // Look for the "in office" designated codes
     const inOfficeMatch = sectionText.match(
       /(?:in.office|in\soffice)[\s\S]*?(?:out.of.office|$)/i,
     );
@@ -495,6 +410,7 @@ function parseGR133(html: string): {
       let match;
       while ((match = codePattern.exec(inOfficeMatch[0])) !== null) {
         inOffice.add(match[1]);
+        textClassified.add(match[1]);
       }
     }
 
@@ -502,19 +418,19 @@ function parseGR133(html: string): {
       let match;
       while ((match = codePattern.exec(outOfOfficeMatch[0])) !== null) {
         outOfOffice.add(match[1]);
+        textClassified.add(match[1]);
       }
     }
   }
 
-  // Also try extracting from links
   $('a[href*="/fee-navigator/hsc/"]').each((_i, el) => {
     const href = $(el).attr('href') ?? '';
     const codeMatch = href.match(/\/fee-navigator\/hsc\/([^?&#]+)/);
     if (!codeMatch) return;
 
     const code = decodeURIComponent(codeMatch[1]);
+    if (textClassified.has(code)) return;
 
-    // Check surrounding text context
     const parentText = $(el).parent().text();
     if (parentText.match(/in.office/i) && !parentText.match(/out.of.office/i)) {
       inOffice.add(code);
@@ -523,15 +439,18 @@ function parseGR133(html: string): {
     }
   });
 
-  // Common pattern: "out of office" codes end in Z (e.g., 03.03AZ)
-  // "in office" codes are the non-Z variants
-  // Use this as a heuristic to sort codes that weren't clearly categorized
+  // Z-suffix heuristic: only apply to codes NOT already classified by text
   for (const code of [...inOffice]) {
-    if (code.endsWith('Z')) {
+    if (code.endsWith('Z') && !textClassified.has(code)) {
+      console.log(`  [GR 1.33] Heuristic: moving ${code} from in-office to out-of-office (Z suffix, not text-classified)`);
       inOffice.delete(code);
       outOfOffice.add(code);
+    } else if (code.endsWith('Z') && textClassified.has(code)) {
+      console.log(`  [GR 1.33] Keeping text-classified ${code} as in-office despite Z suffix`);
     }
   }
+
+  console.log(`  GR 1.33: ${inOffice.size} in-office, ${outOfOffice.size} out-of-office (${textClassified.size} text-classified)`);
 
   return { inOffice, outOfOffice };
 }
@@ -713,6 +632,24 @@ async function main(): Promise<void> {
       if (found.maxPerVisit !== null) console.log(`      maxPerVisit: ${found.maxPerVisit}`);
       if (found.requiresAnesthesia) console.log(`      anesthesia: required`);
     }
+  }
+
+  // Run post-enrichment validation
+  console.log('\n=== Running post-enrichment validation ===\n');
+  try {
+    const { execSync } = await import('node:child_process');
+    const validateScript = path.join(
+      path.dirname(new URL(import.meta.url).pathname),
+      'validate-fee-navigator-data.ts',
+    );
+    const tsxPath = path.join(process.cwd(), 'apps', 'api', 'node_modules', '.bin', 'tsx');
+    execSync(`"${tsxPath}" "${validateScript}"`, { stdio: 'inherit' });
+    console.log('\n  Post-enrichment validation: PASSED\n');
+  } catch {
+    console.error('\n  *** POST-ENRICHMENT VALIDATION FAILED ***');
+    console.error('  Review the validation output above before using this data.');
+    console.error('  The enrichment may have corrupted the data.\n');
+    process.exit(2);
   }
 }
 

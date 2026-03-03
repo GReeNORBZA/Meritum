@@ -122,6 +122,9 @@ function insertRow(store: Record<string, any>[], values: any): any {
       shadowBillingEligible: values.shadowBillingEligible ?? false,
       notes: values.notes ?? null,
       helpText: values.helpText ?? null,
+      category: values.category ?? null,
+      billingTips: values.billingTips ?? null,
+      commonTerms: values.commonTerms ?? [],
       versionId: values.versionId,
       effectiveFrom: values.effectiveFrom,
       effectiveTo: values.effectiveTo ?? null,
@@ -994,8 +997,11 @@ function seedHsc(overrides: Partial<Record<string, any>> = {}): Record<string, a
     facilityDesignation: overrides.facilityDesignation ?? null,
     pcpcmBasket: overrides.pcpcmBasket ?? 'in_basket',
     shadowBillingEligible: overrides.shadowBillingEligible ?? false,
+    category: overrides.category ?? null,
     notes: overrides.notes ?? null,
     helpText: overrides.helpText ?? 'Standard GP office visit',
+    billingTips: overrides.billingTips ?? null,
+    commonTerms: overrides.commonTerms ?? [],
     versionId: overrides.versionId ?? crypto.randomUUID(),
     effectiveFrom: overrides.effectiveFrom ?? '2026-01-01',
     effectiveTo: overrides.effectiveTo ?? null,
@@ -3211,6 +3217,9 @@ describe('Reference Service — getHscDetail', () => {
     expect(detail.governingRuleReferences).toEqual([]);
     expect(detail.facilityDesignation).toBeNull();
     expect(detail.notes).toBeNull();
+    expect(detail.category).toBeNull();
+    expect(detail.billingTips).toBeNull();
+    expect(detail.commonTerms).toEqual([]);
   });
 
   it('returns all enriched fields when populated', async () => {
@@ -3232,6 +3241,9 @@ describe('Reference Service — getHscDetail', () => {
       governingRuleReferences: ['GR-4', 'GR-7'],
       facilityDesignation: 'in_office',
       notes: 'Requires referral from GP',
+      category: 'C Consultation',
+      billingTips: 'Ensure referral letter is attached',
+      commonTerms: ['specialist consult', 'IM consultation'],
     });
 
     const detail = await getHscDetail(deps, '08.19A');
@@ -3247,6 +3259,9 @@ describe('Reference Service — getHscDetail', () => {
     expect(detail.governingRuleReferences).toEqual(['GR-4', 'GR-7']);
     expect(detail.facilityDesignation).toBe('in_office');
     expect(detail.notes).toBe('Requires referral from GP');
+    expect(detail.category).toBe('C Consultation');
+    expect(detail.billingTips).toBe('Ensure referral letter is attached');
+    expect(detail.commonTerms).toEqual(['specialist consult', 'IM consultation']);
   });
 
   it('throws NotFoundError for non-existent HSC code', async () => {

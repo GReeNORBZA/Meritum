@@ -712,6 +712,8 @@ async function main() {
       period: string;
     } | null;
     requiresAnesthesia?: boolean;
+    billingTips?: string | null;
+    commonTerms?: string[];
   }
   interface ScrapedModifier {
     modifierCode: string;
@@ -787,6 +789,7 @@ async function main() {
         description: h.description,
         baseFee: h.baseFee,
         feeType: h.feeType,
+        category: h.category ?? null,
         modifierEligibility: h.modifierEligibility,
         surchargeEligible: h.surchargeEligible,
         governingRuleReferences: h.governingRuleReferences ?? [],
@@ -801,6 +804,8 @@ async function main() {
         facilityDesignation: h.facilityDesignation ?? null,
         notes: h.notes,
         helpText: h.helpText,
+        billingTips: h.billingTips ?? null,
+        commonTerms: h.commonTerms ?? [],
         versionId: REF_VERSION_ID,
         effectiveFrom: '2025-04-01',
       })),
