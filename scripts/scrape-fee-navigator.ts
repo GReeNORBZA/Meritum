@@ -63,6 +63,7 @@ interface HscCode {
   helpText: string | null;
   commonTerms: string[];
   billingTips: string | null;
+  governingRuleReferences: string[];
 }
 
 interface HscModifierRow {
@@ -361,6 +362,49 @@ function parseHscDetailHtml(
   const tipsEl = $('div.billing-tips');
   const billingTips = tipsEl.length ? tipsEl.text().replace(/\s+/g, ' ').trim() : null;
 
+  // Governing rule references (div.governing-rules section)
+  const governingRuleReferences: string[] = [];
+  const govRulesEl = $('div.governing-rules');
+  if (govRulesEl.length) {
+    // Try structured list first: ul > li with div.title containing rule numbers
+    govRulesEl.find('li').each((_i, el) => {
+      const titleText = $(el).find('div.title, .title').text().trim();
+      if (titleText) {
+        // Extract rule number (e.g., "1.31", "4.4.8", "4.3.1")
+        const ruleMatch = titleText.match(/^(\d+(?:\.\d+)*)/);
+        if (ruleMatch) {
+          governingRuleReferences.push(ruleMatch[1]);
+        }
+      }
+    });
+
+    // Fallback: extract rule numbers from links to governing-rules pages
+    if (governingRuleReferences.length === 0) {
+      govRulesEl.find('a[href*="/governing-rules/"]').each((_i, el) => {
+        const href = $(el).attr('href') ?? '';
+        const ruleMatch = href.match(/\/governing-rules\/([\d.]+)/);
+        if (ruleMatch) {
+          governingRuleReferences.push(ruleMatch[1]);
+        }
+      });
+    }
+
+    // Final fallback: regex on the full text for rule number patterns
+    if (governingRuleReferences.length === 0) {
+      const govText = govRulesEl.text();
+      const matches = govText.match(/\b(\d+\.\d+(?:\.\d+)*)\b/g);
+      if (matches) {
+        const seen = new Set<string>();
+        for (const m of matches) {
+          if (!seen.has(m)) {
+            seen.add(m);
+            governingRuleReferences.push(m);
+          }
+        }
+      }
+    }
+  }
+
   // Modifier rows
   const modifierRows: HscModifierRow[] = [];
   const modifierCodes = new Set<string>();
@@ -408,6 +452,7 @@ function parseHscDetailHtml(
       helpText: [description, notes, billingTips].filter(Boolean).join('\n\n'),
       commonTerms,
       billingTips,
+      governingRuleReferences,
     },
     modifierRows,
   };
