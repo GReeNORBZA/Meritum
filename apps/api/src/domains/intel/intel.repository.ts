@@ -1,4 +1,4 @@
-import { eq, and, sql, count, desc, asc, or, isNull, inArray, gte, lte } from 'drizzle-orm';
+import { eq, and, sql, count, desc, asc, or, isNull, inArray, gte, lte, ne } from 'drizzle-orm';
 import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   aiRules,
@@ -14,6 +14,9 @@ import {
   type SelectAiSuggestionEvent,
 } from '@meritum/shared/schemas/db/intelligence.schema.js';
 import { providers } from '@meritum/shared/schemas/db/provider.schema.js';
+import { hscCodes } from '@meritum/shared/schemas/db/reference.schema.js';
+import { claims } from '@meritum/shared/schemas/db/claim.schema.js';
+import { ahcipClaimDetails } from '@meritum/shared/schemas/db/ahcip.schema.js';
 import { SUPPRESSION_THRESHOLD, MIN_COHORT_SIZE } from '@meritum/shared/constants/intelligence.constants.js';
 
 // ---------------------------------------------------------------------------
@@ -925,6 +928,161 @@ export function createIntelRepository(db: NodePgDatabase) {
         .where(whereClause!)
         .orderBy(desc(aiSuggestionEvents.createdAt));
       return rows;
+    },
+
+    // -----------------------------------------------------------------------
+    // Tier 1 data-driven validator queries (hsc_codes + cross-claim)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Get age restriction JSONB for an HSC code.
+     * Returns the parsed ageRestriction object or null if no restriction.
+     */
+    async getAgeRestriction(
+      hscCode: string,
+    ): Promise<{ text: string; minYears?: number; maxYears?: number; minMonths?: number; maxMonths?: number } | null> {
+      const rows = await db
+        .select({ ageRestriction: hscCodes.ageRestriction })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      return rows[0]?.ageRestriction ?? null;
+    },
+
+    /**
+     * Get specialty restrictions for an HSC code.
+     * Returns the array of specialty codes or empty array.
+     */
+    async getSpecialtyRestrictions(hscCode: string): Promise<string[]> {
+      const rows = await db
+        .select({ specialtyRestrictions: hscCodes.specialtyRestrictions })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      return rows[0]?.specialtyRestrictions ?? [];
+    },
+
+    /**
+     * Get HSC code category (e.g., "surgical", "pre-operative", "post-operative").
+     * Returns null if code not found or category not set.
+     */
+    async getHscCategory(hscCode: string): Promise<string | null> {
+      const rows = await db
+        .select({ category: hscCodes.category })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      return rows[0]?.category ?? null;
+    },
+
+    /**
+     * Check if an HSC code is eligible for LVP75 (multiple procedure 75% discount).
+     * Returns true if modifierEligibility JSONB array contains 'LVP75'.
+     */
+    async getLvp75Eligibility(hscCode: string): Promise<boolean> {
+      const rows = await db
+        .select({ modifierEligibility: hscCodes.modifierEligibility })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      const mods = rows[0]?.modifierEligibility ?? [];
+      return mods.includes('LVP75');
+    },
+
+    /**
+     * Check if an HSC code is eligible for surcharge modifiers (EV/NTAM/NTPM/WK).
+     */
+    async getSurchargeEligible(hscCode: string): Promise<boolean> {
+      const rows = await db
+        .select({ surchargeEligible: hscCodes.surchargeEligible })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      return rows[0]?.surchargeEligible ?? false;
+    },
+
+    /**
+     * Get the maximum per-day frequency limit for an HSC code.
+     * Returns null if no limit defined.
+     */
+    async getMaxPerDay(hscCode: string): Promise<number | null> {
+      const rows = await db
+        .select({ maxPerDay: hscCodes.maxPerDay })
+        .from(hscCodes)
+        .where(eq(hscCodes.hscCode, hscCode))
+        .limit(1);
+      return rows[0]?.maxPerDay ?? null;
+    },
+
+    /**
+     * Count same-day same-code claims for a patient by a physician.
+     * Used for maxPerDay enforcement. Excludes the current claim from the count.
+     */
+    async countSameDaySameCodeClaims(
+      providerId: string,
+      patientId: string,
+      hscCode: string,
+      dateOfService: string,
+      excludeClaimId: string,
+    ): Promise<number> {
+      const rows = await db
+        .select({ cnt: count() })
+        .from(claims)
+        .innerJoin(ahcipClaimDetails, eq(claims.claimId, ahcipClaimDetails.claimId))
+        .where(
+          and(
+            eq(claims.physicianId, providerId),
+            eq(claims.patientId, patientId),
+            eq(claims.dateOfService, dateOfService),
+            eq(ahcipClaimDetails.healthServiceCode, hscCode),
+            ne(claims.claimId, excludeClaimId),
+            isNull(claims.deletedAt),
+          ),
+        );
+      return Number(rows[0]?.cnt ?? 0);
+    },
+
+    /**
+     * Get recent major procedures for a patient by a physician.
+     * Looks back `lookbackDays` from today. Returns HSC code, category, and date.
+     * Used for pre/post-op window checking.
+     */
+    async getRecentMajorProcedures(
+      providerId: string,
+      patientId: string,
+      lookbackDays: number,
+    ): Promise<{ hscCode: string; category: string | null; dateOfService: string }[]> {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - lookbackDays);
+      const cutoff = cutoffDate.toISOString().split('T')[0];
+
+      const rows = await db
+        .select({
+          hscCode: ahcipClaimDetails.healthServiceCode,
+          category: hscCodes.category,
+          dateOfService: claims.dateOfService,
+        })
+        .from(claims)
+        .innerJoin(ahcipClaimDetails, eq(claims.claimId, ahcipClaimDetails.claimId))
+        .innerJoin(hscCodes, eq(ahcipClaimDetails.healthServiceCode, hscCodes.hscCode))
+        .where(
+          and(
+            eq(claims.physicianId, providerId),
+            eq(claims.patientId, patientId),
+            gte(claims.dateOfService, cutoff),
+            isNull(claims.deletedAt),
+            or(
+              eq(hscCodes.category, 'surgical'),
+              eq(hscCodes.category, 'major_procedure'),
+            ),
+          ),
+        );
+
+      return rows.map((r) => ({
+        hscCode: r.hscCode,
+        category: r.category,
+        dateOfService: r.dateOfService,
+      }));
     },
   };
 }

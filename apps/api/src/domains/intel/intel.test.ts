@@ -26,9 +26,16 @@ import {
   detectBedsideSignals,
   resolveConfidenceTier,
   processBedsideTierBRemoval,
+  checkAgeRestriction,
+  checkSpecialtyGate,
+  checkPrePostOpWindow,
+  applyMultipleProcedureDiscount,
+  validateSurchargeEligibility,
+  checkMaxPerDay,
   type ClaimContext,
   type ClaimContextDeps,
   type Tier1Deps,
+  type Tier1DataDrivenDeps,
   type LifecycleDeps,
   type AnalyseDeps,
   type LearningLoopDeps,
@@ -36,6 +43,7 @@ import {
   type ContextualHelpDeps,
   type Suggestion,
   type BedsideLearningDeps,
+  type AgeRestriction,
 } from './intel.service.js';
 import {
   createLlmClient,
@@ -1880,6 +1888,8 @@ function makeTestClaimContext(overrides?: Partial<ClaimContext>): ClaimContext {
         maxPerDay: null,
         requiresReferral: false,
         surchargeEligible: true,
+        ageRestriction: null,
+        category: null,
       },
       modifiers: [],
       diagnosticCode: {
@@ -1951,6 +1961,8 @@ function makeMockDeps(overrides?: Partial<ClaimContextDeps>): ClaimContextDeps {
       maxPerDay: null,
       requiresReferral: false,
       surchargeEligible: true,
+      ageRestriction: null,
+      category: null,
     }),
     getModifierDefinitions: async () => [
       {
@@ -3470,6 +3482,8 @@ function makeLlmTestContext(overrides?: Partial<ClaimContext>): ClaimContext {
         maxPerDay: null,
         requiresReferral: false,
         surchargeEligible: false,
+        ageRestriction: null,
+        category: null,
       },
       modifiers: [],
       diagnosticCode: null,
@@ -4486,6 +4500,8 @@ describe('Intel Service — analyseClaim orchestrator', () => {
         maxPerDay: null,
         requiresReferral: false,
         surchargeEligible: true,
+        ageRestriction: null,
+        category: null,
       }),
       getModifierDefinitions: async () => [
         {
@@ -7996,5 +8012,395 @@ describe('Intel Digest — generateWeeklyDigests', () => {
 
     const digests = await generateWeeklyDigests(deps, new Date(), new Date());
     expect(digests).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// Tier 1 Data-Driven Validators
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Shared helper for data-driven validator tests
+// ---------------------------------------------------------------------------
+
+function makeDataDrivenContext(overrides?: Partial<ClaimContext>): ClaimContext {
+  return makeTestClaimContext({
+    claim: {
+      claimId: crypto.randomUUID(),
+      claimType: 'AHCIP',
+      state: 'DRAFT',
+      dateOfService: '2026-02-15',
+      dayOfWeek: 0,
+      importSource: 'MANUAL',
+      ...(overrides?.claim ?? {}),
+    },
+    ahcip: {
+      healthServiceCode: '03.04A',
+      modifier1: null,
+      modifier2: null,
+      modifier3: null,
+      diagnosticCode: '401',
+      functionalCentre: 'XXAA01',
+      baNumber: '12345',
+      encounterType: 'OFFICE',
+      calls: 1,
+      timeSpent: 15,
+      facilityNumber: null,
+      referralPractitioner: null,
+      shadowBillingFlag: false,
+      pcpcmBasketFlag: false,
+      afterHoursFlag: false,
+      afterHoursType: null,
+      submittedFee: '45.00',
+      ...(overrides?.ahcip ?? {}),
+    },
+    patient: {
+      age: 45,
+      gender: 'M',
+      ...(overrides?.patient ?? {}),
+    },
+    provider: {
+      specialtyCode: 'GP',
+      physicianType: 'GENERAL',
+      defaultLocation: {
+        functionalCentre: 'XXAA01',
+        facilityNumber: null,
+        rrnpEligible: false,
+      },
+      ...(overrides?.provider ?? {}),
+    },
+    ...overrides,
+  });
+}
+
+function makeBaseDeps(overrides?: Partial<Tier1DataDrivenDeps>): Tier1DataDrivenDeps {
+  return {
+    getAgeRestriction: async () => null,
+    getSpecialtyRestrictions: async () => [],
+    getHscCategory: async () => null,
+    getLvp75Eligibility: async () => false,
+    getSurchargeEligible: async () => false,
+    getMaxPerDay: async () => null,
+    countSameDaySameCodeClaims: async () => 0,
+    getRecentMajorProcedures: async () => [],
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// checkAgeRestriction
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — checkAgeRestriction', () => {
+  it('returns suggestion when patient is too young', async () => {
+    const ctx = makeDataDrivenContext({ patient: { age: 5, gender: 'M' } });
+    const deps = makeBaseDeps({
+      getAgeRestriction: async () => ({ text: 'Must be 18+', minYears: 18 }),
+    });
+    const result = await checkAgeRestriction(ctx, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('too young');
+    expect(result[0].description).toContain('5');
+    expect(result[0].description).toContain('18');
+  });
+
+  it('returns suggestion when patient is too old', async () => {
+    const ctx = makeDataDrivenContext({ patient: { age: 80, gender: 'F' } });
+    const deps = makeBaseDeps({
+      getAgeRestriction: async () => ({ text: 'Paediatric only (0-17)', maxYears: 17 }),
+    });
+    const result = await checkAgeRestriction(ctx, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('too old');
+    expect(result[0].description).toContain('80');
+    expect(result[0].description).toContain('17');
+  });
+
+  it('returns empty when age is within bounds', async () => {
+    const ctx = makeDataDrivenContext({ patient: { age: 25, gender: 'M' } });
+    const deps = makeBaseDeps({
+      getAgeRestriction: async () => ({ text: 'Adults 18-65', minYears: 18, maxYears: 65 }),
+    });
+    const result = await checkAgeRestriction(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when no age restriction exists', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getAgeRestriction: async () => null });
+    const result = await checkAgeRestriction(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkSpecialtyGate
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — checkSpecialtyGate', () => {
+  it('returns suggestion when specialty is not in allowed list', async () => {
+    const ctx = makeDataDrivenContext({ provider: { specialtyCode: 'GP', physicianType: 'GENERAL', defaultLocation: null } });
+    const deps = makeBaseDeps({
+      getSpecialtyRestrictions: async () => ['ORTHO', 'NEURO'],
+    });
+    const result = await checkSpecialtyGate(ctx, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('GP');
+    expect(result[0].description).toContain('ORTHO');
+  });
+
+  it('returns empty when specialty matches', async () => {
+    const ctx = makeDataDrivenContext({ provider: { specialtyCode: 'ORTHO', physicianType: 'SPECIALIST', defaultLocation: null } });
+    const deps = makeBaseDeps({
+      getSpecialtyRestrictions: async () => ['ORTHO', 'NEURO'],
+    });
+    const result = await checkSpecialtyGate(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when no restrictions exist (empty array)', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getSpecialtyRestrictions: async () => [] });
+    const result = await checkSpecialtyGate(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkPrePostOpWindow
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — checkPrePostOpWindow', () => {
+  const providerId = crypto.randomUUID();
+  const patientId = crypto.randomUUID();
+
+  it('returns suggestion when visit is within post-op window of major procedure', async () => {
+    const ctx = makeDataDrivenContext({
+      claim: { claimId: crypto.randomUUID(), claimType: 'AHCIP', state: 'DRAFT', dateOfService: '2026-02-15', dayOfWeek: 0, importSource: 'MANUAL' },
+    });
+    const deps = makeBaseDeps({
+      getHscCategory: async () => 'consultation',
+      getRecentMajorProcedures: async () => [
+        { hscCode: '99.01A', category: 'surgical', dateOfService: '2026-02-10' },
+      ],
+    });
+    const result = await checkPrePostOpWindow(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('post-operative');
+    expect(result[0].description).toContain('99.01A');
+  });
+
+  it('returns suggestion when visit is within pre-op window', async () => {
+    const ctx = makeDataDrivenContext({
+      claim: { claimId: crypto.randomUUID(), claimType: 'AHCIP', state: 'DRAFT', dateOfService: '2026-02-05', dayOfWeek: 3, importSource: 'MANUAL' },
+    });
+    const deps = makeBaseDeps({
+      getHscCategory: async () => 'consultation',
+      getRecentMajorProcedures: async () => [
+        { hscCode: '99.01A', category: 'surgical', dateOfService: '2026-02-12' },
+      ],
+    });
+    const result = await checkPrePostOpWindow(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toContain('pre-operative');
+  });
+
+  it('returns empty when no recent major procedures', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({
+      getHscCategory: async () => 'consultation',
+      getRecentMajorProcedures: async () => [],
+    });
+    const result = await checkPrePostOpWindow(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when claim is outside the window', async () => {
+    const ctx = makeDataDrivenContext({
+      claim: { claimId: crypto.randomUUID(), claimType: 'AHCIP', state: 'DRAFT', dateOfService: '2026-02-15', dayOfWeek: 0, importSource: 'MANUAL' },
+    });
+    const deps = makeBaseDeps({
+      getHscCategory: async () => 'consultation',
+      getRecentMajorProcedures: async () => [
+        { hscCode: '99.01A', category: 'surgical', dateOfService: '2026-01-01' }, // >14 days ago
+      ],
+    });
+    const result = await checkPrePostOpWindow(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when claim category is a major procedure itself', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({
+      getHscCategory: async () => 'surgical',
+      getRecentMajorProcedures: async () => [
+        { hscCode: '99.01A', category: 'surgical', dateOfService: '2026-02-10' },
+      ],
+    });
+    const result = await checkPrePostOpWindow(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyMultipleProcedureDiscount
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — applyMultipleProcedureDiscount', () => {
+  it('returns suggestion when multiple procedures same day, LVP75 eligible, modifier missing', async () => {
+    const ctx = makeDataDrivenContext();
+    const sameDayClaim = makeDataDrivenContext({
+      ahcip: {
+        healthServiceCode: '03.05A',
+        modifier1: null, modifier2: null, modifier3: null,
+        diagnosticCode: '401', functionalCentre: 'XXAA01', baNumber: '12345',
+        encounterType: 'OFFICE', calls: 1, timeSpent: 15,
+        facilityNumber: null, referralPractitioner: null,
+        shadowBillingFlag: false, pcpcmBasketFlag: false,
+        afterHoursFlag: false, afterHoursType: null, submittedFee: '60.00',
+      },
+    });
+    const deps = makeBaseDeps({ getLvp75Eligibility: async () => true });
+    const result = await applyMultipleProcedureDiscount(ctx, [sameDayClaim], deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.FEE_OPTIMISATION);
+    expect(result[0].title).toContain('Multiple procedure discount');
+    expect(result[0].suggestedChanges).toBeDefined();
+    expect(result[0].suggestedChanges![0].valueFormula).toBe('LVP75');
+  });
+
+  it('returns empty when LVP75 modifier already applied', async () => {
+    const ctx = makeDataDrivenContext({
+      ahcip: {
+        healthServiceCode: '03.04A',
+        modifier1: 'LVP75', modifier2: null, modifier3: null,
+        diagnosticCode: '401', functionalCentre: 'XXAA01', baNumber: '12345',
+        encounterType: 'OFFICE', calls: 1, timeSpent: 15,
+        facilityNumber: null, referralPractitioner: null,
+        shadowBillingFlag: false, pcpcmBasketFlag: false,
+        afterHoursFlag: false, afterHoursType: null, submittedFee: '45.00',
+      },
+    });
+    const sameDayClaim = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getLvp75Eligibility: async () => true });
+    const result = await applyMultipleProcedureDiscount(ctx, [sameDayClaim], deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when code is not LVP75 eligible', async () => {
+    const ctx = makeDataDrivenContext();
+    const sameDayClaim = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getLvp75Eligibility: async () => false });
+    const result = await applyMultipleProcedureDiscount(ctx, [sameDayClaim], deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when only one procedure on that day', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getLvp75Eligibility: async () => true });
+    const result = await applyMultipleProcedureDiscount(ctx, [], deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when context has no AHCIP fields', async () => {
+    const ctx = makeDataDrivenContext({ ahcip: null as any });
+    ctx.ahcip = null;
+    const deps = makeBaseDeps({ getLvp75Eligibility: async () => true });
+    const result = await applyMultipleProcedureDiscount(ctx, [makeDataDrivenContext()], deps);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSurchargeEligibility
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — validateSurchargeEligibility', () => {
+  it('returns suggestion when SURC modifier on ineligible code', async () => {
+    const ctx = makeDataDrivenContext({
+      ahcip: {
+        healthServiceCode: '03.04A',
+        modifier1: 'EV', modifier2: null, modifier3: null,
+        diagnosticCode: '401', functionalCentre: 'XXAA01', baNumber: '12345',
+        encounterType: 'OFFICE', calls: 1, timeSpent: 15,
+        facilityNumber: null, referralPractitioner: null,
+        shadowBillingFlag: false, pcpcmBasketFlag: false,
+        afterHoursFlag: false, afterHoursType: null, submittedFee: '45.00',
+      },
+    });
+    const deps = makeBaseDeps({ getSurchargeEligible: async () => false });
+    const result = await validateSurchargeEligibility(ctx, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('EV');
+    expect(result[0].title).toContain('not eligible');
+  });
+
+  it('returns empty when code is surcharge eligible', async () => {
+    const ctx = makeDataDrivenContext({
+      ahcip: {
+        healthServiceCode: '03.04A',
+        modifier1: 'NTAM', modifier2: null, modifier3: null,
+        diagnosticCode: '401', functionalCentre: 'XXAA01', baNumber: '12345',
+        encounterType: 'OFFICE', calls: 1, timeSpent: 15,
+        facilityNumber: null, referralPractitioner: null,
+        shadowBillingFlag: false, pcpcmBasketFlag: false,
+        afterHoursFlag: false, afterHoursType: null, submittedFee: '45.00',
+      },
+    });
+    const deps = makeBaseDeps({ getSurchargeEligible: async () => true });
+    const result = await validateSurchargeEligibility(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when no surcharge modifier applied', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getSurchargeEligible: async () => false });
+    const result = await validateSurchargeEligibility(ctx, deps);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkMaxPerDay
+// ---------------------------------------------------------------------------
+
+describe('Tier1 Data-Driven — checkMaxPerDay', () => {
+  const providerId = crypto.randomUUID();
+  const patientId = crypto.randomUUID();
+
+  it('returns suggestion when daily limit exceeded', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({
+      getMaxPerDay: async () => 2,
+      countSameDaySameCodeClaims: async () => 2, // 2 existing + this one = 3 > maxPerDay of 2
+    });
+    const result = await checkMaxPerDay(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(result[0].title).toContain('Daily limit exceeded');
+    expect(result[0].description).toContain('3');
+    expect(result[0].description).toContain('maximum of 2');
+  });
+
+  it('returns empty when within daily limit', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({
+      getMaxPerDay: async () => 3,
+      countSameDaySameCodeClaims: async () => 1, // 1 existing + this one = 2 <= maxPerDay of 3
+    });
+    const result = await checkMaxPerDay(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty when no maxPerDay restriction', async () => {
+    const ctx = makeDataDrivenContext();
+    const deps = makeBaseDeps({ getMaxPerDay: async () => null });
+    const result = await checkMaxPerDay(ctx, providerId, patientId, deps);
+    expect(result).toHaveLength(0);
   });
 });

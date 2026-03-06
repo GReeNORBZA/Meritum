@@ -56,6 +56,15 @@ export interface ProviderContext {
   } | null;
 }
 
+/** Age restriction metadata from hsc_codes JSONB column. */
+export interface AgeRestriction {
+  text: string;
+  minYears?: number;
+  maxYears?: number;
+  minMonths?: number;
+  maxMonths?: number;
+}
+
 /** HSC code reference data resolved during context building. */
 export interface HscCodeRef {
   hscCode: string;
@@ -68,6 +77,8 @@ export interface HscCodeRef {
   maxPerDay: number | null;
   requiresReferral: boolean;
   surchargeEligible: boolean;
+  ageRestriction: AgeRestriction | null;
+  category: string | null;
 }
 
 /** Modifier reference data. */
@@ -711,6 +722,311 @@ export interface Tier1Deps {
   recordAutoApplied?: (providerId: string, ruleId: string) => Promise<void>;
   /** Increment pre_applied_count for bedside-contingent Tier B rules */
   recordPreApplied?: (providerId: string, ruleId: string) => Promise<void>;
+  /** Optional Tier 1 data-driven validator dependencies */
+  tier1DataDrivenDeps?: Tier1DataDrivenDeps;
+}
+
+/** Dependencies for Tier 1 data-driven validators (reference data + cross-claim queries). */
+export interface Tier1DataDrivenDeps {
+  getAgeRestriction: (hscCode: string) => Promise<AgeRestriction | null>;
+  getSpecialtyRestrictions: (hscCode: string) => Promise<string[]>;
+  getHscCategory: (hscCode: string) => Promise<string | null>;
+  getLvp75Eligibility: (hscCode: string) => Promise<boolean>;
+  getSurchargeEligible: (hscCode: string) => Promise<boolean>;
+  getMaxPerDay: (hscCode: string) => Promise<number | null>;
+  countSameDaySameCodeClaims: (
+    providerId: string,
+    patientId: string,
+    hscCode: string,
+    dateOfService: string,
+    excludeClaimId: string,
+  ) => Promise<number>;
+  getRecentMajorProcedures: (
+    providerId: string,
+    patientId: string,
+    lookbackDays: number,
+  ) => Promise<{ hscCode: string; category: string | null; dateOfService: string }[]>;
+}
+
+// ---------------------------------------------------------------------------
+// Tier 1 Data-Driven Validators
+// ---------------------------------------------------------------------------
+
+/** SURCHARGE modifier codes that require surchargeEligible = true */
+const SURCHARGE_MODIFIERS = ['EV', 'NTAM', 'NTPM', 'WK'];
+
+/** Default pre/post-op window in days */
+const PRE_POST_OP_WINDOW_DAYS = 14;
+
+/** Categories that indicate a major surgical procedure */
+const MAJOR_PROCEDURE_CATEGORIES = ['surgical', 'major_procedure'];
+
+/**
+ * Check if the patient's age falls outside the HSC code's age restriction.
+ * Returns a REJECTION_RISK suggestion if patient is too young or too old.
+ */
+export async function checkAgeRestriction(
+  context: ClaimContext,
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  const restriction = await deps.getAgeRestriction(context.ahcip.healthServiceCode);
+  if (!restriction) return [];
+
+  const patientAge = context.patient.age;
+
+  if (restriction.minYears !== undefined && patientAge < restriction.minYears) {
+    return [{
+      suggestionId: crypto.randomUUID(),
+      ruleId: `data-driven:age-restriction:${context.ahcip.healthServiceCode}`,
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `Age restriction: patient too young for ${context.ahcip.healthServiceCode}`,
+      description: `${restriction.text}. Patient age (${patientAge}) is below the minimum (${restriction.minYears} years).`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: `SOMB 2026 — Age Restriction for ${context.ahcip.healthServiceCode}`,
+      sourceUrl: null,
+      suggestedChanges: null,
+    }];
+  }
+
+  if (restriction.maxYears !== undefined && patientAge > restriction.maxYears) {
+    return [{
+      suggestionId: crypto.randomUUID(),
+      ruleId: `data-driven:age-restriction:${context.ahcip.healthServiceCode}`,
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `Age restriction: patient too old for ${context.ahcip.healthServiceCode}`,
+      description: `${restriction.text}. Patient age (${patientAge}) exceeds the maximum (${restriction.maxYears} years).`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: `SOMB 2026 — Age Restriction for ${context.ahcip.healthServiceCode}`,
+      sourceUrl: null,
+      suggestedChanges: null,
+    }];
+  }
+
+  return [];
+}
+
+/**
+ * Check if the provider's specialty is allowed to bill this HSC code.
+ * Returns a REJECTION_RISK suggestion if specialty is not in the allowed list.
+ */
+export async function checkSpecialtyGate(
+  context: ClaimContext,
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  const restrictions = await deps.getSpecialtyRestrictions(context.ahcip.healthServiceCode);
+  if (restrictions.length === 0) return [];
+
+  if (!restrictions.includes(context.provider.specialtyCode)) {
+    return [{
+      suggestionId: crypto.randomUUID(),
+      ruleId: `data-driven:specialty-gate:${context.ahcip.healthServiceCode}`,
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `Specialty restriction: ${context.ahcip.healthServiceCode} not billable by ${context.provider.specialtyCode}`,
+      description: `This HSC code is restricted to specialties: ${restrictions.join(', ')}. Your specialty (${context.provider.specialtyCode}) is not in the allowed list.`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: `SOMB 2026 — Specialty Restriction for ${context.ahcip.healthServiceCode}`,
+      sourceUrl: null,
+      suggestedChanges: null,
+    }];
+  }
+
+  return [];
+}
+
+/**
+ * Check if the current claim falls within a pre/post-operative inclusion period.
+ * Queries recent major procedures for the same patient and warns if a visit
+ * code is billed within the operative window.
+ */
+export async function checkPrePostOpWindow(
+  context: ClaimContext,
+  providerId: string,
+  patientId: string,
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  const category = await deps.getHscCategory(context.ahcip.healthServiceCode);
+
+  // Only flag visit/consultation codes billed during an op window.
+  // If the current claim IS a major procedure, don't flag it.
+  if (category && MAJOR_PROCEDURE_CATEGORIES.includes(category)) return [];
+
+  const recentProcedures = await deps.getRecentMajorProcedures(
+    providerId,
+    patientId,
+    PRE_POST_OP_WINDOW_DAYS,
+  );
+
+  if (recentProcedures.length === 0) return [];
+
+  const claimDate = new Date(context.claim.dateOfService);
+  const suggestions: Suggestion[] = [];
+
+  for (const proc of recentProcedures) {
+    const procDate = new Date(proc.dateOfService);
+    const diffDays = Math.abs(Math.floor((claimDate.getTime() - procDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+    if (diffDays <= PRE_POST_OP_WINDOW_DAYS) {
+      const windowType = claimDate >= procDate ? 'post-operative' : 'pre-operative';
+      suggestions.push({
+        suggestionId: crypto.randomUUID(),
+        ruleId: `data-driven:pre-post-op:${context.ahcip.healthServiceCode}`,
+        tier: 1,
+        category: SuggestionCategory.REJECTION_RISK,
+        priority: SuggestionPriority.HIGH,
+        title: `Potential ${windowType} period conflict`,
+        description: `This claim (${context.ahcip.healthServiceCode}) is within ${diffDays} days of a major procedure (${proc.hscCode} on ${proc.dateOfService}). Services during the ${windowType} period may be included in the surgical fee.`,
+        revenueImpact: null,
+        confidence: 0.85,
+        sourceReference: 'SOMB 2026 GR 6 — Pre/Post-Operative Period',
+        sourceUrl: null,
+        suggestedChanges: null,
+      });
+      break; // One suggestion per claim is sufficient
+    }
+  }
+
+  return suggestions;
+}
+
+/**
+ * Check if the LVP75 modifier (multiple procedure 75% discount) should be applied.
+ * When multiple procedures are billed on the same day for the same patient,
+ * and the code is LVP75-eligible, suggests adding the modifier if missing.
+ */
+export async function applyMultipleProcedureDiscount(
+  context: ClaimContext,
+  sameDayClaims: ClaimContext[],
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  // Need at least one other procedure on the same day
+  if (sameDayClaims.length === 0) return [];
+
+  const isEligible = await deps.getLvp75Eligibility(context.ahcip.healthServiceCode);
+  if (!isEligible) return [];
+
+  // Check if LVP75 modifier is already applied
+  const appliedModifiers = [
+    context.ahcip.modifier1,
+    context.ahcip.modifier2,
+    context.ahcip.modifier3,
+  ].filter(Boolean);
+
+  if (appliedModifiers.includes('LVP75')) return [];
+
+  return [{
+    suggestionId: crypto.randomUUID(),
+    ruleId: `data-driven:lvp75:${context.ahcip.healthServiceCode}`,
+    tier: 1,
+    category: SuggestionCategory.FEE_OPTIMISATION,
+    priority: SuggestionPriority.MEDIUM,
+    title: `Multiple procedure discount may apply to ${context.ahcip.healthServiceCode}`,
+    description: `This code is LVP75-eligible and there are ${sameDayClaims.length} other procedure(s) on the same day. Consider adding the LVP75 modifier (75% discount for additional procedures).`,
+    revenueImpact: null,
+    confidence: 0.9,
+    sourceReference: 'SOMB 2026 GR 6.9 — Multiple Procedure Discount (75%)',
+    sourceUrl: null,
+    suggestedChanges: [{ field: 'modifier', valueFormula: 'LVP75' }],
+  }];
+}
+
+/**
+ * Validate that surcharge modifiers (EV/NTAM/NTPM/WK) are only applied to
+ * HSC codes that are surcharge-eligible.
+ */
+export async function validateSurchargeEligibility(
+  context: ClaimContext,
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  const appliedModifiers = [
+    context.ahcip.modifier1,
+    context.ahcip.modifier2,
+    context.ahcip.modifier3,
+  ].filter(Boolean);
+
+  const hasSurchargeModifier = appliedModifiers.some((m) => SURCHARGE_MODIFIERS.includes(m));
+  if (!hasSurchargeModifier) return [];
+
+  const isEligible = await deps.getSurchargeEligible(context.ahcip.healthServiceCode);
+  if (isEligible) return [];
+
+  const surchargeModifier = appliedModifiers.find((m) => SURCHARGE_MODIFIERS.includes(m))!;
+  return [{
+    suggestionId: crypto.randomUUID(),
+    ruleId: `data-driven:surcharge:${context.ahcip.healthServiceCode}`,
+    tier: 1,
+    category: SuggestionCategory.REJECTION_RISK,
+    priority: SuggestionPriority.HIGH,
+    title: `Surcharge modifier ${surchargeModifier} not eligible for ${context.ahcip.healthServiceCode}`,
+    description: `The surcharge modifier ${surchargeModifier} was applied but ${context.ahcip.healthServiceCode} is not surcharge-eligible. This will likely be rejected.`,
+    revenueImpact: null,
+    confidence: 1.0,
+    sourceReference: 'SOMB 2026 GR 15 — Surcharge Eligibility',
+    sourceUrl: null,
+    suggestedChanges: null,
+  }];
+}
+
+/**
+ * Check if the daily frequency limit (maxPerDay) for an HSC code has been exceeded.
+ * Counts same-day same-code claims for the same patient.
+ */
+export async function checkMaxPerDay(
+  context: ClaimContext,
+  providerId: string,
+  patientId: string,
+  deps: Tier1DataDrivenDeps,
+): Promise<Suggestion[]> {
+  if (!context.ahcip) return [];
+
+  const maxPerDay = await deps.getMaxPerDay(context.ahcip.healthServiceCode);
+  if (maxPerDay === null) return [];
+
+  const sameDayCount = await deps.countSameDaySameCodeClaims(
+    providerId,
+    patientId,
+    context.ahcip.healthServiceCode,
+    context.claim.dateOfService,
+    context.claim.claimId,
+  );
+
+  // sameDayCount is OTHER claims; adding this one makes total = sameDayCount + 1
+  if (sameDayCount + 1 > maxPerDay) {
+    return [{
+      suggestionId: crypto.randomUUID(),
+      ruleId: `data-driven:max-per-day:${context.ahcip.healthServiceCode}`,
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `Daily limit exceeded for ${context.ahcip.healthServiceCode}`,
+      description: `This code has a maximum of ${maxPerDay} per day per patient. Including this claim, there are ${sameDayCount + 1} claims for this code on ${context.claim.dateOfService}.`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: `SOMB 2026 — Daily Maximum for ${context.ahcip.healthServiceCode}`,
+      sourceUrl: null,
+      suggestedChanges: null,
+    }];
+  }
+
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -1099,6 +1415,26 @@ export async function evaluateTier1Rules(
 
     // 5f. Increment times_shown (fire-and-forget)
     tier1Deps.incrementShown(providerId, rule.ruleId);
+  }
+
+  // 5g. Tier 1 data-driven validators (age, specialty, pre/post-op, LVP75, surcharge, maxPerDay)
+  if (context.ahcip && tier1Deps.tier1DataDrivenDeps && patientClaim) {
+    const ddDeps = tier1Deps.tier1DataDrivenDeps;
+    const pid = patientClaim.patientId;
+
+    const [ageSugs, specSugs, opSugs, surchargeSugs, maxDaySugs] = await Promise.all([
+      checkAgeRestriction(context, ddDeps),
+      checkSpecialtyGate(context, ddDeps),
+      checkPrePostOpWindow(context, providerId, pid, ddDeps),
+      validateSurchargeEligibility(context, ddDeps),
+      checkMaxPerDay(context, providerId, pid, ddDeps),
+    ]);
+
+    // LVP75 needs same-day claims — not available in context, pass empty for now
+    // (sameDayClaims would require a separate query in a batch context)
+    const lvp75Sugs = await applyMultipleProcedureDiscount(context, [], ddDeps);
+
+    suggestions.push(...ageSugs, ...specSugs, ...opSugs, ...lvp75Sugs, ...surchargeSugs, ...maxDaySugs);
   }
 
   // 6. Deduplicate: if multiple suggestions target the same field, keep highest priority
