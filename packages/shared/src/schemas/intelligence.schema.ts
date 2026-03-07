@@ -186,7 +186,7 @@ const conditionSchema: z.ZodType = z.lazy(() =>
     field: z.string().optional(),
     operator: z.enum([
       '==', '!=', '>', '<', '>=', '<=',
-      'IS NULL', 'IS NOT NULL', 'IN', 'NOT IN',
+      'IS NULL', 'IS NOT NULL', 'IN', 'NOT IN', '%',
     ]).optional(),
     value: z.unknown().optional(),
     children: z.array(z.lazy(() => conditionSchema)).optional(),

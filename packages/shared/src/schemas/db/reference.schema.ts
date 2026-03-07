@@ -119,14 +119,6 @@ export const hscCodes = pgTable(
       .notNull()
       .default(false),
     facilityDesignation: varchar('facility_designation', { length: 20 }),
-    ageRestriction: jsonb('age_restriction').$type<{
-      text: string;
-      minYears?: number;
-      maxYears?: number;
-      minMonths?: number;
-      maxMonths?: number;
-    }>(),
-    category: varchar('category', { length: 50 }),
     notes: text('notes'),
     helpText: text('help_text'),
     billingTips: text('billing_tips'),

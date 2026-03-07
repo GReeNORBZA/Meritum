@@ -2496,15 +2496,13 @@ export async function getBillingGuidanceDetail(
 // ---------------------------------------------------------------------------
 
 export interface ProvincialPhnFormatResult {
-  formatId: string;
+  id: string;
   provinceCode: string;
   provinceName: string;
-  formatPattern: string;
-  formatDescription: string;
-  examplePhn: string | null;
-  validationRegex: string | null;
-  phnLength: number | null;
-  isReciprocal: boolean;
+  phnLength: number;
+  phnRegex: string;
+  validationAlgorithm: string | null;
+  notes: string | null;
 }
 
 /**
@@ -2516,15 +2514,13 @@ export async function listProvincialPhnFormats(
   const rows = await deps.repo.listProvincialPhnFormats();
 
   return rows.map((r) => ({
-    formatId: r.formatId,
+    id: r.id,
     provinceCode: r.provinceCode,
     provinceName: r.provinceName,
-    formatPattern: r.formatPattern,
-    formatDescription: r.formatDescription,
-    examplePhn: r.examplePhn ?? null,
-    validationRegex: r.validationRegex ?? null,
-    phnLength: r.phnLength ?? null,
-    isReciprocal: r.isReciprocal,
+    phnLength: r.phnLength,
+    phnRegex: r.phnRegex,
+    validationAlgorithm: r.validationAlgorithm ?? null,
+    notes: r.notes ?? null,
   }));
 }
 
@@ -2535,13 +2531,12 @@ export async function listProvincialPhnFormats(
 export interface ReciprocalBillingRuleResult {
   ruleId: string;
   sourceProvince: string;
-  targetProvince: string;
-  billingMethod: string;
-  maxFeePercentage: string | null;
-  requiresPreApproval: boolean;
-  effectiveFrom: string | null;
-  effectiveTo: string | null;
+  claimType: string;
+  submissionMethod: string;
+  feeScheduleSource: string;
+  deadlineDays: number;
   notes: string | null;
+  isActive: boolean;
 }
 
 /**
@@ -2556,13 +2551,12 @@ export async function getReciprocalBillingRules(
   return rows.map((r) => ({
     ruleId: r.ruleId,
     sourceProvince: r.sourceProvince,
-    targetProvince: r.targetProvince,
-    billingMethod: r.billingMethod,
-    maxFeePercentage: r.maxFeePercentage ?? null,
-    requiresPreApproval: r.requiresPreApproval,
-    effectiveFrom: r.effectiveFrom ?? null,
-    effectiveTo: r.effectiveTo ?? null,
+    claimType: r.claimType,
+    submissionMethod: r.submissionMethod,
+    feeScheduleSource: r.feeScheduleSource,
+    deadlineDays: r.deadlineDays,
     notes: r.notes ?? null,
+    isActive: r.isActive,
   }));
 }
 
@@ -2573,13 +2567,13 @@ export async function getReciprocalBillingRules(
 export interface AnesthesiaRuleResult {
   ruleId: string;
   scenarioCode: string;
-  scenarioName: string;
+  scenarioLabel: string;
   description: string;
   baseUnits: number;
   timeUnitMinutes: number;
   calculationFormula: string;
-  modifierInteractions: Record<string, unknown>;
-  exampleCalculation: string | null;
+  applicableModifiers: string[];
+  sourceReference: string | null;
   sortOrder: number;
 }
 
@@ -2594,13 +2588,13 @@ export async function listAnesthesiaRulesEntries(
   return rows.map((r) => ({
     ruleId: r.ruleId,
     scenarioCode: r.scenarioCode,
-    scenarioName: r.scenarioName,
+    scenarioLabel: r.scenarioLabel,
     description: r.description,
-    baseUnits: r.baseUnits,
-    timeUnitMinutes: r.timeUnitMinutes,
+    baseUnits: r.baseUnits ?? 0,
+    timeUnitMinutes: r.timeUnitMinutes ?? 15,
     calculationFormula: r.calculationFormula,
-    modifierInteractions: (r.modifierInteractions ?? {}) as Record<string, unknown>,
-    exampleCalculation: r.exampleCalculation ?? null,
+    applicableModifiers: (r.applicableModifiers ?? []) as string[],
+    sourceReference: r.sourceReference ?? null,
     sortOrder: r.sortOrder,
   }));
 }
@@ -2620,13 +2614,13 @@ export async function getAnesthesiaRuleByScenario(
   return {
     ruleId: row.ruleId,
     scenarioCode: row.scenarioCode,
-    scenarioName: row.scenarioName,
+    scenarioLabel: row.scenarioLabel,
     description: row.description,
-    baseUnits: row.baseUnits,
-    timeUnitMinutes: row.timeUnitMinutes,
+    baseUnits: row.baseUnits ?? 0,
+    timeUnitMinutes: row.timeUnitMinutes ?? 15,
     calculationFormula: row.calculationFormula,
-    modifierInteractions: (row.modifierInteractions ?? {}) as Record<string, unknown>,
-    exampleCalculation: row.exampleCalculation ?? null,
+    applicableModifiers: (row.applicableModifiers ?? []) as string[],
+    sourceReference: row.sourceReference ?? null,
     sortOrder: row.sortOrder,
   };
 }
@@ -2645,14 +2639,16 @@ export async function calculateAnesthesiaFee(
     throw new NotFoundError('Anesthesia rule');
   }
 
-  const timeUnits = rule.timeUnitMinutes > 0
-    ? Math.ceil(durationMinutes / rule.timeUnitMinutes)
+  const baseUnits = rule.baseUnits ?? 0;
+  const timeUnitMinutes = rule.timeUnitMinutes ?? 15;
+  const timeUnits = timeUnitMinutes > 0
+    ? Math.ceil(durationMinutes / timeUnitMinutes)
     : 0;
-  const totalUnits = rule.baseUnits + timeUnits;
+  const totalUnits = baseUnits + timeUnits;
 
   return {
     scenarioCode: rule.scenarioCode,
-    baseUnits: rule.baseUnits,
+    baseUnits,
     timeUnits,
     totalUnits,
     formula: rule.calculationFormula,
@@ -2668,8 +2664,7 @@ export interface BundlingRuleResult {
   codeA: string;
   codeB: string;
   relationship: string;
-  description: string;
-  resolution: string | null;
+  description: string | null;
   overrideAllowed: boolean;
   sourceReference: string | null;
 }
@@ -2691,8 +2686,7 @@ export async function getBundlingRuleForPair(
     codeA: row.codeA,
     codeB: row.codeB,
     relationship: row.relationship,
-    description: row.description,
-    resolution: row.resolution ?? null,
+    description: row.description ?? null,
     overrideAllowed: row.overrideAllowed,
     sourceReference: row.sourceReference ?? null,
   };
@@ -2713,8 +2707,7 @@ export async function checkBundlingConflicts(
     codeA: r.codeA,
     codeB: r.codeB,
     relationship: r.relationship,
-    description: r.description,
-    resolution: r.resolution ?? null,
+    description: r.description ?? null,
     overrideAllowed: r.overrideAllowed,
     sourceReference: r.sourceReference ?? null,
   }));
@@ -2746,7 +2739,7 @@ export async function listJustificationTemplatesEntries(
   return rows.map((r) => ({
     templateId: r.templateId,
     scenario: r.scenario,
-    title: r.title,
+    title: r.name,
     templateText: r.templateText,
     placeholders: (r.placeholders ?? []) as string[],
     sortOrder: r.sortOrder,
@@ -2768,7 +2761,7 @@ export async function getJustificationTemplateDetail(
   return {
     templateId: row.templateId,
     scenario: row.scenario,
-    title: row.title,
+    title: row.name,
     templateText: row.templateText,
     placeholders: (row.placeholders ?? []) as string[],
     sortOrder: row.sortOrder,

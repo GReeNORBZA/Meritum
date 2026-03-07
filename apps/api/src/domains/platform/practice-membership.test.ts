@@ -467,7 +467,8 @@ describe('PracticeMembershipRepository', () => {
     const cutoff = new Date();
     const pending = await repo.findPendingRemovals(cutoff);
     expect(pending).toHaveLength(1);
-    expect(pending[0].removalEffectiveAt.getTime()).toBeLessThanOrEqual(
+    const effectiveAt = pending[0]!.removalEffectiveAt!;
+    expect(effectiveAt.getTime()).toBeLessThanOrEqual(
       cutoff.getTime(),
     );
   });

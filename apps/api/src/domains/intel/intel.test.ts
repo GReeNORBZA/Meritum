@@ -32,6 +32,12 @@ import {
   applyMultipleProcedureDiscount,
   validateSurchargeEligibility,
   checkMaxPerDay,
+  checkBundlingConflicts,
+  validateModifierEligibility,
+  checkFrequencyRestrictions,
+  validatePatientRegistration,
+  checkCallbackLimits,
+  mapExplanatoryCodeToPreventionRules,
   type ClaimContext,
   type ClaimContextDeps,
   type Tier1Deps,
@@ -6294,10 +6300,10 @@ describe('Intel Seed — seedMvpRules', () => {
 
     const result = await seedMvpRules(deps);
 
-    expect(result.total).toBe(106);
-    expect(result.inserted).toBe(106);
+    expect(result.total).toBe(157);
+    expect(result.inserted).toBe(157);
     expect(result.skipped).toBe(0);
-    expect(inserted).toHaveLength(106);
+    expect(inserted).toHaveLength(157);
   });
 
   it('is idempotent — second run inserts 0', async () => {
@@ -6316,7 +6322,7 @@ describe('Intel Seed — seedMvpRules', () => {
     };
 
     const first = await seedMvpRules(depsFirst);
-    expect(first.inserted).toBe(106);
+    expect(first.inserted).toBe(157);
 
     // Second run: all already exist
     const depsSecond: SeedDeps = {
@@ -6333,8 +6339,8 @@ describe('Intel Seed — seedMvpRules', () => {
 
     const second = await seedMvpRules(depsSecond);
     expect(second.inserted).toBe(0);
-    expect(second.skipped).toBe(106);
-    expect(second.total).toBe(106);
+    expect(second.skipped).toBe(157);
+    expect(second.total).toBe(157);
   });
 
   it('CMGP rule conditions parse and evaluate correctly', () => {
@@ -6375,12 +6381,12 @@ describe('Intel Seed — seedMvpRules', () => {
     expect(cmgpRule.suggestionTemplate.suggested_changes![0].value_formula).toBe('CMGP');
   });
 
-  it('GR 3 rules use cross_claim condition type', () => {
-    const gr3Rules = MVP_RULES.filter(r => r.name.startsWith('GR 3'));
-    expect(gr3Rules.length).toBeGreaterThanOrEqual(3);
+  it('GR 4 visit limit rules use cross_claim condition type', () => {
+    const gr4Rules = MVP_RULES.filter(r => r.name.startsWith('GR 4'));
+    expect(gr4Rules.length).toBeGreaterThanOrEqual(3);
 
     // Daily limit uses top-level cross_claim
-    const daily = gr3Rules.find(r => r.name.includes('daily'))!;
+    const daily = gr4Rules.find(r => r.name.includes('daily'))!;
     expect(daily).toBeDefined();
     expect(daily.category).toBe('REJECTION_RISK');
     expect(daily.priorityFormula).toBe('fixed:HIGH');
@@ -6396,14 +6402,14 @@ describe('Intel Seed — seedMvpRules', () => {
     }
 
     // Weekly limit
-    const weekly = gr3Rules.find(r => r.name.includes('weekly'))!;
+    const weekly = gr4Rules.find(r => r.name.includes('weekly'))!;
     expect(weekly).toBeDefined();
     if (weekly.conditions.type === 'cross_claim' && 'query' in weekly.conditions) {
       expect(weekly.conditions.query!.lookbackDays).toBe(7);
     }
 
     // Monthly limit
-    const monthly = gr3Rules.find(r => r.name.includes('monthly'))!;
+    const monthly = gr4Rules.find(r => r.name.includes('monthly'))!;
     expect(monthly).toBeDefined();
     if (monthly.conditions.type === 'cross_claim' && 'query' in monthly.conditions) {
       expect(monthly.conditions.query!.lookbackDays).toBe(30);
@@ -6504,13 +6510,13 @@ describe('Intel Seed — seedMvpRules', () => {
     );
     const patternRules = MVP_RULES.filter(r => r.name.startsWith('Pattern'));
 
-    // ~30 modifier eligibility
-    expect(modifierRules.length).toBeGreaterThanOrEqual(25);
-    expect(modifierRules.length).toBeLessThanOrEqual(35);
+    // ~47 modifier eligibility (expanded with telehealth, BMI, SAU/SAQU, etc.)
+    expect(modifierRules.length).toBeGreaterThanOrEqual(40);
+    expect(modifierRules.length).toBeLessThanOrEqual(55);
 
-    // ~40 rejection prevention
-    expect(rejectionRules.length).toBeGreaterThanOrEqual(35);
-    expect(rejectionRules.length).toBeLessThanOrEqual(45);
+    // ~77 rejection prevention (expanded with GR 7, GR 10, hospital reciprocal, frequency, registration, etc.)
+    expect(rejectionRules.length).toBeGreaterThanOrEqual(65);
+    expect(rejectionRules.length).toBeLessThanOrEqual(85);
 
     // ~20 WCB-specific
     expect(wcbRules.length).toBeGreaterThanOrEqual(15);
@@ -8402,5 +8408,301 @@ describe('Tier1 Data-Driven — checkMaxPerDay', () => {
     const deps = makeBaseDeps({ getMaxPerDay: async () => null });
     const result = await checkMaxPerDay(ctx, providerId, patientId, deps);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
+// Data-Driven Administrative Validators (ported from main repo)
+// ===========================================================================
+
+function makeClaimContextForValidation(overrides?: {
+  hscCode?: string;
+  modifier1?: string | null;
+  modifier2?: string | null;
+  modifier3?: string | null;
+  dateOfService?: string;
+  claimId?: string;
+  dayOfWeek?: number;
+}): ClaimContext {
+  return {
+    claim: {
+      claimId: overrides?.claimId ?? crypto.randomUUID(),
+      claimType: 'AHCIP',
+      state: 'DRAFT',
+      dateOfService: overrides?.dateOfService ?? '2026-03-01',
+      dayOfWeek: overrides?.dayOfWeek ?? 0,
+      importSource: 'MANUAL',
+    },
+    ahcip: {
+      healthServiceCode: overrides?.hscCode ?? '03.04A',
+      modifier1: overrides?.modifier1 ?? null,
+      modifier2: overrides?.modifier2 ?? null,
+      modifier3: overrides?.modifier3 ?? null,
+      diagnosticCode: null,
+      functionalCentre: 'ABCD',
+      baNumber: 'BA001',
+      encounterType: 'OFFICE',
+      calls: 1,
+      timeSpent: null,
+      facilityNumber: null,
+      referralPractitioner: null,
+      shadowBillingFlag: false,
+      pcpcmBasketFlag: false,
+      afterHoursFlag: false,
+      afterHoursType: null,
+      submittedFee: null,
+    },
+    wcb: null,
+    patient: { age: 45, gender: 'M' },
+    provider: {
+      specialtyCode: 'GP',
+      physicianType: 'physician',
+      defaultLocation: null,
+    },
+    reference: {
+      hscCode: null,
+      modifiers: [],
+      diagnosticCode: null,
+      sets: {},
+    },
+    crossClaim: {},
+  };
+}
+
+describe('Data-Driven Administrative Validators', () => {
+  // -------------------------------------------------------------------------
+  // checkBundlingConflicts
+  // -------------------------------------------------------------------------
+
+  it('checkBundlingConflicts returns suggestion when conflicting codes found', async () => {
+    const claim = makeClaimContextForValidation({ hscCode: '03.04A' });
+    const otherClaim = makeClaimContextForValidation({ hscCode: '03.05A' });
+
+    const deps = {
+      getBundlingExclusions: async (hscCode: string) => {
+        if (hscCode === '03.04A') {
+          return [{ excludedCode: '03.05A', relationship: 'MUTUALLY_EXCLUSIVE' }];
+        }
+        return [];
+      },
+    };
+
+    const suggestions = await checkBundlingConflicts(claim, [otherClaim], deps);
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(suggestions[0].title).toContain('03.04A');
+    expect(suggestions[0].title).toContain('03.05A');
+  });
+
+  it('checkBundlingConflicts returns empty array when no conflicts', async () => {
+    const claim = makeClaimContextForValidation({ hscCode: '03.04A' });
+    const otherClaim = makeClaimContextForValidation({ hscCode: '08.19A' });
+
+    const deps = {
+      getBundlingExclusions: async () => [] as { excludedCode: string; relationship: string }[],
+    };
+
+    const suggestions = await checkBundlingConflicts(claim, [otherClaim], deps);
+    expect(suggestions).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // validateModifierEligibility
+  // -------------------------------------------------------------------------
+
+  it('validateModifierEligibility returns suggestion for ineligible modifier', async () => {
+    const deps = {
+      checkModifierEligibility: async (_hsc: string, modifier: string) => {
+        return modifier !== 'TELE'; // TELE is ineligible
+      },
+    };
+
+    const suggestions = await validateModifierEligibility('03.04A', ['TELE'], deps);
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(suggestions[0].title).toContain('TELE');
+    expect(suggestions[0].title).toContain('03.04A');
+  });
+
+  it('validateModifierEligibility returns empty for eligible modifier', async () => {
+    const deps = {
+      checkModifierEligibility: async () => true,
+    };
+
+    const suggestions = await validateModifierEligibility('03.04A', ['CMGP'], deps);
+    expect(suggestions).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // checkFrequencyRestrictions
+  // -------------------------------------------------------------------------
+
+  it('checkFrequencyRestrictions returns suggestion when frequency exceeded', async () => {
+    const claim = makeClaimContextForValidation({
+      hscCode: '03.04A',
+      dateOfService: '2026-03-01',
+    });
+
+    const deps = {
+      getFrequencyRestriction: async (hscCode: string) => {
+        if (hscCode === '03.04A') {
+          return { text: 'Max 1 per year', count: 1, period: 'per_year' };
+        }
+        return null;
+      },
+      countClaimsInPeriod: async () => 1, // already 1 claim in period
+    };
+
+    const suggestions = await checkFrequencyRestrictions(
+      claim,
+      'patient-1',
+      'provider-1',
+      deps,
+    );
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(suggestions[0].description).toContain('Max 1 per year');
+  });
+
+  it('checkFrequencyRestrictions returns empty when within limits', async () => {
+    const claim = makeClaimContextForValidation({
+      hscCode: '03.04A',
+      dateOfService: '2026-03-01',
+    });
+
+    const deps = {
+      getFrequencyRestriction: async () => ({
+        text: 'Max 2 per year',
+        count: 2,
+        period: 'per_year' as const,
+      }),
+      countClaimsInPeriod: async () => 1, // 1 claim, limit is 2
+    };
+
+    const suggestions = await checkFrequencyRestrictions(
+      claim,
+      'patient-1',
+      'provider-1',
+      deps,
+    );
+    expect(suggestions).toHaveLength(0);
+  });
+
+  it('checkFrequencyRestrictions returns empty when no restriction exists', async () => {
+    const claim = makeClaimContextForValidation({ hscCode: '99.99Z' });
+
+    const deps = {
+      getFrequencyRestriction: async () => null,
+      countClaimsInPeriod: async () => 0,
+    };
+
+    const suggestions = await checkFrequencyRestrictions(
+      claim,
+      'patient-1',
+      'provider-1',
+      deps,
+    );
+    expect(suggestions).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // validatePatientRegistration
+  // -------------------------------------------------------------------------
+
+  it('validatePatientRegistration returns suggestion for invalid PHN format', () => {
+    const claim = makeClaimContextForValidation({ hscCode: '03.04A' });
+
+    // PHN not 9 digits
+    const suggestions = validatePatientRegistration(claim, '12345', 'ULI123', 'REG456');
+    const phnSuggestion = suggestions.find((s) => s.ruleId === 'data-driven:phn-format');
+    expect(phnSuggestion).toBeDefined();
+    expect(phnSuggestion!.category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(phnSuggestion!.title).toContain('Invalid PHN format');
+  });
+
+  it('validatePatientRegistration returns suggestion for PHN failing Luhn check', () => {
+    const claim = makeClaimContextForValidation({ hscCode: '03.04A' });
+
+    // 9-digit PHN that fails Luhn check digit validation
+    const suggestions = validatePatientRegistration(claim, '123456780', 'ULI123', 'REG456');
+    const phnSuggestion = suggestions.find((s) => s.ruleId === 'data-driven:phn-luhn');
+    expect(phnSuggestion).toBeDefined();
+    expect(phnSuggestion!.category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(phnSuggestion!.title).toContain('check digit');
+  });
+
+  it('validatePatientRegistration returns empty for valid PHN', () => {
+    const claim = makeClaimContextForValidation({ hscCode: '03.04A' });
+
+    // 000000000 passes Luhn (sum = 0, 0 % 10 = 0)
+    const suggestions = validatePatientRegistration(claim, '000000000', 'ULI123', 'REG456');
+    const phnSuggestions = suggestions.filter(
+      (s) => s.ruleId === 'data-driven:phn-format' ||
+             s.ruleId === 'data-driven:phn-luhn' ||
+             s.ruleId === 'data-driven:phn-missing',
+    );
+    expect(phnSuggestions).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // checkCallbackLimits
+  // -------------------------------------------------------------------------
+
+  it('checkCallbackLimits returns suggestion when limit exceeded', async () => {
+    // Claim with EV (evening) modifier on a weekday (Wednesday = dayOfWeek 3)
+    const claim = makeClaimContextForValidation({
+      hscCode: '03.04A',
+      modifier1: 'EV',
+      dayOfWeek: 3,
+    });
+
+    const deps = {
+      countCallbacksInPeriod: async () => 2, // Already at limit (max 2 for evening)
+    };
+
+    const suggestions = await checkCallbackLimits(claim, 'provider-1', deps);
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].category).toBe(SuggestionCategory.REJECTION_RISK);
+    expect(suggestions[0].title).toContain('GR 15');
+    expect(suggestions[0].description).toContain('2');
+  });
+
+  it('checkCallbackLimits returns empty when within limits', async () => {
+    // Claim with WK (weekend) modifier on a Saturday (dayOfWeek 6)
+    const claim = makeClaimContextForValidation({
+      hscCode: '03.04A',
+      modifier1: 'WK',
+      dayOfWeek: 6,
+    });
+
+    const deps = {
+      countCallbacksInPeriod: async () => 5, // 5 of 10 max for weekend
+    };
+
+    const suggestions = await checkCallbackLimits(claim, 'provider-1', deps);
+    expect(suggestions).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // mapExplanatoryCodeToPreventionRules
+  // -------------------------------------------------------------------------
+
+  it('mapExplanatoryCodeToPreventionRules returns correct rule names', () => {
+    // Code 05A maps to PHN format and Luhn validation rules
+    const rules05A = mapExplanatoryCodeToPreventionRules('05A');
+    expect(rules05A).toContain('data-driven:phn-format');
+    expect(rules05A).toContain('data-driven:phn-luhn');
+
+    // Code 05BB maps to ULI missing
+    const rules05BB = mapExplanatoryCodeToPreventionRules('05BB');
+    expect(rules05BB).toContain('data-driven:uli-missing');
+
+    // Code 01 maps to PHN missing
+    const rules01 = mapExplanatoryCodeToPreventionRules('01');
+    expect(rules01).toContain('data-driven:phn-missing');
+
+    // Unknown code returns empty
+    const rulesUnknown = mapExplanatoryCodeToPreventionRules('ZZZ');
+    expect(rulesUnknown).toHaveLength(0);
   });
 });

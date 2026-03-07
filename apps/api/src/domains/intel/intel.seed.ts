@@ -28,6 +28,23 @@ export interface MvpRuleDefinition {
 // ---------------------------------------------------------------------------
 
 const modifierEligibilityRules: MvpRuleDefinition[] = [
+  // ---------------------------------------------------------------------------
+  // CMGP Modifier Investigation (D07-213)
+  // FINDING: CMGP (Comprehensive General Practice) modifier has 15 entries in
+  // hsc-modifiers.json (type "CMPX", action "For Each Call Increase By $19.54"),
+  // covering only the 03.0x family of HSC codes (03.01J, 03.03A, 03.03AZ,
+  // 03.03B, 03.03BZ, 03.03C, 03.03CV, 03.03N, 03.03NA, 03.03NB, 03.03P,
+  // 03.03Q, 03.07A, 03.07AZ, 03.07B). This is a small subset compared to the
+  // broader CMGP program scope. The discrepancy is expected — CMGP eligibility
+  // is primarily determined by provider specialty (GP/Family Medicine) and the
+  // CMGP program enrollment status, not solely by per-HSC-code eligibility in
+  // the modifier table. The 6 CMGP rules below use specialty-based conditions
+  // (specialtyFilter: ['GP']) combined with reference set lookups
+  // (ref.cmgp_eligible_codes, ref.cmgp_comprehensive_codes, etc.) which are
+  // populated from the broader CMGP program definition, not just
+  // hsc-modifiers.json. This approach is correct.
+  // ---------------------------------------------------------------------------
+
   // --- CMGP Modifier Rules ---
   {
     name: 'CMGP eligibility — GP office visit',
@@ -150,7 +167,7 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     sombVersion: '2026.1',
   },
 
-  // --- After-Hours (AFHR) Modifier Rules ---
+  // --- Off Hours Premium (SURC type: EV, NTAM, NTPM, WK) Modifier Rules ---
   {
     name: 'After-hours eligibility — weekday evening',
     category: 'MODIFIER_ADD',
@@ -164,10 +181,10 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       ],
     },
     suggestionTemplate: {
-      title: 'Consider after-hours modifier',
-      description: 'This claim is from a weekday. If the service was provided after 17:00 or before 08:00, you may claim the after-hours premium.',
+      title: 'Consider off-hours premium (EV surcharge)',
+      description: 'This claim is from a weekday. If the service was provided after 17:00 or before 08:00, you may claim the EV (evening) surcharge modifier under GR 15.',
       revenue_impact_formula: 'fixed:30.00',
-      source_reference: 'SOMB 2026 Section 2.3 — After-Hours Premium',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
       suggested_changes: [{ field: 'ahcip.afterHoursFlag', value_formula: 'true' }],
     },
     specialtyFilter: null,
@@ -186,10 +203,10 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       ],
     },
     suggestionTemplate: {
-      title: 'Add after-hours modifier for weekend service',
-      description: 'This service was on a weekend. Weekend services qualify for the after-hours premium.',
+      title: 'Add off-hours premium for weekend service (WK surcharge)',
+      description: 'This service was on a weekend. Weekend services qualify for the WK (weekend) surcharge modifier under GR 15.',
       revenue_impact_formula: 'fixed:30.00',
-      source_reference: 'SOMB 2026 Section 2.3 — After-Hours Premium',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
       suggested_changes: [{ field: 'ahcip.afterHoursFlag', value_formula: 'true' }],
     },
     specialtyFilter: null,
@@ -208,11 +225,156 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       ],
     },
     suggestionTemplate: {
-      title: 'Add after-hours modifier for statutory holiday',
-      description: 'This service was on a statutory holiday. Statutory holidays qualify for the after-hours premium.',
+      title: 'Add off-hours premium for statutory holiday (WK surcharge)',
+      description: 'This service was on a statutory holiday. Statutory holidays qualify for the WK (weekend) surcharge modifier under GR 15.',
       revenue_impact_formula: 'fixed:30.00',
-      source_reference: 'SOMB 2026 Section 2.3 — After-Hours Premium',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
       suggested_changes: [{ field: 'ahcip.afterHoursFlag', value_formula: 'true' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- SURC Modifier Rules (EV, NTAM, NTPM, WK) — Off-Hours Surcharge ---
+  // Each SURC modifier applies to 1,942 HSC codes in hsc-modifiers.json.
+  // These are the single largest revenue gap for most physicians.
+  {
+    name: 'Off-hours surcharge — weekday evening (EV)',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.dayOfWeek', operator: 'IN', value: [1, 2, 3, 4, 5] },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 17 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 22 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.surc_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'EV' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'EV' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'EV' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add EV surcharge modifier',
+      description: 'This service was provided on a weekday evening (17:00–22:00) and the HSC code is SURC-eligible. The EV modifier adds an off-hours surcharge under GR 15.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'EV' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'tier:1:priority:2',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Off-hours surcharge — night AM (NTAM)',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 22 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 24 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.surc_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'NTAM' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'NTAM' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'NTAM' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add NTAM surcharge modifier',
+      description: 'This service was provided between 22:00–00:00 and the HSC code is SURC-eligible. The NTAM modifier adds a night surcharge under GR 15.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'NTAM' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'tier:1:priority:2',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Off-hours surcharge — night PM (NTPM)',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 0 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 7 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.surc_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'NTPM' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'NTPM' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'NTPM' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add NTPM surcharge modifier',
+      description: 'This service was provided between 00:00–07:00 and the HSC code is SURC-eligible. The NTPM modifier adds a night surcharge under GR 15.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'NTPM' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'tier:1:priority:2',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Off-hours surcharge — weekend/holiday (WK)',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'or',
+          children: [
+            { type: 'temporal', field: 'claim.dayOfWeek', operator: 'IN', value: [0, 6] },
+            { type: 'set_membership', field: 'claim.dateOfService', operator: 'IN', value: 'ref.statutory_holidays' },
+          ],
+        },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 7 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 22 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.surc_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'WK' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'WK' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'WK' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add WK surcharge modifier',
+      description: 'This service was provided on a weekend or statutory holiday (07:00–22:00) and the HSC code is SURC-eligible. The WK modifier adds an off-hours surcharge under GR 15.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'WK' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'tier:1:priority:2',
+    sombVersion: '2026.1',
+  },
+
+  // --- Tray Service (GR 14) — MAJT Modifier ---
+  // GR 14 defines 184 HSC codes eligible for tray service (109 major, 75 minor).
+  // MAJT (major tray) has 105 eligible codes in hsc-modifiers.json.
+  {
+    name: 'Tray service — in-office procedure eligible for MAJT',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.tray_eligible_codes' },
+        { type: 'set_membership', field: 'ahcip.encounterType', operator: 'NOT IN', value: ['HOSPITAL', 'ED', 'FACILITY'] },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'MAJT' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'MAJT' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'MAJT' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Tray service modifier (MAJT) may apply',
+      description: 'This procedure is eligible for the major tray service benefit (MAJT) when performed outside a hospital, AACC, UCC, or contracted facility. GR 14 allows claiming the tray fee in addition to the procedure fee.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 14 — Tray Service',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'MAJT' }],
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',
@@ -360,7 +522,7 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     sombVersion: '2026.1',
   },
 
-  // --- TELE (Telehealth) Modifier ---
+  // --- TELES (Telehealth) Modifier ---
   {
     name: 'Telehealth modifier — virtual encounter',
     category: 'MODIFIER_ADD',
@@ -377,9 +539,9 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     },
     suggestionTemplate: {
       title: 'Add TELE modifier for virtual visit',
-      description: 'This virtual encounter is eligible for the TELE modifier. Adding it ensures proper categorisation.',
-      revenue_impact_formula: 'fixed:0.00',
-      source_reference: 'SOMB 2026 Section 3.5 — Telehealth',
+      description: 'This virtual encounter is eligible for the TELES modifier (code TELES, type TELE). Adding it adjusts the base fee via "Increase Base To" action.',
+      revenue_impact_formula: 'fee_difference',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth',
       suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'TELE' }],
     },
     specialtyFilter: null,
@@ -387,7 +549,136 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     sombVersion: '2026.1',
   },
 
-  // --- BMI Modifier ---
+  // --- Telehealth GR 17 — High-Traffic and Specialty TELES Rules ---
+  {
+    name: 'Telehealth — office visit (03.03A/03.04A/03.05A) eligible for TELES',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '==', value: 'VIRTUAL' },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: ['03.03A', '03.04A', '03.05A'] },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'TELE' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add TELES modifier to virtual office visit',
+      description: 'This virtual office visit (03.03A, 03.04A, or 03.05A) is eligible for the TELES modifier under GR 17. These high-traffic codes frequently qualify for the telehealth fee adjustment.',
+      revenue_impact_formula: 'fee_difference',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth (High-Traffic Codes)',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'TELE' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Telehealth — mental health consultation eligible for TELES',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '==', value: 'VIRTUAL' },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.mental_health_tele_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'TELE' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add TELES modifier to virtual mental health consultation',
+      description: 'This mental health service code (08.19x family) is eligible for the TELES modifier when delivered virtually under GR 17.',
+      revenue_impact_formula: 'fee_difference',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth (Mental Health)',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'TELE' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Telehealth — chronic disease management eligible for TELES',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '==', value: 'VIRTUAL' },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.chronic_disease_tele_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'TELE' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'TELE' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Add TELES modifier to virtual chronic disease management',
+      description: 'This chronic disease management code is eligible for the TELES modifier when delivered virtually under GR 17.',
+      revenue_impact_formula: 'fee_difference',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth (Chronic Disease)',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'TELE' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- BMI GR 18 — MODIFIER_ADD Rules ---
+  {
+    name: 'BMI modifier — surgical procedure with BMI premium',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.bmi', operator: '>=', value: 35 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.bmisrg_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'BMIPRO' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'BMIPRO' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'BMIPRO' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'BMI modifier for surgical procedure',
+      description: 'This patient has a BMI >= 35 and the procedure is BMISRG-eligible. The BMIPRO modifier provides a BMI premium for surgical procedures under GR 18.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 18 — Body Mass Index (Surgical)',
+      suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'BMIPRO' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'BMI modifier — anaesthesia with BMI premium',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.bmi', operator: '>=', value: 35 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.bmiane_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'BMIANE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'BMIANE' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'BMIANE' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'BMI modifier for anaesthesia',
+      description: 'This patient has a BMI >= 35 and the anaesthesia code is BMIANE-eligible. The BMIANE modifier provides a BMI premium for anaesthesia under GR 18.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 18 — Body Mass Index (Anaesthesia)',
+      suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'BMIANE' }],
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- BMI Modifier (type: BMI, codes: BMIPRO, BMIANE, BMIANT) ---
   {
     name: 'BMI modifier eligibility',
     category: 'MODIFIER_ADD',
@@ -403,9 +694,9 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     },
     suggestionTemplate: {
       title: 'BMI modifier may apply',
-      description: 'This service code is eligible for the BMI modifier if BMI was documented during the encounter.',
-      revenue_impact_formula: 'fixed:5.00',
-      source_reference: 'SOMB 2026 Section 3.2 — BMI Modifier',
+      description: 'This service code is eligible for the BMI modifier (BMIPRO, BMIANE, or BMIANT depending on procedure type) if BMI was documented during the encounter.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 18 — Body Mass Index (BMI)',
       suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'BMI' }],
     },
     specialtyFilter: ['GP'],
@@ -414,6 +705,9 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
   },
 
   // --- COMP (Complexity) Modifier ---
+  // Note: The closest match in hsc-modifiers.json is COMPLT (type: REDO, 207 HSCs),
+  // which means "completion" not "complexity". COMP here refers to a complexity
+  // modifier concept that is distinct from COMPLT. Retaining COMP as the rule name.
   {
     name: 'Complexity modifier — multiple diagnoses',
     category: 'MODIFIER_ADD',
@@ -479,7 +773,7 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       title: 'Consider multiple calls billing',
       description: 'This code supports billing for multiple calls in the same day. If you provided more than one visit, adjust the calls count.',
       revenue_impact_formula: 'fee_lookup',
-      source_reference: 'SOMB 2026 Section 2.5 — Multiple Calls',
+      source_reference: 'SOMB 2026 GR 15.11 — Callback Limits',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:LOW',
@@ -550,7 +844,7 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       title: 'Document anaesthesia time',
       description: 'Anaesthesia codes require time documentation. Without it, the claim may be assessed at base rate only.',
       revenue_impact_formula: 'fee_lookup',
-      source_reference: 'SOMB 2026 Section 10 — Anaesthesia',
+      source_reference: 'SOMB 2026 GR 12 — Anesthesia',
     },
     specialtyFilter: ['ANES'],
     priorityFormula: 'fixed:HIGH',
@@ -564,22 +858,214 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       type: 'and',
       children: [
         { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.surgical_assist_codes' },
-        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'ASST' },
-        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'ASST' },
-        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'ASST' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'SA' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'SA' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'SA' },
       ],
     },
     suggestionTemplate: {
       title: 'Surgical assist modifier may apply',
-      description: 'If you assisted on this surgical procedure, the ASST modifier enables claiming the surgical assist fee.',
+      description: 'If you assisted on this surgical procedure, the SA modifier enables claiming the surgical assist fee.',
       revenue_impact_formula: 'fee_lookup',
-      source_reference: 'SOMB 2026 Section 9 — Surgical Procedures',
-      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'ASST' }],
+      source_reference: 'SOMB 2026 GR 13 — Surgical Assistance Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'SA' }],
     },
     specialtyFilter: ['SURG', 'ORTHO', 'OBGYN'],
     priorityFormula: 'fixed:MEDIUM',
     sombVersion: '2026.1',
   },
+
+  // --- SAU/SAQU Surgical Assist Modifier Rules (GR 13) ---
+  {
+    name: 'Surgical assist — SAU modifier eligible for procedure',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.sau_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'SA' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'SA' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'SA' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'SAU' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'SAU' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'SAU' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'SAU modifier available for surgical assist',
+      description: 'This surgical procedure is SAU-eligible. If you provided surgical assistance, the SAU modifier enables claiming the surgical assist unit fee under GR 13.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 13 — Surgical Assistance Benefits',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'SAU' }],
+    },
+    specialtyFilter: ['SURG', 'ORTHO', 'OBGYN', 'NEURO', 'CARD'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Surgical assist — SAQU quoted fee available',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.saqu_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'SAQU' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'SAQU' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'SAQU' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'SAQU quoted fee modifier available',
+      description: 'This procedure is eligible for the SAQU (quoted surgical assist) modifier. If the assist type is quoted, SAQU may provide a higher reimbursement than SAU. Consider switching from SAU to SAQU if applicable.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 13 — Surgical Assistance Quoted Fees',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'SAQU' }],
+    },
+    specialtyFilter: ['SURG', 'ORTHO', 'OBGYN', 'NEURO', 'CARD'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- VANE Extra Procedure Modifier (GR 12) ---
+  {
+    name: 'Anaesthesia — VANE extra procedure modifier available',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.vane_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'VANE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'VANE' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'VANE' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'count',
+            filter: {
+              type: 'set_membership',
+              field: 'reference.hscCode.categoryCode',
+              operator: 'IN',
+              value: ['P', 'M', 'M+', '1', '3', '4', '6', '14', '15'],
+            },
+          },
+          field: 'crossClaim.vane_procedure_count',
+          operator: '>=',
+          value: 2,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'VANE modifier for additional procedure under same anaesthetic',
+      description: 'Multiple surgical procedures were performed under the same anaesthetic. The VANE modifier is available for the additional procedure anaesthesia fee under GR 12.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 12 — Anesthesia (VANE Modifier)',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'VANE' }],
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- REDO Modifier ---
+  {
+    name: 'Redo procedure — REDO modifier for repeat surgery',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.redo_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'REDO' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'REDO' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'REDO' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 365,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'field_compare',
+              field: 'ahcip.healthServiceCode',
+              operator: '==',
+              value: '{{ahcip.healthServiceCode}}',
+            },
+          },
+          field: 'crossClaim.redo_prior_surgery',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'REDO modifier for repeat surgery',
+      description: 'This procedure was previously performed on the same anatomical site. The REDO modifier may apply for repeat surgical procedures, providing an additional fee premium.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB Modifier Eligibility — REDO',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'REDO' }],
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- 2ANU Second Anaesthetist Modifier (GR 12) ---
+  {
+    name: 'Anaesthesia — 2ANU second anaesthetist modifier available',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.2anu_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: '2ANU' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: '2ANU' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: '2ANU' },
+      ],
+    },
+    suggestionTemplate: {
+      title: '2ANU second anaesthetist modifier available',
+      description: 'This procedure is eligible for the 2ANU modifier when a second anaesthetist is required due to case complexity. The second anaesthetist can claim their time using this modifier under GR 12.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 12 — Anesthesia (Second Anaesthetist)',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: '2ANU' }],
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // --- UGA Unplanned General Anaesthetic Modifier ---
+  {
+    name: 'Anaesthesia — UGA unplanned general anaesthetic modifier',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.uga_eligible_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'UGA' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'UGA' },
+        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'UGA' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'UGA modifier for unplanned general anaesthetic',
+      description: 'If this procedure was planned under local/regional anaesthesia but required conversion to general anaesthesia, the UGA modifier applies. This provides an additional fee for the unplanned general anaesthetic.',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB Modifier Eligibility — UGA',
+      suggested_changes: [{ field: 'ahcip.modifier1', value_formula: 'UGA' }],
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
   {
     name: 'Emergency surcharge modifier',
     category: 'MODIFIER_ADD',
@@ -685,9 +1171,9 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     sombVersion: '2026.1',
   },
 
-  // --- NGHT (Night) Modifier ---
+  // --- Night Premium (SURC type: NTAM, NTPM) Modifier ---
   {
-    name: 'NGHT modifier — overnight service',
+    name: 'Night premium modifier — overnight service',
     category: 'MODIFIER_ADD',
     claimType: 'AHCIP',
     conditions: {
@@ -698,20 +1184,20 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       ],
     },
     suggestionTemplate: {
-      title: 'Overnight premium may apply',
-      description: 'If this hospital/ED service was between 22:00 and 07:00, the NGHT modifier premium applies.',
+      title: 'Night premium may apply (NTAM/NTPM surcharge)',
+      description: 'If this hospital/ED service was between 22:00 and 07:00, the NTAM (midnight–07:00) or NTPM (22:00–midnight) surcharge modifier applies under GR 15.',
       revenue_impact_formula: 'fixed:35.00',
-      source_reference: 'SOMB 2026 Section 2.4 — Night Premium',
-      suggested_changes: [{ field: 'ahcip.afterHoursType', value_formula: 'NGHT' }],
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits (Night)',
+      suggested_changes: [{ field: 'ahcip.afterHoursType', value_formula: 'NTPM' }],
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:MEDIUM',
     sombVersion: '2026.1',
   },
 
-  // --- CMXP (Complex Paediatric) Modifier ---
+  // --- CMXV (Complex Visit — Paediatric, type: CARE, codes: CMXV15/CMXV20/CMXV30/CMXV35) ---
   {
-    name: 'CMXP modifier — complex paediatric visit',
+    name: 'CMXV modifier — complex paediatric visit',
     category: 'MODIFIER_ADD',
     claimType: 'AHCIP',
     conditions: {
@@ -719,17 +1205,18 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
       children: [
         { type: 'field_compare', field: 'patient.age', operator: '<', value: 18 },
         { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.cmxp_eligible_codes' },
-        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CMXP' },
-        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'CMXP' },
-        { type: 'field_compare', field: 'ahcip.modifier3', operator: '!=', value: 'CMXP' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CMXV15' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CMXV20' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CMXV30' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CMXV35' },
       ],
     },
     suggestionTemplate: {
-      title: 'Complex paediatric modifier may apply',
-      description: 'This paediatric visit may qualify for the CMXP modifier if multiple conditions were managed.',
+      title: 'Complex paediatric visit modifier (CMXV) may apply',
+      description: 'This paediatric visit may qualify for a CMXV modifier (CMXV15, CMXV20, CMXV30, or CMXV35 — type CARE) based on time and complexity.',
       revenue_impact_formula: 'fixed:18.00',
-      source_reference: 'SOMB 2026 — Paediatric Modifiers',
-      suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'CMXP' }],
+      source_reference: 'SOMB 2026 — Paediatric Modifiers (CMXV family, type CARE)',
+      suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'CMXV15' }],
     },
     specialtyFilter: ['GP', 'PEDS'],
     priorityFormula: 'fixed:MEDIUM',
@@ -761,6 +1248,37 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
     priorityFormula: 'fixed:MEDIUM',
     sombVersion: '2026.1',
   },
+
+  // --- GR 12: Neonatal/Infant Anaesthesia Age Premium ---
+  // GR 12.9 provides +25% for corrected age infants, GR 12.10 provides +50% for <40 weeks conceptual age.
+  {
+    name: 'GR 12 — neonatal/infant anaesthesia age premium available',
+    category: 'MODIFIER_ADD',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.age', operator: '<', value: 1 },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.anaesthesia_codes' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'CAANE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'CAANE' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'L40ANE' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'L40ANE' },
+        { type: 'field_compare', field: 'ahcip.modifier1', operator: '!=', value: 'L30AN' },
+        { type: 'field_compare', field: 'ahcip.modifier2', operator: '!=', value: 'L30AN' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Neonatal/infant anaesthesia age premium',
+      description: 'This patient is under 1 year old and the procedure involves anaesthesia. Age-based premiums may apply: +25% for corrected age infants (CAANE/CAANT/CA2AN under GR 12.9), +50% for <40 weeks conceptual age (L40ANE under GR 12.10), or additional neonatal benefit (L30AN/L30AT under GR 12.7).',
+      revenue_impact_formula: 'fee_lookup',
+      source_reference: 'SOMB 2026 GR 12 — Anesthesia Age Premiums',
+      suggested_changes: [{ field: 'ahcip.modifier2', value_formula: 'CAANE' }],
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -768,9 +1286,9 @@ const modifierEligibilityRules: MvpRuleDefinition[] = [
 // ---------------------------------------------------------------------------
 
 const rejectionPreventionRules: MvpRuleDefinition[] = [
-  // --- GR 3: Visit Limits ---
+  // --- GR 4: Visit Limits ---
   {
-    name: 'GR 3 — daily visit limit same patient',
+    name: 'GR 4 — daily visit limit same patient',
     category: 'REJECTION_RISK',
     claimType: 'AHCIP',
     conditions: {
@@ -791,17 +1309,17 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       value: 2,
     },
     suggestionTemplate: {
-      title: 'GR 3 daily visit limit risk',
-      description: 'You have already billed this code for this patient today. A duplicate may be rejected under GR 3.',
+      title: 'GR 4 daily visit limit risk',
+      description: 'You have already billed this code for this patient today. A duplicate may be rejected under GR 4.',
       revenue_impact_formula: 'fixed:0.00',
-      source_reference: 'SOMB 2026 GR 3 — Visit Frequency Limits',
+      source_reference: 'SOMB 2026 GR 4 — Visit and Consultation Frequency Limits',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',
     sombVersion: '2026.1',
   },
   {
-    name: 'GR 3 — weekly visit limit same patient',
+    name: 'GR 4 — weekly visit limit same patient',
     category: 'REJECTION_RISK',
     claimType: 'AHCIP',
     conditions: {
@@ -822,17 +1340,17 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       value: 3,
     },
     suggestionTemplate: {
-      title: 'GR 3 weekly visit limit risk',
-      description: 'This patient has been billed this code 3+ times in 7 days. Additional claims may be rejected under GR 3.',
+      title: 'GR 4 weekly visit limit risk',
+      description: 'This patient has been billed this code 3+ times in 7 days. Additional claims may be rejected under GR 4.',
       revenue_impact_formula: 'fixed:0.00',
-      source_reference: 'SOMB 2026 GR 3 — Visit Frequency Limits',
+      source_reference: 'SOMB 2026 GR 4 — Visit and Consultation Frequency Limits',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',
     sombVersion: '2026.1',
   },
   {
-    name: 'GR 3 — monthly visit limit same patient same code',
+    name: 'GR 4 — monthly visit limit same patient same code',
     category: 'REJECTION_RISK',
     claimType: 'AHCIP',
     conditions: {
@@ -853,17 +1371,17 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       value: 5,
     },
     suggestionTemplate: {
-      title: 'GR 3 monthly frequency limit',
+      title: 'GR 4 monthly frequency limit',
       description: 'This code has been billed 5+ times for this patient in the last 30 days. Consider an alternative code or documenting medical necessity.',
       revenue_impact_formula: 'fixed:0.00',
-      source_reference: 'SOMB 2026 GR 3 — Visit Frequency Limits',
+      source_reference: 'SOMB 2026 GR 4 — Visit and Consultation Frequency Limits',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',
     sombVersion: '2026.1',
   },
   {
-    name: 'GR 3 — per-day max exceeded',
+    name: 'GR 4 — per-day max exceeded',
     category: 'REJECTION_RISK',
     claimType: 'AHCIP',
     conditions: {
@@ -893,7 +1411,7 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       title: 'Per-day maximum exceeded',
       description: 'This code has a per-day maximum. You have already billed the maximum number of times today.',
       revenue_impact_formula: 'fixed:0.00',
-      source_reference: 'SOMB 2026 GR 3 — Visit Frequency Limits',
+      source_reference: 'SOMB 2026 GR 4 — Visit and Consultation Frequency Limits',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',
@@ -1066,7 +1584,7 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
     sombVersion: '2026.1',
   },
   {
-    name: 'Modifier conflict — CMGP and ASST',
+    name: 'Modifier conflict — CMGP and SA',
     category: 'REJECTION_RISK',
     claimType: 'AHCIP',
     conditions: {
@@ -1077,15 +1595,15 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
           children: [
             { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'CMGP' },
             { type: 'or', children: [
-              { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'ASST' },
-              { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'ASST' },
+              { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'SA' },
+              { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'SA' },
             ]},
           ],
         },
         {
           type: 'and',
           children: [
-            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'ASST' },
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SA' },
             { type: 'or', children: [
               { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'CMGP' },
               { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'CMGP' },
@@ -1095,8 +1613,8 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       ],
     },
     suggestionTemplate: {
-      title: 'CMGP and ASST modifiers conflict',
-      description: 'CMGP (primary care) and ASST (surgical assist) modifiers are mutually exclusive. Remove one.',
+      title: 'CMGP and SA modifiers conflict',
+      description: 'CMGP (primary care) and SA (surgical assist) modifiers are mutually exclusive. Remove one.',
       revenue_impact_formula: 'fixed:0.00',
       source_reference: 'SOMB 2026 Section 3 — Modifier Rules',
     },
@@ -1773,6 +2291,1239 @@ const rejectionPreventionRules: MvpRuleDefinition[] = [
       description: 'This code was rejected for this patient in the last 90 days. Review the rejection reason before resubmitting.',
       revenue_impact_formula: 'fixed:0.00',
       source_reference: 'Best Practices — Claim Resubmission',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- GR 15: Off-Hours Callback Limits ---
+  // GR 15.11 defines strict maximums per time period per physician per day.
+  {
+    name: 'GR 15 — weekday daytime callback limit exceeded',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.dayOfWeek', operator: 'IN', value: [1, 2, 3, 4, 5] },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 7 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 17 },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.modifier1',
+            aggregation: 'count',
+            filter: {
+              type: 'and',
+              children: [
+                { type: 'temporal', field: 'claim.dayOfWeek', operator: 'IN', value: [1, 2, 3, 4, 5] },
+                { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 7 },
+                { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 17 },
+                {
+                  type: 'or',
+                  children: [
+                    { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: ['03.03KA', '03.05N'] },
+                    { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SURC' },
+                  ],
+                },
+              ],
+            },
+          },
+          field: 'crossClaim.gr15_weekday_day_callback_count',
+          operator: '>=',
+          value: 5,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'GR 15 weekday daytime callback limit exceeded',
+      description: 'You have reached the maximum of 5 special callbacks (03.03KA, 03.05N, or SURC) per weekday daytime (07:00–17:00). Additional claims in this period will be rejected under GR 15.11.1.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits (Callback Limits)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'GR 15 — night early callback limit exceeded (2200-2400)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 22 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 24 },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.modifier1',
+            aggregation: 'count',
+            filter: {
+              type: 'and',
+              children: [
+                { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 22 },
+                { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 24 },
+                {
+                  type: 'or',
+                  children: [
+                    { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: ['03.03MC', '03.05QA'] },
+                    { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SURC' },
+                  ],
+                },
+              ],
+            },
+          },
+          field: 'crossClaim.gr15_night_early_callback_count',
+          operator: '>=',
+          value: 2,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'GR 15 night early callback limit exceeded',
+      description: 'You have reached the maximum of 2 special callbacks (03.03MC, 03.05QA, or SURC) per day between 22:00–24:00. Additional claims in this period will be rejected under GR 15.11.4.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits (Callback Limits)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'GR 15 — night late callback limit exceeded (0000-0700)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 0 },
+        { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 7 },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.modifier1',
+            aggregation: 'count',
+            filter: {
+              type: 'and',
+              children: [
+                { type: 'temporal', field: 'claim.encounterHour', operator: '>=', value: 0 },
+                { type: 'temporal', field: 'claim.encounterHour', operator: '<', value: 7 },
+                {
+                  type: 'or',
+                  children: [
+                    { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: ['03.03MD', '03.05QB'] },
+                    { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SURC' },
+                  ],
+                },
+              ],
+            },
+          },
+          field: 'crossClaim.gr15_night_late_callback_count',
+          operator: '>=',
+          value: 7,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'GR 15 night late callback limit exceeded',
+      description: 'You have reached the maximum of 7 special callbacks (03.03MD, 03.05QB, or SURC) per day between 00:00–07:00. Additional claims in this period will be rejected under GR 15.11.5.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 15 — Off Hours Premium Benefits (Callback Limits)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 4 — Visits and Consultations (3 new rules — Critical Gap #3)
+  // GR 4 is the most complex governing rule (420+ referenced HSC codes).
+  // =========================================================================
+
+  // --- GR 4: 365-day re-consultation window (GR 4.6.1) ---
+  {
+    name: 'GR 4 — consultation within 365 days of previous',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: [
+            '03.04A', '03.04AZ', '03.08A', '03.08AZ', '03.08B', '03.08BZ',
+            '03.08C', '03.08CV', '03.08F', '03.08H', '03.08K',
+            '08.11A', '08.11C', '08.19A', '08.19AZ', '08.19AA', '08.19CX',
+          ],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 365,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: [
+                '03.04A', '03.04AZ', '03.08A', '03.08AZ', '03.08B', '03.08BZ',
+                '03.08C', '03.08CV', '03.08F', '03.08H', '03.08K',
+                '08.11A', '08.11C', '08.19A', '08.19AZ', '08.19AA', '08.19CX',
+              ],
+            },
+          },
+          field: 'crossClaim.gr4_comprehensive_within_365',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Comprehensive visit/consultation within 365 days',
+      description: 'A comprehensive visit or consultation was already billed for this patient by you within the last 365 days. GR 4.6.1 limits comprehensive visits/consultations to once every 365 days per patient per physician. This claim may be downgraded or rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 4 — Visits and Consultations (365-Day Rule)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- GR 4.4.8: Referral requirement for specialist consultations ---
+  {
+    name: 'GR 4 — specialist consultation without referral',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: [
+            '03.01O', '03.01LJ', '03.01LK', '03.01LL', '03.03D', '03.03F',
+            '03.03FA', '03.03FT', '03.03FV', '03.03FZ', '03.04Q', '03.05B',
+            '03.07A', '03.07AZ', '03.07B', '03.07C',
+            '03.08A', '03.08AZ', '03.08B', '03.08BZ', '03.08C', '03.08CV',
+            '03.08F', '03.08H', '03.08K', '03.08L', '03.08M',
+            '03.09A', '03.09B',
+            '08.19A', '08.19AZ', '08.19B', '08.19C',
+            '08.19AA', '08.19BB', '08.19CC', '08.19CX',
+          ],
+        },
+        { type: 'existence', field: 'ahcip.referralPractitioner', operator: 'IS NULL' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Specialist consultation requires referring practitioner',
+      description: 'GR 4.4.8 requires the referring practitioner field for this consultation code. Claims submitted without a valid referring practitioner number will be rejected. Codes marked with * in GR 4.4.8 cannot be self-referred.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 4.4.8 — Referral Requirements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- GR 4: Visit vs consultation classification ---
+  {
+    name: 'GR 4 — verify visit vs consultation code selection',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: [
+            '03.08A', '03.08AZ', '03.08B', '03.08BZ', '03.08C', '03.08CV',
+            '03.08F', '03.08H', '03.08K', '03.09A', '03.09B',
+            '08.19A', '08.19AZ', '08.19AA', '08.19B', '08.19BB',
+            '08.19C', '08.19CC', '08.19CX',
+          ],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 365,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: [
+                '03.03A', '03.03AZ', '03.03B', '03.03BZ', '03.03D',
+                '03.04A', '03.04AZ', '03.05I', '03.05IZ',
+                '03.08A', '03.08AZ', '03.08B', '03.08BZ',
+                '08.19A', '08.19AZ', '08.19AA',
+              ],
+            },
+          },
+          field: 'crossClaim.gr4_prior_encounter_same_specialty',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Consultation code used — verify this is not a follow-up',
+      description: 'A consultation code is being used, but this patient has a prior encounter with you within 365 days. Under GR 4, if this is a follow-up rather than a new consultation with a new referral, a visit code (e.g., 03.03A, 03.03D) should be used instead. Consultations require a new referral request from the referring practitioner.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 4 — Visit vs Consultation Classification',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 6 — Procedures (2 new rules — Critical Gap #4)
+  // GR 6 governs multiple procedure billing with 900+ referenced codes.
+  // =========================================================================
+
+  // --- GR 6.9: Multiple procedure discounting ---
+  {
+    name: 'GR 6 — multiple procedures same day require discounting',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'reference.hscCode.categoryCode',
+          operator: 'IN',
+          value: ['P', 'M', 'M+', '1', '3', '4', '6', '14', '15'],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'count',
+            filter: {
+              type: 'set_membership',
+              field: 'reference.hscCode.categoryCode',
+              operator: 'IN',
+              value: ['P', 'M', 'M+', '1', '3', '4', '6', '14', '15'],
+            },
+          },
+          field: 'crossClaim.gr6_procedure_count_same_day',
+          operator: '>=',
+          value: 2,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Multiple procedures same day — discounting may apply',
+      description: 'Multiple procedure codes are billed for this patient on the same day. Under GR 6.9, the second and subsequent procedures in the same anatomical area are typically paid at 75% of the listed benefit. Verify discounting rules apply and that the fee schedule is correctly applied.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 6 — Multiple Procedure Discounting (75%)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- GR 6.10: Bilateral surgery verification ---
+  {
+    name: 'GR 6 — bilateral procedure billing verification',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'reference.hscCode.categoryCode',
+          operator: 'IN',
+          value: ['1', '3', '4', '6', '14', '15'],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'count',
+            filter: {
+              type: 'field_compare',
+              field: 'ahcip.healthServiceCode',
+              operator: '==',
+              value: '{{ahcip.healthServiceCode}}',
+            },
+          },
+          field: 'crossClaim.gr6_same_code_same_day',
+          operator: '>=',
+          value: 2,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Possible bilateral procedure — verify modifier',
+      description: 'The same surgical procedure code is billed twice on the same day for this patient, which may indicate a bilateral procedure. Under GR 6.10, when two surgeons operate on bilateral sides, the most responsible surgeon claims 100% and the second claims 75%. If this is a single surgeon performing bilaterally, ensure the bilateral modifier is applied.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 6.3 — Bilateral Surgery',
+    },
+    specialtyFilter: ['SURG', 'ORTHO', 'OPHTHO', 'ENT', 'UROL'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 9 — Ophthalmology (1 new rule)
+  // GR 9.1.2/9.1.3: 3+3 limit on technical/interpretive services.
+  // =========================================================================
+  {
+    name: 'GR 9 — ophthalmology 3+3 technical/interpretive limit',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: [
+            '09.01B', '09.01C', '09.01E', '09.02B', '09.02E',
+            '09.05A', '09.05B', '09.06A',
+            '09.11A', '09.11B', '09.11C',
+            '09.12A', '09.12B',
+            '09.13E', '09.13F', '09.13I', '09.13J',
+            '09.26A', '09.26D',
+            '21.31A', '24.89B', '25.81A',
+          ],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'count',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: [
+                '09.01B', '09.01C', '09.01E', '09.02B', '09.02E',
+                '09.05A', '09.05B', '09.06A',
+                '09.11A', '09.11B', '09.11C',
+                '09.12A', '09.12B',
+                '09.13E', '09.13F', '09.13I', '09.13J',
+                '09.26A', '09.26D',
+                '21.31A', '24.89B', '25.81A',
+              ],
+            },
+          },
+          field: 'crossClaim.gr9_ophtho_special_count',
+          operator: '>',
+          value: 6,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'GR 9 ophthalmology 3+3 limit may be exceeded',
+      description: 'More than 6 special ophthalmic services (technical + interpretive combined) are being claimed for this patient on the same day. GR 9.1.2 limits claims to 3 technical and 3 interpretive services alongside a complete eye examination. Services beyond this limit will be rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 9 — Ophthalmology (3+3 Limit)',
+    },
+    specialtyFilter: ['Ophthalmology', 'Optometry'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 12 — Anesthesia Time Unit (1 new rule — Critical Gap #6)
+  // GR 12.5.4-5: Additional time units require a full 5 minutes.
+  // =========================================================================
+  {
+    name: 'GR 12 — anaesthesia time unit must be full 5 minutes',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.anaesthesia_codes' },
+        { type: 'existence', field: 'ahcip.timeSpent', operator: 'IS NOT NULL' },
+        { type: 'field_compare', field: 'ahcip.timeSpent', operator: '%' as Condition['operator'], value: 5 },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Anaesthesia time not a multiple of 5 minutes',
+      description: 'The documented anaesthesia time is not a multiple of 5 minutes. GR 12.5.4-5 requires each additional time unit to be a full 5 minutes — partial units may not be claimed. Adjust the time to the nearest full 5-minute unit (rounding down).',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 12 — Anesthesia Time Billing',
+    },
+    specialtyFilter: ['ANES'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Bundling Pair Rules (5 new rules — Critical Gap #5)
+  // Based on 857 unique bundling pairs from hsc-codes.json.
+  // =========================================================================
+
+  // --- 03.03A excludes 03.05JB — office visit bundling conflict ---
+  {
+    name: 'Bundled services — 03.03A excludes 03.05JB (office visit)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.healthServiceCode', operator: '==', value: '03.03A' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'field_compare',
+              field: 'ahcip.healthServiceCode',
+              operator: '==',
+              value: '03.05JB',
+            },
+          },
+          field: 'crossClaim.bundle_0303A_0305JB',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Bundling conflict: 03.03A and 03.05JB',
+      description: '03.03A (office visit) has a bundling exclusion with 03.05JB. These codes cannot be claimed together on the same day for the same patient. One claim will be rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Service Bundling Rules (03.03A exclusions)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- 08.19A excludes 08.19GA, 08.19GZ, 08.19GB — psychiatric consultation bundling ---
+  {
+    name: 'Bundled services — 08.19A excludes 08.19GA/GZ/GB (psychiatric)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.healthServiceCode', operator: '==', value: '08.19A' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: ['08.19GA', '08.19GZ', '08.19GB'],
+            },
+          },
+          field: 'crossClaim.bundle_0819A_group',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Bundling conflict: 08.19A and 08.19GA/GZ/GB',
+      description: '08.19A (psychiatric consultation) has same-day exclusions with 08.19GA, 08.19GZ, and 08.19GB. These codes cannot be claimed on the same day for the same patient. The psychiatric group therapy/management code will be rejected alongside the consultation.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Service Bundling Rules (08.19A exclusions)',
+    },
+    specialtyFilter: ['PSYCH'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- 08.19GA excludes multiple psychiatric consultation codes ---
+  {
+    name: 'Bundled services — 08.19GA excludes consultations (psychiatric)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.healthServiceCode', operator: '==', value: '08.19GA' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: [
+                '08.11A', '08.11C', '08.19A', '08.19AZ', '08.19AA',
+                '08.19B', '08.19BB', '08.19C', '08.19CC',
+              ],
+            },
+          },
+          field: 'crossClaim.bundle_0819GA_consults',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Bundling conflict: 08.19GA and psychiatric consultations',
+      description: '08.19GA has same-day exclusions with psychiatric consultation codes (08.11A, 08.11C, 08.19A, 08.19AZ, 08.19AA, 08.19B, 08.19BB, 08.19C, 08.19CC). These services cannot be claimed on the same day for the same patient.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Service Bundling Rules (08.19GA exclusions)',
+    },
+    specialtyFilter: ['PSYCH'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- 08.19GB excludes multiple psychiatric consultation codes ---
+  {
+    name: 'Bundled services — 08.19GB excludes consultations (psychiatric)',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.healthServiceCode', operator: '==', value: '08.19GB' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: [
+                '08.11A', '08.11C', '08.19A', '08.19AA', '08.19AZ',
+                '08.19B', '08.19BB', '08.19C', '08.19CC',
+              ],
+            },
+          },
+          field: 'crossClaim.bundle_0819GB_consults',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Bundling conflict: 08.19GB and psychiatric consultations',
+      description: '08.19GB has same-day exclusions with psychiatric consultation codes (08.11A, 08.11C, 08.19A, 08.19AA, 08.19AZ, 08.19B, 08.19BB, 08.19C, 08.19CC). These services cannot be claimed on the same day for the same patient.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Service Bundling Rules (08.19GB exclusions)',
+    },
+    specialtyFilter: ['PSYCH'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- Generic bundling exclusion check ---
+  {
+    name: 'Bundled services — check exclusion list',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'existence', field: 'reference.hscCode.bundlingExclusions', operator: 'IS NOT NULL' },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 1,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: '{{reference.hscCode.bundlingExclusions}}',
+            },
+          },
+          field: 'crossClaim.generic_bundle_exclusion',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Bundling exclusion detected',
+      description: 'This service code has a bundling exclusion with another code billed on the same day for this patient. AHCIP will reject one of the claims. Review the bundling exclusion list for this code and remove the conflicting claim or adjust the date of service.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Service Bundling Rules (per-code exclusion list)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Frequency Restriction Rules (3 new rules — Critical Gap #8)
+  // 38 HSC codes have explicit frequencyRestriction values in hsc-codes.json.
+  // =========================================================================
+
+  // --- Colonoscopy screening frequency ---
+  {
+    name: 'Frequency limit — colonoscopy screening interval',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: ['01.22A', '01.22B', '01.22C'],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 365,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'set_membership',
+              field: 'ahcip.healthServiceCode',
+              operator: 'IN',
+              value: ['01.22A', '01.22B', '01.22C'],
+            },
+          },
+          field: 'crossClaim.freq_colonoscopy_within_year',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Colonoscopy screening frequency limit',
+      description: 'A colonoscopy screening code was billed for this patient within the last year. Frequency restrictions apply: 01.22A (high risk) is once/year, 01.22B (moderate risk) is once/5 years, 01.22C (average risk) is once/10 years. Verify the appropriate screening interval has elapsed before resubmitting.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Frequency Restrictions (Colonoscopy Screening)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- Weekly communication limit (telehealth, secure electronic) ---
+  {
+    name: 'Frequency limit — weekly communication/transfer limit',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: ['03.01S', '03.01T', '03.03AI', '03.03AO', '03.03E'],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 7,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'field_compare',
+              field: 'ahcip.healthServiceCode',
+              operator: '==',
+              value: '{{ahcip.healthServiceCode}}',
+            },
+          },
+          field: 'crossClaim.freq_weekly_comm',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Weekly frequency limit for communication/transfer code',
+      description: 'This code is restricted to once per calendar week per patient (03.01S, 03.01T, 03.03E) or once per patient per calendar week (03.03AI, 03.03AO transfer codes). A claim for this code already exists within the past 7 days. An additional claim will be rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Frequency Restrictions (Calendar Week)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- Per-pregnancy limit ---
+  {
+    name: 'Frequency limit — per-pregnancy service restriction',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'set_membership',
+          field: 'ahcip.healthServiceCode',
+          operator: 'IN',
+          value: ['03.03C', '03.04B'],
+        },
+        {
+          type: 'cross_claim',
+          query: {
+            lookbackDays: 280,
+            field: 'ahcip.healthServiceCode',
+            aggregation: 'exists',
+            filter: {
+              type: 'field_compare',
+              field: 'ahcip.healthServiceCode',
+              operator: '==',
+              value: '{{ahcip.healthServiceCode}}',
+            },
+          },
+          field: 'crossClaim.freq_per_pregnancy',
+          operator: '>=',
+          value: 1,
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Per-pregnancy frequency limit',
+      description: 'This code is limited to once per patient per physician per pregnancy. 03.03C (prenatal initial assessment) and 03.04B (initial prenatal examination) were already claimed for this patient within the last 280 days (typical pregnancy duration). An additional claim may be rejected unless this is a new pregnancy.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 — Frequency Restrictions (Per Pregnancy)',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Patient Registration Validation (2 new rules)
+  // 17 explanatory codes (01-09) cover patient registration rejections —
+  // the largest rejection category with ZERO AI coverage.
+  // =========================================================================
+
+  // --- PHN validity pre-check ---
+  {
+    name: 'Patient registration — PHN validity check',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'existence', field: 'patient.phn', operator: 'IS NOT NULL' },
+        { type: 'field_compare', field: 'patient.phnValid', operator: '==', value: false },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'PHN validation failed — claim will be rejected',
+      description: 'The patient Personal Health Number (PHN) does not pass validation (Luhn check and 9-digit Alberta format). Claims submitted with an invalid PHN are rejected with explanatory code 05A (Invalid Personal Health Number). Correct the PHN before submitting.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Explanatory Code 05A — Invalid Personal Health Number',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // --- ULI/Registration number completeness ---
+  {
+    name: 'Patient registration — missing ULI or registration number',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'existence', field: 'patient.phn', operator: 'IS NULL' },
+        { type: 'existence', field: 'patient.uli', operator: 'IS NULL' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Missing PHN and ULI — claim will be rejected',
+      description: 'Neither a Personal Health Number (PHN) nor a Unique Lifetime Identifier (ULI) is present for this patient. Claims require at least one valid identifier. Missing identifiers result in rejection with explanatory codes 05BA (Invalid/Blank Registration Number) or 05BB (Invalid/Blank ULI).',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Explanatory Codes 05BA/05BB — Invalid Registration/ULI',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Hospital Reciprocal Billing (D07-208)
+  // Out-of-province patient eligibility and required fields.
+  // =========================================================================
+  {
+    name: 'Hospital reciprocal — out-of-province patient eligibility',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.province', operator: '!=', value: 'AB' },
+        { type: 'set_membership', field: 'ahcip.encounterType', operator: 'IN', value: ['HOSPITAL', 'ED'] },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Out-of-province patient — hospital reciprocal billing applies',
+      description: 'This patient is from outside Alberta and the encounter is in a hospital/ED setting. Hospital reciprocal billing rules apply. Ensure the claim is submitted through the correct interprovincial reciprocal billing pathway to avoid rejection.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Hospital Reciprocal Billing — Explanatory Codes 80-89',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Hospital reciprocal — verify province has reciprocal agreement',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.province', operator: '!=', value: 'AB' },
+        { type: 'set_membership', field: 'ahcip.encounterType', operator: 'IN', value: ['HOSPITAL', 'ED'] },
+        { type: 'set_membership', field: 'patient.province', operator: 'NOT IN', value: 'ref.reciprocal_provinces' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Province may not have reciprocal agreement',
+      description: 'The patient home province may not participate in the interprovincial reciprocal billing agreement. Verify the province has a valid reciprocal arrangement with Alberta before submitting.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Hospital Reciprocal Billing — Provincial Agreements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Hospital reciprocal — required fields for out-of-province claim',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'patient.province', operator: '!=', value: 'AB' },
+        { type: 'set_membership', field: 'ahcip.encounterType', operator: 'IN', value: ['HOSPITAL', 'ED'] },
+        {
+          type: 'or',
+          children: [
+            { type: 'existence', field: 'patient.outOfProvinceHealthNumber', operator: 'IS NULL' },
+            { type: 'existence', field: 'patient.province', operator: 'IS NULL' },
+          ],
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Missing required fields for out-of-province claim',
+      description: 'Out-of-province hospital reciprocal claims require the patient home province and provincial health number. Missing fields will cause rejection.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Hospital Reciprocal Billing — Form Requirements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Practitioner Registration (D07-208)
+  // Billing number validity and specialty mismatch checks.
+  // =========================================================================
+  {
+    name: 'Practitioner registration — billing number validity',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'or',
+      children: [
+        { type: 'field_compare', field: 'provider.billingNumberValid', operator: '==', value: false },
+        { type: 'field_compare', field: 'provider.billingNumberExpired', operator: '==', value: true },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Practitioner billing number invalid or expired',
+      description: 'The AHCIP billing number is invalid or expired. Claims submitted with an invalid practitioner registration will be rejected with explanatory codes 10 or 11.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Explanatory Codes 10-11 — Practitioner Registration',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Practitioner registration — specialty mismatch with service',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'existence', field: 'reference.hscCode.specialtyRestrictions', operator: 'IS NOT NULL' },
+        { type: 'set_membership', field: 'provider.specialtyCode', operator: 'NOT IN', value: '{{reference.hscCode.specialtyRestrictions}}' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Practitioner specialty mismatch with service code',
+      description: 'The HSC code has specialty restrictions that do not match your registered AHCIP specialty. Claims submitted by a practitioner whose specialty does not match the code restrictions will be rejected with explanatory codes 10A or 10B.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'AHCIP Explanatory Codes 10A-10B — Practitioner Specialty',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Surgical Assist Eligibility Verification (D07-209)
+  // =========================================================================
+  {
+    name: 'Surgical assist — verify assist modifier eligibility',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'or',
+          children: [
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SA' },
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SAU' },
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'SAQU' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'SA' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'SAU' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'SAQU' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'SA' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'SAU' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'SAQU' },
+          ],
+        },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'NOT IN', value: 'ref.surgical_assist_codes' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Surgical assist modifier applied to ineligible code',
+      description: 'An SA, SAU, or SAQU modifier is applied to a code that is not in the surgical assist eligible list under GR 13. This claim will be rejected. Remove the assist modifier or select an eligible procedure code.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 13 — Surgical Assistance Eligibility',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // Telehealth GR 17 — REJECTION_RISK Rules (D07-210)
+  // =========================================================================
+  {
+    name: 'Telehealth — verify encounter type matches billing code',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '==', value: 'VIRTUAL' },
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'NOT IN', value: 'ref.tele_eligible_codes' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Virtual encounter — code not in TELE-eligible list',
+      description: 'This encounter is flagged as virtual but the HSC code is not in the 83 TELE-eligible codes under GR 17. The claim may be rejected. Verify the encounter type or select a TELE-eligible code.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth Eligible Codes',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'Telehealth — TELES modifier on in-person encounter',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '!=', value: 'VIRTUAL' },
+        {
+          type: 'or',
+          children: [
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'TELE' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'TELE' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'TELE' },
+          ],
+        },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'TELES modifier applied to in-person encounter',
+      description: 'The TELES modifier is applied but the encounter is not flagged as virtual. The TELES modifier under GR 17 requires a virtual/telehealth delivery. Remove the modifier or correct the encounter type.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 17 — Telehealth Modifier Requirements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // BMI GR 18 — REJECTION_RISK Rule (D07-210)
+  // =========================================================================
+  {
+    name: 'BMI modifier — verify BMI recorded for eligible procedure',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        {
+          type: 'or',
+          children: [
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'BMIPRO' },
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'BMIANE' },
+            { type: 'field_compare', field: 'ahcip.modifier1', operator: '==', value: 'BMIANT' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'BMIPRO' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'BMIANE' },
+            { type: 'field_compare', field: 'ahcip.modifier2', operator: '==', value: 'BMIANT' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'BMIPRO' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'BMIANE' },
+            { type: 'field_compare', field: 'ahcip.modifier3', operator: '==', value: 'BMIANT' },
+          ],
+        },
+        { type: 'existence', field: 'patient.bmi', operator: 'IS NULL' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'BMI modifier applied but BMI not recorded',
+      description: 'A BMI modifier (BMIPRO, BMIANE, or BMIANT) is applied but no BMI value is documented for the patient. GR 18 requires BMI documentation to support the modifier. Record the patient BMI or remove the modifier.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 18 — BMI Documentation Requirements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 7 — Reconstructive Plastic Surgery (D07-211)
+  // =========================================================================
+  {
+    name: 'GR 7 — reconstructive surgery requires medical necessity documentation',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.reconstructive_surgery_codes' },
+        { type: 'existence', field: 'ahcip.diagnosticCode', operator: 'IS NULL' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Reconstructive surgery — medical necessity documentation required',
+      description: 'This HSC code is in the reconstructive plastic surgery section. GR 7 requires a diagnostic code to demonstrate medical necessity. Without it, the procedure may be classified as cosmetic and the claim rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 7 — Reconstructive Plastic Surgery',
+    },
+    specialtyFilter: ['PLAST'],
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'GR 7 — verify reconstructive vs cosmetic code selection',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.cosmetic_reconstructive_overlap_codes' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Verify reconstructive vs cosmetic classification',
+      description: 'This code is in the cosmetic/reconstructive overlap section under GR 7. Cosmetic procedures are not covered by AHCIP. Ensure the code is correctly classified as reconstructive with appropriate medical necessity documentation.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 7 — Cosmetic vs Reconstructive Classification',
+    },
+    specialtyFilter: ['PLAST'],
+    priorityFormula: 'fixed:MEDIUM',
+    sombVersion: '2026.1',
+  },
+
+  // =========================================================================
+  // GR 10 — Dental/Oral Surgical Services (D07-211)
+  // =========================================================================
+  {
+    name: 'GR 10 — dental assessment code eligibility',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.dental_assessment_codes' },
+        { type: 'set_membership', field: 'provider.specialtyCode', operator: 'NOT IN', value: 'ref.dental_eligible_specialties' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Dental assessment code — verify provider eligibility',
+      description: 'This dental assessment code under GR 10 requires specific provider eligibility. Verify your specialty and registration qualify for billing dental/oral surgical services.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 10 — Dental/Oral Surgical Services',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'GR 10 — dental procedure facility requirement',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.dental_hospital_required_codes' },
+        { type: 'field_compare', field: 'ahcip.encounterType', operator: '==', value: 'OFFICE' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Dental procedure requires hospital setting',
+      description: 'This dental/oral surgical code under GR 10 requires a hospital setting. The encounter is flagged as office. Verify the setting or select an appropriate office-eligible code.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 10 — Dental Facility Requirements',
+    },
+    specialtyFilter: null,
+    priorityFormula: 'fixed:HIGH',
+    sombVersion: '2026.1',
+  },
+  {
+    name: 'GR 10 — dental specialist referral required',
+    category: 'REJECTION_RISK',
+    claimType: 'AHCIP',
+    conditions: {
+      type: 'and',
+      children: [
+        { type: 'set_membership', field: 'ahcip.healthServiceCode', operator: 'IN', value: 'ref.dental_referral_required_codes' },
+        { type: 'existence', field: 'ahcip.referralPractitioner', operator: 'IS NULL' },
+      ],
+    },
+    suggestionTemplate: {
+      title: 'Dental specialist referral required',
+      description: 'This dental/oral surgical code under GR 10 requires a referral from a dentist. Claims submitted without a referring practitioner will be rejected.',
+      revenue_impact_formula: 'fixed:0.00',
+      source_reference: 'SOMB 2026 GR 10 — Dental Referral Requirements',
     },
     specialtyFilter: null,
     priorityFormula: 'fixed:HIGH',

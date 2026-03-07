@@ -7,6 +7,7 @@ import type { Condition, CrossClaimQuery, SuggestionTemplate, SelectAiRule, Sele
 import { SuggestionPriority, SuggestionEventType, SuggestionCategory, SuggestionStatus, PRIORITY_THRESHOLD_DEFAULTS, SUPPRESSION_THRESHOLD, MIN_COHORT_SIZE, IntelAuditAction, ConfidenceTier } from '@meritum/shared/constants/intelligence.constants.js';
 import type { Tier2Deps } from './intel.llm.js';
 import { analyseTier2 } from './intel.llm.js';
+import type { BundlingExclusion, FrequencyRestriction, CountClaimsInPeriodParams } from './intel.repository.js';
 
 // ---------------------------------------------------------------------------
 // Claim Context Types
@@ -746,6 +747,18 @@ export interface Tier1DataDrivenDeps {
     patientId: string,
     lookbackDays: number,
   ) => Promise<{ hscCode: string; category: string | null; dateOfService: string }[]>;
+  /** Bundling exclusions for an HSC code (optional, used by checkBundlingConflicts) */
+  getBundlingExclusions?: (hscCode: string) => Promise<BundlingExclusion[]>;
+  /** Modifier eligibility check (optional, used by validateModifierEligibility) */
+  checkModifierEligibility?: (hscCode: string, modifierCode: string) => Promise<boolean>;
+  /** Frequency restriction for an HSC code (optional, used by checkFrequencyRestrictions) */
+  getFrequencyRestriction?: (hscCode: string) => Promise<FrequencyRestriction | null>;
+  /** Count claims in a period (optional, used by checkFrequencyRestrictions) */
+  countClaimsInPeriod?: (params: CountClaimsInPeriodParams) => Promise<number>;
+  /** Count callbacks in a period (optional, used by checkCallbackLimits) */
+  countCallbacksInPeriod?: (params: { providerId: string; dateOfService: string; startTime: string; endTime: string }) => Promise<number>;
+  /** Get same-day claims for bundling / LVP75 checks (optional) */
+  getSameDayClaims?: (providerId: string, patientId: string, dateOfService: string) => Promise<any[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -926,7 +939,7 @@ export async function applyMultipleProcedureDiscount(
     context.ahcip.modifier1,
     context.ahcip.modifier2,
     context.ahcip.modifier3,
-  ].filter(Boolean);
+  ].filter((m): m is string => Boolean(m));
 
   if (appliedModifiers.includes('LVP75')) return [];
 
@@ -960,7 +973,7 @@ export async function validateSurchargeEligibility(
     context.ahcip.modifier1,
     context.ahcip.modifier2,
     context.ahcip.modifier3,
-  ].filter(Boolean);
+  ].filter((m): m is string => Boolean(m));
 
   const hasSurchargeModifier = appliedModifiers.some((m) => SURCHARGE_MODIFIERS.includes(m));
   if (!hasSurchargeModifier) return [];
@@ -1024,6 +1037,504 @@ export async function checkMaxPerDay(
       sourceUrl: null,
       suggestedChanges: null,
     }];
+  }
+
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Data-Driven Validation: Bundling Conflict Checker
+// ---------------------------------------------------------------------------
+
+/**
+ * Check for bundling conflicts between a claim and other same-day claims.
+ * For each same-day claim with the same patient, checks if the HSC codes
+ * have a bundling exclusion rule in the reference data.
+ *
+ * @returns Array of REJECTION_RISK suggestions for conflicting codes.
+ */
+export async function checkBundlingConflicts(
+  claim: ClaimContext,
+  sameDayClaims: ClaimContext[],
+  deps: { getBundlingExclusions: NonNullable<Tier1DataDrivenDeps['getBundlingExclusions']> },
+): Promise<Suggestion[]> {
+  const suggestions: Suggestion[] = [];
+  const hscCode = claim.ahcip?.healthServiceCode;
+  if (!hscCode) return suggestions;
+
+  const exclusions = await deps.getBundlingExclusions(hscCode);
+  if (exclusions.length === 0) return suggestions;
+
+  const excludedSet = new Map(exclusions.map((e) => [e.excludedCode, e.relationship]));
+
+  for (const otherClaim of sameDayClaims) {
+    const otherHsc = otherClaim.ahcip?.healthServiceCode;
+    if (!otherHsc || otherHsc === hscCode) continue;
+
+    const relationship = excludedSet.get(otherHsc);
+    if (relationship) {
+      suggestions.push({
+        suggestionId: crypto.randomUUID(),
+        ruleId: 'data-driven:bundling',
+        tier: 1,
+        category: SuggestionCategory.REJECTION_RISK,
+        priority: SuggestionPriority.HIGH,
+        title: `Bundling conflict: ${hscCode} and ${otherHsc}`,
+        description: `Code ${hscCode} has a bundling conflict (${relationship}) with ${otherHsc} billed on the same day. This may result in rejection.`,
+        revenueImpact: null,
+        confidence: 1.0,
+        sourceReference: 'AHCIP Bundling Rules',
+        sourceUrl: null,
+        suggestedChanges: null,
+      });
+    }
+  }
+
+  return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Data-Driven Validation: Modifier Eligibility Validator
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that each modifier on a claim is eligible for the claim's HSC code.
+ *
+ * @returns Array of REJECTION_RISK suggestions for ineligible modifiers.
+ */
+export async function validateModifierEligibility(
+  hscCode: string,
+  modifiers: string[],
+  deps: { checkModifierEligibility: NonNullable<Tier1DataDrivenDeps['checkModifierEligibility']> },
+): Promise<Suggestion[]> {
+  const suggestions: Suggestion[] = [];
+
+  for (const modifier of modifiers) {
+    const isEligible = await deps.checkModifierEligibility(hscCode, modifier);
+    if (!isEligible) {
+      suggestions.push({
+        suggestionId: crypto.randomUUID(),
+        ruleId: 'data-driven:modifier-eligibility',
+        tier: 1,
+        category: SuggestionCategory.REJECTION_RISK,
+        priority: SuggestionPriority.HIGH,
+        title: `Modifier ${modifier} not eligible for ${hscCode}`,
+        description: `Modifier ${modifier} is not listed as eligible for health service code ${hscCode}. Submitting with this modifier may result in rejection.`,
+        revenueImpact: null,
+        confidence: 1.0,
+        sourceReference: 'SOMB Modifier Eligibility',
+        sourceUrl: null,
+        suggestedChanges: null,
+      });
+    }
+  }
+
+  return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Data-Driven Validation: Frequency Restriction Checker
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculate the start date of the restriction period based on the period string.
+ * Supported periods: 'per_day', 'per_year', 'per_lifetime', 'per_month'.
+ */
+function calculatePeriodStartDate(dateOfService: string, period: string): string {
+  const dos = new Date(dateOfService);
+  switch (period) {
+    case 'per_day':
+      return dateOfService;
+    case 'per_month': {
+      const monthStart = new Date(dos.getFullYear(), dos.getMonth(), 1);
+      return monthStart.toISOString().split('T')[0];
+    }
+    case 'per_year': {
+      const yearStart = new Date(dos.getFullYear(), 0, 1);
+      return yearStart.toISOString().split('T')[0];
+    }
+    case 'per_lifetime':
+      return '1900-01-01';
+    default:
+      return dateOfService;
+  }
+}
+
+/**
+ * Check frequency restrictions on a claim's HSC code.
+ * Queries the reference data for the restriction, then counts claims
+ * in the period to determine if the limit has been reached.
+ *
+ * @param claim - The claim context being validated
+ * @param patientId - Patient ID for claim count lookup
+ * @param providerId - Provider ID for physician-scoped queries
+ * @param deps - Injected repository dependencies
+ * @returns Array of REJECTION_RISK suggestions if frequency is exceeded.
+ */
+export async function checkFrequencyRestrictions(
+  claim: ClaimContext,
+  patientId: string,
+  providerId: string,
+  deps: { getFrequencyRestriction: NonNullable<Tier1DataDrivenDeps['getFrequencyRestriction']>; countClaimsInPeriod: NonNullable<Tier1DataDrivenDeps['countClaimsInPeriod']> },
+): Promise<Suggestion[]> {
+  const suggestions: Suggestion[] = [];
+  const hscCode = claim.ahcip?.healthServiceCode;
+  if (!hscCode) return suggestions;
+
+  const restriction = await deps.getFrequencyRestriction(hscCode);
+  if (!restriction) return suggestions;
+
+  const startDate = calculatePeriodStartDate(claim.claim.dateOfService, restriction.period);
+
+  const claimCount = await deps.countClaimsInPeriod({
+    providerId,
+    patientId,
+    hscCode,
+    startDate,
+    endDate: claim.claim.dateOfService,
+  });
+
+  if (claimCount >= restriction.count) {
+    suggestions.push({
+      suggestionId: crypto.randomUUID(),
+      ruleId: 'data-driven:frequency-restriction',
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `Frequency limit reached for ${hscCode}`,
+      description: `${hscCode} has a frequency restriction: ${restriction.text}. ${claimCount} claim(s) already exist in this period.`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: 'SOMB Frequency Restrictions',
+      sourceUrl: null,
+      suggestedChanges: null,
+    });
+  }
+
+  return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Patient Registration Pre-Check
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate patient registration fields before submission.
+ * Checks PHN format (9 digits, valid Luhn), blank/missing ULI,
+ * and blank/missing registration number.
+ *
+ * This is a synchronous check — no DB query needed.
+ *
+ * @param claim - The claim context to validate
+ * @param patientPhn - The patient's PHN (passed separately to avoid PHN in ClaimContext)
+ * @param patientUli - The patient's ULI
+ * @param patientRegNumber - The patient's registration number
+ * @returns Array of REJECTION_RISK suggestions for any failures.
+ */
+export function validatePatientRegistration(
+  claim: ClaimContext,
+  patientPhn?: string | null,
+  patientUli?: string | null,
+  patientRegNumber?: string | null,
+): Suggestion[] {
+  const suggestions: Suggestion[] = [];
+
+  // Check PHN format and Luhn check digit
+  if (patientPhn) {
+    if (!/^\d{9}$/.test(patientPhn)) {
+      suggestions.push({
+        suggestionId: crypto.randomUUID(),
+        ruleId: 'data-driven:phn-format',
+        tier: 1,
+        category: SuggestionCategory.REJECTION_RISK,
+        priority: SuggestionPriority.HIGH,
+        title: 'Invalid PHN format',
+        description: 'The patient PHN must be exactly 9 digits. This will be rejected by AHCIP (explanatory code 05A).',
+        revenueImpact: null,
+        confidence: 1.0,
+        sourceReference: 'AHCIP Explanatory Code 05A',
+        sourceUrl: null,
+        suggestedChanges: null,
+      });
+    } else {
+      // Luhn check
+      let sum = 0;
+      for (let i = patientPhn.length - 1; i >= 0; i--) {
+        let digit = parseInt(patientPhn[i], 10);
+        const positionFromRight = patientPhn.length - 1 - i;
+        if (positionFromRight % 2 === 1) {
+          digit *= 2;
+          if (digit > 9) digit -= 9;
+        }
+        sum += digit;
+      }
+      if (sum % 10 !== 0) {
+        suggestions.push({
+          suggestionId: crypto.randomUUID(),
+          ruleId: 'data-driven:phn-luhn',
+          tier: 1,
+          category: SuggestionCategory.REJECTION_RISK,
+          priority: SuggestionPriority.HIGH,
+          title: 'PHN fails check digit validation',
+          description: 'The patient PHN fails Luhn check digit validation. This will be rejected by AHCIP (explanatory code 05A).',
+          revenueImpact: null,
+          confidence: 1.0,
+          sourceReference: 'AHCIP Explanatory Code 05A',
+          sourceUrl: null,
+          suggestedChanges: null,
+        });
+      }
+    }
+  } else {
+    // Missing PHN entirely
+    suggestions.push({
+      suggestionId: crypto.randomUUID(),
+      ruleId: 'data-driven:phn-missing',
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: 'Missing patient PHN',
+      description: 'No PHN provided for this patient. This will be rejected by AHCIP (explanatory code 01).',
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: 'AHCIP Explanatory Code 01',
+      sourceUrl: null,
+      suggestedChanges: null,
+    });
+  }
+
+  // Check for blank/missing ULI
+  if (!patientUli || patientUli.trim() === '') {
+    suggestions.push({
+      suggestionId: crypto.randomUUID(),
+      ruleId: 'data-driven:uli-missing',
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: 'Missing patient ULI',
+      description: 'No Unique Lifetime Identifier (ULI) provided. This will be rejected by AHCIP (explanatory code 05BB).',
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: 'AHCIP Explanatory Code 05BB',
+      sourceUrl: null,
+      suggestedChanges: null,
+    });
+  }
+
+  // Check for blank/missing registration number
+  if (!patientRegNumber || patientRegNumber.trim() === '') {
+    suggestions.push({
+      suggestionId: crypto.randomUUID(),
+      ruleId: 'data-driven:reg-number-missing',
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: 'Missing patient registration number',
+      description: 'No registration number provided. This will be rejected by AHCIP (explanatory code 05BA).',
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: 'AHCIP Explanatory Code 05BA',
+      sourceUrl: null,
+      suggestedChanges: null,
+    });
+  }
+
+  return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// GR 15 Callback Limit Checker
+// ---------------------------------------------------------------------------
+
+/** GR 15 callback limits by time period. */
+const GR15_CALLBACK_LIMITS: Record<string, { startTime: string; endTime: string; maxCallbacks: number }> = {
+  weekday_daytime: { startTime: '07:00', endTime: '17:00', maxCallbacks: 5 },
+  weekday_evening: { startTime: '17:00', endTime: '22:00', maxCallbacks: 2 },
+  night_late: { startTime: '22:00', endTime: '24:00', maxCallbacks: 2 },
+  night_early: { startTime: '00:00', endTime: '07:00', maxCallbacks: 7 },
+  weekend: { startTime: '00:00', endTime: '24:00', maxCallbacks: 10 },
+};
+
+/** SURC modifier codes that indicate callback services. */
+const SURC_MODIFIER_CODES = ['EV', 'NTAM', 'NTPM', 'WK'];
+
+/**
+ * Determine which GR 15 time period a SURC modifier represents.
+ * EV = evening (weekday 17:00-22:00)
+ * NTAM = night early (00:00-07:00)
+ * NTPM = night late (22:00-24:00)
+ * WK = weekend/holiday (all day)
+ */
+function getSurcPeriod(modifierCode: string, dayOfWeek: number): string | null {
+  // Weekend takes precedence regardless of modifier
+  if (dayOfWeek === 0 || dayOfWeek === 6) return 'weekend';
+
+  switch (modifierCode) {
+    case 'EV': return 'weekday_evening';
+    case 'NTAM': return 'night_early';
+    case 'NTPM': return 'night_late';
+    case 'WK': return 'weekend';
+    default: return null;
+  }
+}
+
+/**
+ * Check GR 15 callback limits for claims with SURC modifiers (EV, NTAM, NTPM, WK).
+ * Determines the applicable time period and checks if the callback count exceeds the limit.
+ *
+ * @param claim - The claim context being validated
+ * @param providerId - Provider ID for physician-scoped queries
+ * @param deps - Injected repository dependencies
+ * @returns Array of REJECTION_RISK suggestions if callback limit exceeded.
+ */
+export async function checkCallbackLimits(
+  claim: ClaimContext,
+  providerId: string,
+  deps: { countCallbacksInPeriod: NonNullable<Tier1DataDrivenDeps['countCallbacksInPeriod']> },
+): Promise<Suggestion[]> {
+  const suggestions: Suggestion[] = [];
+  if (!claim.ahcip) return suggestions;
+
+  // Find SURC modifier on the claim
+  const claimModifiers = [
+    claim.ahcip.modifier1,
+    claim.ahcip.modifier2,
+    claim.ahcip.modifier3,
+  ].filter((m): m is string => m !== null);
+
+  const surcModifier = claimModifiers.find((m) => SURC_MODIFIER_CODES.includes(m));
+  if (!surcModifier) return suggestions;
+
+  // Determine the time period
+  const period = getSurcPeriod(surcModifier, claim.claim.dayOfWeek);
+  if (!period) return suggestions;
+
+  const limits = GR15_CALLBACK_LIMITS[period];
+  if (!limits) return suggestions;
+
+  // Count existing callbacks in this period
+  const callbackCount = await deps.countCallbacksInPeriod({
+    providerId,
+    dateOfService: claim.claim.dateOfService,
+    startTime: limits.startTime,
+    endTime: limits.endTime,
+  });
+
+  if (callbackCount >= limits.maxCallbacks) {
+    suggestions.push({
+      suggestionId: crypto.randomUUID(),
+      ruleId: 'data-driven:gr15-callback-limit',
+      tier: 1,
+      category: SuggestionCategory.REJECTION_RISK,
+      priority: SuggestionPriority.HIGH,
+      title: `GR 15 callback limit reached (${period.replace('_', ' ')})`,
+      description: `GR 15 limits ${period.replace('_', ' ')} callbacks to ${limits.maxCallbacks} per day. ${callbackCount} callback(s) already billed for this period.`,
+      revenueImpact: null,
+      confidence: 1.0,
+      sourceReference: 'SOMB Governing Rule 15',
+      sourceUrl: null,
+      suggestedChanges: null,
+    });
+  }
+
+  return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Explanatory Code to Prevention Rules Mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Map from explanatory code category to the AI rule names that help prevent
+ * rejections in that category.
+ *
+ * This is a static mapping used for analytics dashboards and the learning loop.
+ */
+const EXPLANATORY_CODE_PREVENTION_MAP: Record<string, string[]> = {
+  'PATIENT REGISTRATION': [
+    'data-driven:phn-format',
+    'data-driven:phn-luhn',
+    'data-driven:phn-missing',
+    'data-driven:uli-missing',
+    'data-driven:reg-number-missing',
+  ],
+  'PRACTITIONER REGISTRATION': [
+    'data-driven:practitioner-eligibility',
+  ],
+  'INELIGIBLE SERVICES': [
+    'data-driven:bundling',
+    'data-driven:frequency-restriction',
+  ],
+  'SURGICAL PROCEDURES': [
+    'data-driven:bundling',
+    'data-driven:modifier-eligibility',
+  ],
+  'MINOR PROCEDURES': [
+    'data-driven:bundling',
+    'data-driven:modifier-eligibility',
+  ],
+  'ANESTHESIA': [
+    'data-driven:modifier-eligibility',
+  ],
+  'CONSULTATIONS/VISITS': [
+    'data-driven:frequency-restriction',
+    'data-driven:gr15-callback-limit',
+  ],
+  'ADJUSTMENTS': [
+    'data-driven:frequency-restriction',
+  ],
+};
+
+/**
+ * Map of individual explanatory codes to prevention rule names.
+ * Provides more granular mapping than category-level.
+ */
+const EXPLANATORY_CODE_SPECIFIC_MAP: Record<string, string[]> = {
+  '01': ['data-driven:phn-missing'],
+  '01A': ['data-driven:phn-missing'],
+  '02': ['data-driven:phn-format', 'data-driven:reg-number-missing'],
+  '05': ['data-driven:phn-format'],
+  '05A': ['data-driven:phn-format', 'data-driven:phn-luhn'],
+  '05BA': ['data-driven:reg-number-missing'],
+  '05BB': ['data-driven:uli-missing'],
+  '54': ['data-driven:bundling', 'data-driven:modifier-eligibility'],
+  '60A': ['data-driven:frequency-restriction'],
+};
+
+/**
+ * Given an AHCIP explanatory code (e.g., '05A', '54', '60A'), return the names
+ * of AI rules that help prevent this type of rejection.
+ *
+ * First checks the specific code map, then falls back to category-level mapping.
+ * Used for analytics dashboards and the learning loop.
+ *
+ * @param code - The AHCIP explanatory code
+ * @returns Array of rule name strings that help prevent this rejection type
+ */
+export function mapExplanatoryCodeToPreventionRules(code: string): string[] {
+  // Check specific code mapping first
+  const specificRules = EXPLANATORY_CODE_SPECIFIC_MAP[code];
+  if (specificRules && specificRules.length > 0) {
+    return specificRules;
+  }
+
+  // Fall back to category-level mapping
+  // This requires knowing the category for the code — use a simplified lookup
+  // based on code prefixes (01-09 = PATIENT REGISTRATION, 10-11 = PRACTITIONER, etc.)
+  const codeNum = parseInt(code.replace(/[A-Za-z]/g, ''), 10);
+  if (isNaN(codeNum)) return [];
+
+  let category: string | null = null;
+  if (codeNum >= 1 && codeNum <= 9) category = 'PATIENT REGISTRATION';
+  else if (codeNum >= 10 && codeNum <= 11) category = 'PRACTITIONER REGISTRATION';
+  else if (codeNum >= 20 && codeNum <= 28) category = 'INELIGIBLE SERVICES';
+  else if (codeNum >= 50 && codeNum <= 54) category = 'SURGICAL PROCEDURES';
+  else if (codeNum >= 55 && codeNum <= 59) category = 'MINOR PROCEDURES';
+  else if (codeNum >= 60 && codeNum <= 69) category = 'CONSULTATIONS/VISITS';
+  else if (codeNum >= 70 && codeNum <= 79) category = 'ADJUSTMENTS';
+
+  if (category) {
+    return EXPLANATORY_CODE_PREVENTION_MAP[category] ?? [];
   }
 
   return [];
@@ -1430,11 +1941,37 @@ export async function evaluateTier1Rules(
       checkMaxPerDay(context, providerId, pid, ddDeps),
     ]);
 
-    // LVP75 needs same-day claims — not available in context, pass empty for now
-    // (sameDayClaims would require a separate query in a batch context)
-    const lvp75Sugs = await applyMultipleProcedureDiscount(context, [], ddDeps);
+    // LVP75 needs same-day claims
+    const sameDayClaims = ddDeps.getSameDayClaims
+      ? await ddDeps.getSameDayClaims(providerId, pid, context.claim.dateOfService)
+      : [];
+    const lvp75Sugs = await applyMultipleProcedureDiscount(context, sameDayClaims, ddDeps);
 
     suggestions.push(...ageSugs, ...specSugs, ...opSugs, ...lvp75Sugs, ...surchargeSugs, ...maxDaySugs);
+
+    // Data-driven administrative validators
+    if (sameDayClaims.length > 0 && ddDeps.getBundlingExclusions) {
+      const bundlingSugs = await checkBundlingConflicts(context, sameDayClaims, { getBundlingExclusions: ddDeps.getBundlingExclusions });
+      suggestions.push(...bundlingSugs);
+    }
+
+    if (ddDeps.checkModifierEligibility) {
+      const modifiers = [context.ahcip.modifier1, context.ahcip.modifier2, context.ahcip.modifier3].filter(Boolean) as string[];
+      if (modifiers.length > 0) {
+        const modSugs = await validateModifierEligibility(context.ahcip.healthServiceCode, modifiers, { checkModifierEligibility: ddDeps.checkModifierEligibility });
+        suggestions.push(...modSugs);
+      }
+    }
+
+    if (ddDeps.getFrequencyRestriction && ddDeps.countClaimsInPeriod) {
+      const freqSugs = await checkFrequencyRestrictions(context, pid, providerId, { getFrequencyRestriction: ddDeps.getFrequencyRestriction, countClaimsInPeriod: ddDeps.countClaimsInPeriod });
+      suggestions.push(...freqSugs);
+    }
+
+    if (ddDeps.countCallbacksInPeriod) {
+      const callbackSugs = await checkCallbackLimits(context, providerId, { countCallbacksInPeriod: ddDeps.countCallbacksInPeriod });
+      suggestions.push(...callbackSugs);
+    }
   }
 
   // 6. Deduplicate: if multiple suggestions target the same field, keep highest priority
