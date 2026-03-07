@@ -32,6 +32,9 @@ function makeActiveShift(overrides: Partial<SelectEdShift> = {}): SelectEdShift 
     patientCount: overrides.patientCount ?? 3,
     estimatedValue: overrides.estimatedValue ?? '150.00',
     status: overrides.status ?? 'ACTIVE',
+    shiftSource: overrides.shiftSource ?? 'MANUAL',
+    inferredConfirmed: overrides.inferredConfirmed ?? false,
+    scheduleId: overrides.scheduleId ?? null,
     createdAt: overrides.createdAt ?? new Date('2026-02-19T08:00:00Z'),
   };
 }

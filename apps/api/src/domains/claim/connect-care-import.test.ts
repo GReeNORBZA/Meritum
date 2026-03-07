@@ -205,7 +205,7 @@ describe('Connect Care Import Service', () => {
   describe('uploadAndParse', () => {
     it('creates an import batch and returns results', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
 
       mockParseSccExtract.mockReturnValue({
         rows: [{ rowNumber: 1, classification: 'VALID' }],
@@ -230,7 +230,7 @@ describe('Connect Care Import Service', () => {
 
     it('rejects an invalid file extension before parsing', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
 
       await expect(
         uploadAndParse(deps, 'phys-001', 'actor-001', providerCtx, makeFile({ fileName: 'data.json' })),
@@ -241,7 +241,7 @@ describe('Connect Care Import Service', () => {
 
     it('runs duplicate detection after parsing', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
 
       mockParseSccExtract.mockReturnValue({
         rows: [{ rowNumber: 1 }],
@@ -265,7 +265,7 @@ describe('Connect Care Import Service', () => {
 
     it('runs correction handling after duplicate detection', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
 
       await uploadAndParse(deps, 'phys-001', 'actor-001', providerCtx, makeFile());
 
@@ -274,7 +274,7 @@ describe('Connect Care Import Service', () => {
 
     it('calls audit log when available', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
 
       await uploadAndParse(deps, 'phys-001', 'actor-001', providerCtx, makeFile());
 
@@ -286,7 +286,7 @@ describe('Connect Care Import Service', () => {
 
     it('handles Buffer content correctly', async () => {
       const deps = makeDeps();
-      const providerCtx = { billingProviderId: 'PROV1', businessArrangement: 'BA1' };
+      const providerCtx = { providerId: 'PROV1', billingNumber: 'BN001', businessArrangements: [{ baNumber: 'BA1', baId: 'ba-001' }] };
       const bufferFile = makeFile({ content: Buffer.from('csv,content\na,b') });
 
       await uploadAndParse(deps, 'phys-001', 'actor-001', providerCtx, bufferFile);

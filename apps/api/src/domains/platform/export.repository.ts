@@ -151,11 +151,14 @@ export function createExportRepository(db: NodePgDatabase) {
           .select({
             auditId: claimAuditHistory.auditId,
             claimId: claimAuditHistory.claimId,
-            fieldName: claimAuditHistory.fieldName,
-            oldValue: claimAuditHistory.oldValue,
-            newValue: claimAuditHistory.newValue,
-            changedBy: claimAuditHistory.changedBy,
-            changedAt: claimAuditHistory.changedAt,
+            action: claimAuditHistory.action,
+            previousState: claimAuditHistory.previousState,
+            newState: claimAuditHistory.newState,
+            changes: claimAuditHistory.changes,
+            actorId: claimAuditHistory.actorId,
+            actorContext: claimAuditHistory.actorContext,
+            reason: claimAuditHistory.reason,
+            createdAt: claimAuditHistory.createdAt,
           })
           .from(claimAuditHistory)
           .innerJoin(claims, eq(claimAuditHistory.claimId, claims.claimId))

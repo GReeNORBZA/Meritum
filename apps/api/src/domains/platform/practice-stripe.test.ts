@@ -472,7 +472,7 @@ describe('handlePracticeStripeWebhook', () => {
   // -------------------------------------------------------------------------
 
   it('adds GST (5%) to invoice.created event', async () => {
-    const obj = {
+    const obj: any = {
       metadata: { practice_id: PRACTICE_ID },
       subtotal: 100_00, // $100.00 in cents
     };
@@ -485,7 +485,7 @@ describe('handlePracticeStripeWebhook', () => {
   });
 
   it('handles zero subtotal on invoice.created', async () => {
-    const obj = {
+    const obj: any = {
       metadata: { practice_id: PRACTICE_ID },
       subtotal: 0,
     };

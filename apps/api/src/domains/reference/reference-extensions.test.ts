@@ -261,26 +261,22 @@ describe('Provincial PHN Formats', () => {
     const { deps } = makeMockRepo({
       listProvincialPhnFormats: vi.fn().mockResolvedValue([
         {
-          formatId: 'fmt-ab',
+          id: 'fmt-ab',
           provinceCode: 'AB',
           provinceName: 'Alberta',
-          formatPattern: '9999-99999',
-          formatDescription: '9-digit numeric',
-          examplePhn: '1234-56789',
-          validationRegex: '^\\d{4}-?\\d{5}$',
           phnLength: 9,
-          isReciprocal: false,
+          phnRegex: '^\\d{4}-?\\d{5}$',
+          validationAlgorithm: 'luhn',
+          notes: '9-digit numeric',
         },
         {
-          formatId: 'fmt-bc',
+          id: 'fmt-bc',
           provinceCode: 'BC',
           provinceName: 'British Columbia',
-          formatPattern: '9999 999 999',
-          formatDescription: '10-digit starting with 9',
-          examplePhn: '9876543210',
-          validationRegex: '^9\\d{9}$',
           phnLength: 10,
-          isReciprocal: true,
+          phnRegex: '^9\\d{9}$',
+          validationAlgorithm: null,
+          notes: '10-digit starting with 9',
         },
       ]),
     });
@@ -289,9 +285,9 @@ describe('Provincial PHN Formats', () => {
 
     expect(results).toHaveLength(2);
     expect(results[0].provinceCode).toBe('AB');
-    expect(results[0].isReciprocal).toBe(false);
+    expect(results[0].phnLength).toBe(9);
     expect(results[1].provinceCode).toBe('BC');
-    expect(results[1].isReciprocal).toBe(true);
+    expect(results[1].phnLength).toBe(10);
   });
 });
 
@@ -306,14 +302,14 @@ describe('Reciprocal Billing Rules', () => {
         {
           ruleId: 'rule-1',
           sourceProvince: 'BC',
-          targetProvince: 'AB',
-          billingMethod: 'RECIPROCAL',
-          maxFeePercentage: '100',
-          requiresPreApproval: false,
-          effectiveFrom: '2025-01-01',
-          effectiveTo: null,
+          claimType: 'MEDICAL',
+          submissionMethod: 'RECIPROCAL',
+          feeScheduleSource: 'ALBERTA',
+          deadlineDays: 90,
           notes: null,
           isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ]),
     });
@@ -322,7 +318,7 @@ describe('Reciprocal Billing Rules', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].sourceProvince).toBe('BC');
-    expect(results[0].billingMethod).toBe('RECIPROCAL');
+    expect(results[0].submissionMethod).toBe('RECIPROCAL');
     expect((repo as any).getReciprocalRules).toHaveBeenCalledWith('BC');
   });
 
@@ -341,15 +337,17 @@ describe('Anesthesia Rules', () => {
   const sampleRule = {
     ruleId: 'anes-1',
     scenarioCode: 'GENERAL_ANESTHESIA',
-    scenarioName: 'General Anesthesia',
+    scenarioLabel: 'General Anesthesia',
     description: 'Standard general anesthesia procedure',
     baseUnits: 4,
     timeUnitMinutes: 15,
     calculationFormula: 'base_units + ceil(duration_min / 15)',
-    modifierInteractions: { BMI_GT_40: 'add_2_units' },
-    exampleCalculation: '4 + ceil(60/15) = 8 units',
+    applicableModifiers: ['ANE', 'AST'],
+    sourceReference: 'GR 12',
     sortOrder: 1,
     isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   it('listAnesthesiaRulesEntries returns sorted list', async () => {
@@ -420,10 +418,11 @@ describe('Bundling Rules', () => {
     codeB: '03.05A',
     relationship: 'BUNDLED',
     description: 'These codes are bundled — only bill the higher-fee code',
-    resolution: 'Bill the higher fee code only',
     overrideAllowed: true,
     sourceReference: 'SOMB 2026 §5.1',
     isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   it('getBundlingRuleForPair returns rule for known pair', async () => {

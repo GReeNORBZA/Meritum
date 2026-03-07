@@ -6317,7 +6317,7 @@ describe('IMA-012 — Export Window Notifications', () => {
       }),
     );
     // Verify EXPORT_WINDOW_CLOSED was emitted before ACCOUNT_DATA_DELETED
-    const emitCalls = emitter.emit.mock.calls;
+    const emitCalls = vi.mocked(emitter.emit).mock.calls;
     const closedIdx = emitCalls.findIndex((c: any) => c[0] === 'EXPORT_WINDOW_CLOSED');
     const deletedIdx = emitCalls.findIndex((c: any) => c[0] === 'ACCOUNT_DATA_DELETED');
     expect(closedIdx).toBeLessThan(deletedIdx);

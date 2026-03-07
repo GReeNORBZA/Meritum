@@ -836,18 +836,147 @@ When your prompt starts with `[TASK]`, you are being invoked by the automated ta
 4. After all tests pass, output exactly this on a new line: `[TASK_COMPLETE]`
 5. If tests fail after 5 fix attempts, output: `[TASK_BLOCKED] reason: <one-line description>`
 6. Do not ask questions — make reasonable decisions based on CLAUDE.md and the FRD
+7. If your prompt starts with `[TASK] [RETRY N/M]`, a previous attempt failed. The failure output is included — read it carefully, diagnose the root cause, and fix it before re-running tests
+
+### Task Runner CLI
+
+```bash
+./task-runner.sh <manifest-file> [options]
+
+Options:
+  --resume             Resume after the last completed task (reads .progress file)
+  --dry-run            Print what would execute without invoking Claude
+  --only=<task-id>     Run a single specific task, skipping all others
+  --config=<file>      Specify config JSON (auto-detected from manifest name if omitted)
+  --webhook=<url>      POST build results to this URL on completion
+  --no-checkpoint      Disable git commit/rollback after each task
+  --no-preflight       Skip environment verification checks
+  --clean-logs         Prune old log dirs and exit (no tasks run)
+  --non-interactive    Never prompt for input (auto-continue on failure); auto-enabled when stdin is not a terminal
+  --parallel[=N]       Run up to N tasks concurrently within each section (default N=2); sections still run sequentially
+
+Environment variables:
+  TASK_RUNNER_WEBHOOK  Default webhook URL (overridden by --webhook)
+  COVERAGE_THRESHOLD   Minimum line coverage % for advisory report (default: 60)
+  LOG_RETENTION        Number of recent log dirs to keep per manifest (default: 10)
+  DATABASE_URL         If set, preflight checks database connectivity
+
+Other scripts:
+  ./scripts/build-status.sh              Show cross-domain build status dashboard
+  ./scripts/build-status.sh --verbose    Include latest failure details
+```
+
+### Task Runner Safety Features
+
+The task runner provides automatic safety mechanisms that run before, during, and after task execution.
+
+**Pre-Build:**
+- **Config validation:** Validates config JSON schema (required fields, task ID format, duplicate IDs, dependency references, test/testFile consistency, prerequisite existence). Blocks the build if validation fails.
+- **Concurrent build lock:** PID-based lock file (`.build-state/{manifest}.lock`) prevents two instances from running the same manifest simultaneously. Stale locks auto-removed.
+- **Preamble resolution:** Project preamble (`preamble.txt`) prepended to every task prompt. Resolution order: (1) config JSON `"preamble"` field, (2) `preamble.txt` in project root, (3) generic fallback.
+- **Preflight checks:** Verifies Claude CLI, Node.js, pnpm, git working tree clean, database reachable (if `DATABASE_URL` set), dependencies present. Fails fast before burning API calls.
+- **Cross-domain prerequisites:** If config JSON has `"prerequisites"` array, checks `.build-state/{name}.completed` markers. Hard-blocks if any prerequisite domain hasn't completed.
+- **Prompt staleness detection:** Scans prompt files for backtick-quoted file paths, checks each exists. Auto-regenerates from config if stale.
+
+**During Build:**
+- **Retry with failure context:** Failed tasks retried up to `MAX_RETRIES` times (default: 2). Previous attempt's verification output prepended to the retry prompt.
+- **Git checkpointing:** After each passed task, commits working state (`git commit --no-verify`). On failure after all retries, rolls back to last checkpoint.
+- **Verify timeout:** Verification commands timeout after 120 seconds to prevent hangs.
+- **Test count enforcement:** `verify-tests.sh` counts test definitions (`it()`/`test()`) and fails if fewer than expected. Bans trivial assertions.
+- **Parallel execution:** With `--parallel=N`, tasks within the same manifest section run concurrently. Sections run sequentially as dependency barriers.
+
+**Post-Build:**
+- **Completion markers:** If all tasks pass, writes `.build-state/{manifest-name}.completed`. Downstream domains check these markers in prerequisite validation.
+- **Post-run test audit:** Scans config JSON against source files, reports test gaps. Build fails if gaps exist.
+- **Coverage threshold (advisory):** Runs vitest coverage, reports files below `COVERAGE_THRESHOLD` (default 60%). Advisory only.
+- **Build notifications:** Desktop notification + optional webhook POST with status, pass/fail counts, duration.
+- **Log rotation:** Prunes old log directories, keeping newest `LOG_RETENTION` (default: 10).
+
+### Orchestration File Structure
+
+```
+meritum/
+├── task-runner.sh                          # Main orchestration script (1200+ lines)
+├── preamble.txt                            # Project context prepended to every task prompt
+├── CLAUDE.md                               # This file — persistent rules for all sessions
+├── CLAUDE-TEMPLATE.md                      # Generalized template for new projects
+├── scripts/
+│   ├── generate-tasks.js                   # Config JSON → manifest + prompt files
+│   ├── validate-config.sh                  # Config JSON schema validation
+│   ├── verify-tests.sh                     # Test count + quality enforcement
+│   ├── audit-test-coverage.sh              # Post-run gap detection + coverage
+│   ├── build-status.sh                     # Cross-domain build status dashboard
+│   ├── check-prompt-staleness.sh           # Prompt file freshness check
+│   ├── init-project.sh                     # Interactive project scaffolding
+│   └── tasks/
+│       ├── domain-01-iam.tasks             # Generated manifests (one per domain)
+│       ├── domain-02-reference.tasks
+│       ├── domain-04-claim-core.tasks
+│       ├── domain-04-ahcip.tasks
+│       ├── domain-04-wcb.tasks
+│       ├── domain-05-provider.tasks
+│       ├── domain-06-patient.tasks
+│       ├── domain-07-intelligence.tasks
+│       ├── domain-08-analytics.tasks
+│       ├── domain-09-notification.tasks
+│       ├── domain-10-mobile.tasks
+│       ├── domain-11-onboarding.tasks
+│       ├── domain-12-platform.tasks
+│       ├── domain-13-support.tasks
+│       └── prompts/                        # Generated prompt .md files per domain
+│           ├── d01/
+│           ├── d02/
+│           └── ...
+├── configs/
+│   ├── domain-01-iam.json                  # Task definitions per domain
+│   ├── domain-02-reference-manifests.json
+│   ├── domain-04-ahcip-manifests.json
+│   ├── domain-04-claim-core-manifests.json
+│   ├── domain-04-wcb-manifests.json
+│   ├── domain-05-provider-manifests.json
+│   ├── domain-06-patient-manifests.json
+│   ├── domain-07-intelligence-manifests.json
+│   ├── domain-08-analytics-manifests.json
+│   ├── domain-09-notification-manifests.json
+│   ├── domain-10-mobile-manifests.json
+│   ├── domain-11-onboarding-manifests.json
+│   ├── domain-12-platform-manifests.json
+│   └── domain-13-support-manifests.json
+├── .build-state/                           # Completion markers (gitignored)
+│   ├── domain-01-iam.completed
+│   └── ...
+└── logs/build/                             # Build logs per run (gitignored)
+    └── domain-01-iam-YYYYMMDD-HHMMSS/
+```
 
 ### Standard Development Workflow (Interactive)
 
+**All interactive development MUST follow the orchestration layer.** The task runner is the primary development mechanism for this project. Interactive sessions are for debugging, exploratory work, and small fixes — not for bypassing the orchestrated build pipeline.
+
 When given a task interactively:
-1. Identify which domain(s) are affected
-2. Read the FRD for that domain in `docs/frd/` if you need business context
-3. Follow the domain module structure exactly
-4. Add Zod schemas in `packages/shared` (not in the API)
-5. Write the repository, service, handler, and routes in that order
-6. **Run tests after each file. Fix failures before moving to the next file.**
-7. **Add security tests for the domain (all 6 categories). This is not optional.**
-8. Run all tests to ensure nothing breaks: `pnpm test && pnpm test:security`
+1. **Check build status first:** Run `./scripts/build-status.sh` to understand the current state of all domains
+2. **Identify the task-runner task** that corresponds to the requested work. Check `configs/domain-*.json` and `scripts/tasks/*.tasks` for the relevant task ID and its verification command
+3. Identify which domain(s) are affected
+4. Read the FRD for that domain in `docs/frd/` if you need business context
+5. Follow the domain module structure exactly
+6. Add Zod schemas in `packages/shared` (not in the API)
+7. Write the repository, service, handler, and routes in that order
+8. **Run tests after each file. Fix failures before moving to the next file.**
+9. **Add security tests for the domain (all 6 categories). This is not optional.**
+10. **Run the same verification command** from the manifest for the relevant task — not an ad-hoc test command
+11. Run all tests to ensure nothing breaks: `pnpm test && pnpm test:security`
+12. **Report the result** using the task ID: state whether it would be `[TASK_COMPLETE]` or `[TASK_BLOCKED]`
+
+**When to use the task runner instead of interactive development:**
+- Building a new domain or completing a domain's remaining tasks → use `./task-runner.sh`
+- Implementing multiple related tasks in sequence → use `./task-runner.sh --only=<task-id>` for each
+- Any work that spans more than 2 files in a domain → prefer the task runner
+
+**When interactive development is appropriate:**
+- Debugging a specific test failure
+- Exploring code to understand a domain before running the task runner
+- One-off fixes to a single file (still follow build-test-fix loop)
+- Reviewing or explaining existing code
 
 ### Domain Completion Checklist
 

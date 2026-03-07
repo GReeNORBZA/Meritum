@@ -1019,8 +1019,9 @@ export function createClaimHandlers(deps: ClaimHandlerDeps) {
     };
 
     const providerCtx = {
-      billingProviderId: physicianId,
-      businessArrangement: (request.authContext as any).businessArrangement ?? '',
+      providerId: physicianId,
+      billingNumber: (request.authContext as any).billingNumber ?? '',
+      businessArrangements: (request.authContext as any).businessArrangements ?? [],
     };
 
     const result = await uploadAndParse(

@@ -164,11 +164,9 @@ export function toInsertRecords(): InsertProvincialPhnFormat[] {
   return PROVINCIAL_PHN_FORMATS.map((entry) => ({
     provinceCode: entry.provinceCode,
     provinceName: entry.provinceName,
-    formatPattern: entry.formatPattern,
-    formatDescription: entry.formatDescription,
-    examplePhn: entry.examplePhn,
-    validationRegex: entry.validationRegex,
     phnLength: entry.phnLength,
-    isReciprocal: entry.isReciprocal,
+    phnRegex: entry.validationRegex,
+    validationAlgorithm: null,
+    notes: entry.formatDescription,
   }));
 }

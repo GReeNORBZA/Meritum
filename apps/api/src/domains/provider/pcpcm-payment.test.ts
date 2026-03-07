@@ -1304,8 +1304,8 @@ describe('PCPCM Zod Schemas', () => {
     it('should accept empty query (defaults)', () => {
       const result = listPcpcmPaymentsQuerySchema.safeParse({});
       expect(result.success).toBe(true);
-      expect(result.data.page).toBe(1);
-      expect(result.data.pageSize).toBe(20);
+      expect(result.data!.page).toBe(1);
+      expect(result.data!.pageSize).toBe(20);
     });
 
     it('should reject invalid status', () => {
@@ -1328,8 +1328,8 @@ describe('PCPCM Zod Schemas', () => {
         pageSize: '10',
       });
       expect(result.success).toBe(true);
-      expect(result.data.page).toBe(3);
-      expect(result.data.pageSize).toBe(10);
+      expect(result.data!.page).toBe(3);
+      expect(result.data!.pageSize).toBe(10);
     });
   });
 

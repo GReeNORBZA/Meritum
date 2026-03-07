@@ -9,6 +9,9 @@ import { type SessionManagementDeps } from '../domains/iam/iam.service.js';
 // ---------------------------------------------------------------------------
 
 declare module 'fastify' {
+  interface FastifyContextConfig {
+    auditLog?: boolean;
+  }
   interface FastifyRequest {
     authContext: AuthContext;
   }

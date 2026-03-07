@@ -731,6 +731,7 @@ describe('createPractice', () => {
         fullName: 'Dr. Smith',
         role: 'PHYSICIAN',
       }),
+      findUserByEmail: vi.fn().mockResolvedValue(undefined),
       updateUserRole: vi.fn().mockImplementation(async (userId, role) => {
         roleUpdates.push({ userId, role });
       }),

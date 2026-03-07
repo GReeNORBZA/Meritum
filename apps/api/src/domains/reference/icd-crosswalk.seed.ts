@@ -181,5 +181,6 @@ export function toInsertRecords(versionId: string): InsertIcdCrosswalk[] {
     matchQuality: entry.matchQuality,
     isPreferred: entry.isPreferred,
     notes: entry.notes,
+    effectiveFrom: '2026-01-01',
   }));
 }
